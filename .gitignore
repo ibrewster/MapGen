@@ -1,0 +1,5 @@
+alaska_2s.grd
+bin/
+lib/
+__pycache__
+.DS_Store

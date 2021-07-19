@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>AVO MapGen</title>
+    <link rel="stylesheet" href="static/styles/leaflet.css" />
+    <link rel="stylesheet" href="static/styles/jquery-ui.min.css">
+    <link rel="stylesheet" href="static/styles/index-1.css">
+
+
+    <script src="static/scripts/jquery-3.6.0.min.js" defer></script>
+    <script src="static/scripts/jquery-ui.min.js" defer></script>
+    <script src="static/scripts/leaflet.js" defer></script>
+    <script src="static/scripts/main-1.js" defer></script>
+
+</head>
+
+<body>
+    <div id="downloading" style="display:none">
+        <div id="downloadContent">
+            Generating map image.
+            <br>This may take a few minutes.
+            <br> Please wait...
+        </div>
+    </div>
+
+    <div id="main">
+        <div id="setup">
+            <div id="setupInner">
+                <div class="setupHeader">Map Location</div>
+                <div class="setupContent">
+                    <select id="mapLocation">
+                            <option value="Alaska" data-loc=[55.5,-164,5]>Alaska</option>
+                            <option value="Wrangell" data-loc=[62.0057,-144.0194,9]>Wrangell</option>
+                            <option value="Cook_Inlet" data-loc=[60.0,-152.5,8]>Cook Inlet</option>
+                            <option value="Spurr" data-loc=[61.2989,-152.2539,10]>Spurr</option>
+                            <option value="Redoubt" data-loc=[60.4852,-152.7438,11]>Redoubt</option>
+                            <option value="Iliamna" data-loc=[60.0319,-153.0918,11]>Iliamna</option>
+                            <option value="Augustine" data-loc=[59.3626,-153.435,12]>Augustine</option>
+                            <option value="Fourpeaked" data-loc=[58.7703,-153.6738,11]>Fourpeaked</option>
+                            <option value="Katmai_Region" data-loc=[58.3,-154.8,9]>Katmai Region</option>
+                            <option value="Snowy" data-loc=[58.3336,-154.6859,12]>Snowy</option>
+                            <option value="Griggs" data-loc=[58.3572,-155.1037,12]>Griggs</option>
+                            <option value="Katmai" data-loc=[58.279,-154.9533,12]>Katmai</option>
+                            <option value="Novarupta" data-loc=[58.2654,-155.1591,12]>Novarupta</option>
+                            <option value="Trident" data-loc=[58.235,-155.104,12]>Trident</option>
+                            <option value="Mageik" data-loc=[58.1946,-155.2544,12]>Mageik</option>
+                            <option value="Martin" data-loc=[58.1692,-155.3566,12]>Martin</option>
+                            <option value="Ugashik-Peulik" data-loc=[57.7503,-156.37,11]>Ugashik-Peulik</option>
+                            <option value="Aniakchak" data-loc=[56.88149,-158.15456,11]>Aniakchak</option>
+                            <option value="Veniaminof" data-loc=[56.1979,-159.3931,10]>Veniaminof</option>
+                            <option value="Cold_Bay" data-loc=[55.4,-161.5,9]>Cold Bay</option>
+                            <option value="Pavlof" data-loc=[55.4173,-161.8937,11]>Pavlof</option>
+                            <option value="Dutton" data-loc=[55.1867,-162.2744,11]>Dutton</option>
+                            <option value="Unimak_Island" data-loc=[54.7,-163.9,10]>Unimak Island</option>
+                            <option value="Shishaldin" data-loc=[54.7554,-163.9711,11]>Shishaldin</option>
+                            <option value="Westdahl" data-loc=[54.5171,-164.6476,11]>Westdahl</option>
+                            <option value="Akutan" data-loc=[54.1331,-165.9856,11]>Akutan</option>
+                            <option value="Makushin" data-loc=[53.8899,-166.925,10]>Makushin</option>
+                            <option value="Bogoslof Island" data-loc=[53.9272,-168.0344,11]>Bogoslof Island</option>
+                            <option value="Okmok" data-loc=[53.397,-168.166,10]>Okmok</option>
+                            <option value="Cleveland" data-loc=[52.8222,-169.945,10]>Cleveland</option>
+                            <option value="Korovin" data-loc=[52.3817,-174.1653,11]>Korovin</option>
+                            <option value="Great_Sitkin" data-loc=[52.0765,-176.1109,11]>Great Sitkin</option>
+                            <option value="Kanaga" data-loc=[51.9242,-177.1623,11]>Kanaga</option>
+                            <option value="Tanaga" data-loc=[51.884,-178.143,10]>Tanaga</option>
+                            <option value="Gareloi" data-loc=[51.7892,-178.796,12]>Gareloi</option>
+                            <option value="Semisopochnoi" data-loc=[51.9288,179.5977,11]>Semisopochnoi</option>
+                            <option value="Little_Sitkin" data-loc=[51.9531,178.5356,11]>Little Sitkin</option>
+                    </select>
+                </div>
+                <div class="setupHeader">Map Size</div>
+                <div class="setupContent">
+                    <div id="size">
+                        <span class="sizeLabel">Width:</span>
+                        <span></span>
+                        <span class="sizeLabel">Height:</span>
+                        <span><input class="mapSize" id="mapWidth" type="number" min=32 max="9999" value="1024"></span>
+                        <span id="xMarker">X</span>
+                        <span><input class="mapSize" id="mapHeight" type="number" min=32 max="9999" value="768"></span>
+                        <span class="rightJustify">Units:</span>
+                        <select class="cols2" id="sizeUnits">
+                            <option value="p">Pixels</option>
+                            <option value="i">Inches</option>
+                            <option value="c">cm</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="endButtons">
+                <button id="getMap">Get Map</button>
+            </div>
+        </div>
+
+        <div id="mapContainer">
+            <div id="topMap">
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>
