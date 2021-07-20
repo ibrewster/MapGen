@@ -33,11 +33,13 @@ body {
 
 #size {
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    grid-template-columns: auto 1fr auto;
 }
 
 #xMarker {
     padding-right: 3px;
+    padding-left: 3px;
+    text-align: center;
 }
 
 #size span {
@@ -51,6 +53,10 @@ body {
 .rightJustify {
     justify-self: end;
     padding-right: 3px;
+}
+
+.centerJustify {
+    text-align: center;
 }
 
 .sizeLabel {

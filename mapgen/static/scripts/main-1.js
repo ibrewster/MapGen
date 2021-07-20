@@ -1,7 +1,10 @@
 var map = null;
+var overviewRatio = 5;
+
 $(document).ready(function() {
     $(document).on('change', '.mapSize', sizeMap);
     $(window).resize(sizeMap);
+    $('#overviewWidth').change(function() { overviewChanged = true; })
     $('#getMap').click(getMap);
 
     sizeMap();
@@ -13,6 +16,13 @@ $(document).ready(function() {
         "zoom": 5,
         zoomSnap: 0,
         layers: [tiles]
+    })
+
+    $('#mapLocation').change(locSelectChanged);
+    $('#overviewWidth').change(overviewWidthChanged);
+    $('#overviewUnits').text($('#sizeUnits option:selected').text());
+    $('#sizeUnits').change(function() {
+        $('#overviewUnits').text($('#sizeUnits option:selected').text());
     })
 })
 
@@ -34,12 +44,23 @@ function expireCookie(name) {
 
 function locSelectChanged() {
     //"this" should be the map select pull-down
+    var sel = $(this).find('option:selected');
+    var loc = sel.data('loc');
+    map.setView([loc[0], loc[1]], loc[2]);
+}
 
+function overviewWidthChanged() {
+    overviewRatio = $('#mapWidth').val() / $(this).val()
 }
 
 function sizeMap() {
-    var width = $('#mapWidth').val()
-    var height = $('#mapHeight').val()
+    var width = $('#mapWidth').val();
+
+    if ($('#lockWidth').is(':checked')) {
+        $('#overviewWidth').val(Math.round(width / overviewRatio));
+    }
+
+    var height = $('#mapHeight').val();
 
     var ratio = width / height;
 
@@ -83,28 +104,16 @@ var checkDownloadCookie = function() {
 };
 
 function getMap() {
-    var width = $('#mapWidth').val();
-    var height = $('#mapHeight').val();
-    var unit = $('#sizeUnits').val();
-
+    //make sure our bounds are up-to-date
     var bounds = map.getBounds().toBBoxString();
-
-    var args = {
-        'width': width,
-        'height': height,
-        'bounds': bounds,
-        'unit': unit
-    }
-
-    var query = serialize(args)
-    var dest = 'getMap?' + query;
+    $('#mapBounds').val(bounds);
 
     setCookie("DownloadComplete", "0", 240);
     $('#downloading').css('display', 'grid');
     setTimeout(checkDownloadCookie, 1000);
-    setTimeout(function() { runGetMap(dest); }, 50);
+    setTimeout(runGetMap, 50);
 }
 
-function runGetMap(dest) {
-    window.location.href = dest;
+function runGetMap() {
+    $('#setupForm')[0].submit();
 }

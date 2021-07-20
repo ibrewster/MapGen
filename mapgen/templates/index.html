@@ -27,9 +27,10 @@
     <div id="main">
         <div id="setup">
             <div id="setupInner">
-                <div class="setupHeader">Map Location</div>
-                <div class="setupContent">
-                    <select id="mapLocation">
+                <form id="setupForm" action="getMap" method="POST">
+                    <div class="setupHeader">Map Location</div>
+                    <div class="setupContent">
+                        <select id="mapLocation">
                             <option value="Alaska" data-loc=[55.5,-164,5]>Alaska</option>
                             <option value="Wrangell" data-loc=[62.0057,-144.0194,9]>Wrangell</option>
                             <option value="Cook_Inlet" data-loc=[60.0,-152.5,8]>Cook Inlet</option>
@@ -67,27 +68,38 @@
                             <option value="Gareloi" data-loc=[51.7892,-178.796,12]>Gareloi</option>
                             <option value="Semisopochnoi" data-loc=[51.9288,179.5977,11]>Semisopochnoi</option>
                             <option value="Little_Sitkin" data-loc=[51.9531,178.5356,11]>Little Sitkin</option>
-                    </select>
-                </div>
-                <div class="setupHeader">Map Size</div>
-                <div class="setupContent">
-                    <div id="size">
-                        <span class="sizeLabel">Width:</span>
-                        <span></span>
-                        <span class="sizeLabel">Height:</span>
-                        <span><input class="mapSize" id="mapWidth" type="number" min=32 max="9999" value="1024"></span>
-                        <span id="xMarker">X</span>
-                        <span><input class="mapSize" id="mapHeight" type="number" min=32 max="9999" value="768"></span>
-                        <span class="rightJustify">Units:</span>
-                        <select class="cols2" id="sizeUnits">
+                        </select>
+                        <input type="hidden" id="mapBounds" name="bounds" />
+                    </div>
+
+                    <div class="setupHeader">Map Size</div>
+                    <div class="setupContent">
+                        <div id="size">
+                            <span class="sizeLabel">Width:</span>
+                            <span></span>
+                            <span class="sizeLabel">Height:</span>
+                            <span><input class="mapSize" id="mapWidth" name="width" type="number" min=32 max="9999" value="1024"></span>
+                            <span id="xMarker">X</span>
+                            <span><input class="mapSize" id="mapHeight" name="height" type="number" min=32 max="9999" value="768"></span>
+                            <span class="rightJustify">Units:</span>
+                            <select class="cols2" id="sizeUnits" name="unit">
                             <option value="p">Pixels</option>
                             <option value="i">Inches</option>
                             <option value="c">cm</option>
                         </select>
+                        </div>
                     </div>
-                </div>
-            </div>
 
+                    <div class="setupHeader">Overview</div>
+                    <div class="setupContent">
+                        <input type="checkbox" name="overview" id="overview" checked><label for="overview">Show Overview Map</label>
+                        <br>Width:
+                        <input type="number" min=0 max=9999 name="overviewWidth" id="overviewWidth" value="256">
+                        <span id="overviewUnits"></span>
+                        <div><input type="checkbox" id="lockWidth" checked>Lock to map width</div>
+                    </div>
+                </form>
+            </div>
             <div id="endButtons">
                 <button id="getMap">Get Map</button>
             </div>

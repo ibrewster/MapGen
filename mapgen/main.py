@@ -22,11 +22,12 @@ class MapRequestSchema(Schema):
     height = Float(required = False)
     bounds = String(required = True)
     unit = String(required = True, validate = OneOf(['p', 'i', 'c']))
-    overview = Boolean(required = False, missing = True)
+    overview = Boolean(required = False, missing = False)
+    overviewWidth = Float()
 
 
-@app.get('/getMap')
-@api_input(MapRequestSchema, location = 'query')
+@app.post('/getMap')
+@api_input(MapRequestSchema, location = 'form')
 def get_map(data):
     print(data)
     width = data['width']
@@ -77,9 +78,9 @@ def get_map(data):
             69.5
         ]
 
-        inset_width = width / 4
+        inset_width = data['overviewWidth']
         pos = f"jBR+w{inset_width}{unit}+o0.1c"
-        star_size = inset_width / 12
+        star_size = "16p"
         with fig.inset(position = pos, box = "+gwhite+p1p"):
             fig.coast(
                 region = ak_bounds,
@@ -93,7 +94,7 @@ def get_map(data):
             x_loc = gmt_bounds[0] + (gmt_bounds[1] - gmt_bounds[0]) / 2
             y_loc = gmt_bounds[2] + (gmt_bounds[3] - gmt_bounds[2]) / 2
             fig.plot(x = [x_loc, ], y = [y_loc, ],
-                     style = f"a{star_size}{unit}", color = "blue")
+                     style = f"a{star_size}", color = "blue")
 
     save_file = f'{uuid.uuid4().hex}.pdf'
     file_path = os.path.join('/tmp', save_file)
