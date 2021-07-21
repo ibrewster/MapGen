@@ -108,7 +108,7 @@ def get_map(data):
             # We can use geotiff files directly, no further work needed
             hillshade_file = os.path.join(tmp_dir.name, filename)
         elif img_type == 'j':
-            osgeo.gdal.AllRegister()
+            osgeo.gdal.AllRegister()  # Why? WHY!?!? But needed...
             # Image/World files need to be combined.
             proj = data['imgProj']
             # Should dump the world file to the same directory as the jpeg file
@@ -122,7 +122,7 @@ def get_map(data):
 
     fig.grdimage(hillshade_file, cmap = 'geo',
                  dpi = 300, shading = True, monochrome = True)
-    fig.coast(rivers = 'r/2p,#FFFFFF', water = "#00FFFF", resolution = "f")
+    fig.coast(rivers = 'r/2p,#CBE7FF', water = "#CBE7FF", resolution = "f")
 
     if overview:
         ak_bounds = [
@@ -139,7 +139,7 @@ def get_map(data):
             fig.coast(
                 region = ak_bounds,
                 projection = "M?",
-                water = "#00FFFF",
+                water = "#CBE7FF",
                 land = "lightgreen",
                 resolution = "l",
                 shorelines = True,
