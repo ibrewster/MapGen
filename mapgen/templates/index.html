@@ -27,7 +27,7 @@
     <div id="main">
         <div id="setup">
             <div id="setupInner">
-                <form id="setupForm" action="getMap" method="POST">
+                <form id="setupForm" enctype="multipart/form-data" action="getMap" method="POST">
                     <div class="setupHeader">Map Location</div>
                     <div class="setupContent">
                         <select id="mapLocation">
@@ -70,6 +70,19 @@
                             <option value="Little_Sitkin" data-loc=[51.9531,178.5356,11]>Little Sitkin</option>
                         </select>
                         <input type="hidden" id="mapBounds" name="bounds" />
+                        <div id="latLonLimits">
+                            <div class="reload" tooltip="Set to map bounds">⟳</div>
+                            <div class="topTitle">Min</div>
+                            <div class="topTitle">Max</div>
+
+                            <div class="leftTitle">Lat</div>
+                            <div class="gridCell"><input id="minLat" class="latLon" type="number" min=-90 max=90 step=".001"></div>
+                            <div class="gridCell"><input id="maxLat" class="latLon" type="number" min=-90 max=90 step=".001"></div>
+
+                            <div class="leftTitle">Lon</div>
+                            <div class="gridCell"><input id="minLon" class="latLon" type="number" min=-360 max=180 step=".001"></div>
+                            <div class="gridCell"><input id="maxLon" class="latLon" type="number" min=-360 max=180 step=".001"></div>
+                        </div>
                     </div>
 
                     <div class="setupHeader">Map Size</div>
@@ -97,6 +110,18 @@
                         <input type="number" min=0 max=9999 name="overviewWidth" id="overviewWidth" value="256">
                         <span id="overviewUnits"></span>
                         <div><input type="checkbox" id="lockWidth" checked>Lock to map width</div>
+                    </div>
+
+                    <div class="setupHeader">Overlay Image</div>
+                    <div class="setupContent leftJustify">
+                        Type:
+                        <select id="overlayFormat" name="imgType">
+                            <option value="t">GeoTIFF</option>
+                            <option value="j">Image & World</option>
+                        </select>
+                        <div id="overlayFiles">
+
+                        </div>
                     </div>
                 </form>
             </div>

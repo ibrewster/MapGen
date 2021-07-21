@@ -59,8 +59,18 @@ body {
     text-align: center;
 }
 
+.leftJustify {
+    text-align: left;
+}
+
 .sizeLabel {
     text-align: center;
+}
+
+.reload {
+    line-height: 1em;
+    cursor: pointer;
+    font-family: Lucida Sans Unicode;
 }
 
 #setup {
@@ -72,8 +82,9 @@ body {
 }
 
 #setupInner {
-    height: calc(100% - 3em);
+    height: calc(100% - 1.5em);
     overflow-y: auto;
+    text-align: center;
 }
 
 .setupHeader {
@@ -89,6 +100,7 @@ body {
 
 .setupContent {
     padding: 2px 5px;
+    display: inline-block;
 }
 
 #endButtons {
@@ -119,4 +131,9 @@ body {
     vertical-align: middle;
     font-weight: bold;
     font-size: 115%;
+}
+
+#latLonLimits {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
 }

@@ -1,13 +1,17 @@
 import os
+import tempfile
 import uuid
 
 import flask
+import osgeo.gdal
 
 from urllib.parse import unquote
 
 from apiflask import Schema, input as api_input
-from apiflask.fields import Float, String, Boolean
+from apiflask.fields import Float, String, Boolean, Raw
 from apiflask.validators import OneOf
+
+from werkzeug.utils import secure_filename
 
 from . import app
 
@@ -24,6 +28,33 @@ class MapRequestSchema(Schema):
     unit = String(required = True, validate = OneOf(['p', 'i', 'c']))
     overview = Boolean(required = False, missing = False)
     overviewWidth = Float()
+    imgType = String()
+    imgProj = String(required = False, missing = None)
+    imgFile = Raw(type = "file", required = False, missing = None)
+
+
+def allowed_file(filename):
+    ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'tif', 'tiff', 'jgw', 'tfw']
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def _process_file(request, name, temp_dir = None):
+    if name in request.files:
+        file = request.files[name]
+        if file.filename == "":
+            return (None, None)
+        if not allowed_file(file.filename):
+            return (None, None)
+
+        if temp_dir is None:
+            temp_dir = tempfile.TemporaryDirectory()
+            print(temp_dir, temp_dir.name)
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(temp_dir.name, filename))
+        return (temp_dir, filename)
+
+    else:
+        return (None, None)
 
 
 @app.post('/getMap')
@@ -66,8 +97,31 @@ def get_map(data):
     # proj = f"U{utm_zone}{utm_char}/{width}{unit}"
     fig = pygmt.Figure()
     fig.basemap(projection=proj, region=gmt_bounds, frame=('WeSn', 'afg'))
-    fig.grdimage("alaska_2s.grd", cmap = 'geo',
-                 dpi = 700, shading = True, monochrome = True)
+
+    # See if we have a file to deal with for this
+    hillshade_file = "alaska_2s.grd"
+    tmp_dir, filename = _process_file(flask.request, 'imgFile')
+    if tmp_dir and filename:
+        # User is trying to upload *something*. Deal with it.
+        img_type = data['imgType']
+        if img_type == 't':
+            # We can use geotiff files directly, no further work needed
+            hillshade_file = os.path.join(tmp_dir.name, filename)
+        elif img_type == 'j':
+            osgeo.gdal.AllRegister()
+            # Image/World files need to be combined.
+            proj = data['imgProj']
+            # Should dump the world file to the same directory as the jpeg file
+            _process_file(flask.request, 'worldFile', tmp_dir)
+            print("TempDir:", tmp_dir.name)
+            out_file = os.path.join(tmp_dir.name, "hillshade.tiff")
+            in_file = os.path.join(tmp_dir.name, filename)
+            osgeo.gdal.Warp(out_file, in_file,
+                            srcSRS = proj, dstSRS = 'EPSG:4326')
+            hillshade_file = out_file
+
+    fig.grdimage(hillshade_file, cmap = 'geo',
+                 dpi = 300, shading = True, monochrome = True)
     fig.coast(rivers = 'r/2p,#FFFFFF', water = "#00FFFF", resolution = "f")
 
     if overview:
