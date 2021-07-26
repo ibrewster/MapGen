@@ -1,16 +1,21 @@
+from shapely.geometry import Polygon
+import shapely_geojson
+
 import os
 import tempfile
 import uuid
+import zipfile
 
 import flask
 import osgeo.gdal
+import requests
 
-from urllib.parse import unquote
+from io import BytesIO
+from urllib.parse import unquote, quote
 
 from apiflask import Schema, input as api_input
 from apiflask.fields import Float, String, Boolean, Raw
 from apiflask.validators import OneOf
-
 from werkzeug.utils import secure_filename
 
 from . import app
@@ -56,6 +61,39 @@ def _process_file(request, name, temp_dir = None):
     else:
         return (None, None)
 
+def _download_elevation(bounds, temp_dir):
+    poly = Polygon.from_bounds(*bounds)
+    geojson = quote(shapely_geojson.dumps(poly))
+    ids = 151  # DSM hillshade
+    url = f'https://elevation.alaska.gov/download?geojson={geojson}&ids={ids}'
+    print("Downloading hillshade files")
+    tempdir = temp_dir.name
+    req = requests.get(url, stream=True)
+    if req.status_code != 200:
+        print(req.status_code)
+        print(req.text)
+        return "Error!"
+    zf_path = os.path.join(tempdir, 'custom_download.zip')
+    with open(zf_path, 'wb') as zf:
+        for chunk in req.iter_content(chunk_size=8192):
+            if chunk:
+                zf.write(chunk)
+
+    # Pull out the various tiff files needed
+    tiff_dir = os.path.join(tempdir, 'tiffs')
+    os.makedirs(tiff_dir, exist_ok=True)
+    print("Extracting tiffs")
+    with zipfile.ZipFile(zf_path, 'r') as zf:
+        for file in zf.namelist():
+            if file.endswith('.zip'):
+                print(f"Reading {file}")
+                zf_data = BytesIO(zf.read(file))
+                with zipfile.ZipFile(zf_data, 'r') as zf2:
+                    for tiffile in zf2.namelist():
+                        if tiffile.endswith('.tif'):
+                            print(f"Extracting {tiffile}")
+                            zf2.extract(tiffile, path=tiff_dir)
+    return tiff_dir
 
 @app.post('/getMap')
 @api_input(MapRequestSchema, location = 'form')
@@ -80,6 +118,13 @@ def get_map(data):
         float(ne_lat)
     ]
 
+    warp_bounds = [
+        gmt_bounds[0],  # min x
+        gmt_bounds[2],  # min y
+        gmt_bounds[1],  # max x
+        gmt_bounds[3]  # max y
+    ]
+
 #     utm_left = gmt_bounds[0]
 #     if utm_left < -180:
 #         utm_left += 360
@@ -98,8 +143,10 @@ def get_map(data):
     fig = pygmt.Figure()
     fig.basemap(projection=proj, region=gmt_bounds, frame=('WeSn', 'afg'))
 
+
+
     # See if we have a file to deal with for this
-    hillshade_file = "alaska_2s.grd"
+    hillshade_file = "great_sitkin.tiff"
     tmp_dir, filename = _process_file(flask.request, 'imgFile')
     if tmp_dir and filename:
         # User is trying to upload *something*. Deal with it.
@@ -117,12 +164,27 @@ def get_map(data):
             out_file = os.path.join(tmp_dir.name, "hillshade.tiff")
             in_file = os.path.join(tmp_dir.name, filename)
             osgeo.gdal.Warp(out_file, in_file,
-                            srcSRS = proj, dstSRS = 'EPSG:4326')
+                            srcSRS=proj, dstSRS='EPSG:4326',
+                            outputBounds=warp_bounds,
+                            multithread=True)
             hillshade_file = out_file
+    else:
+        osgeo.gdal.AllRegister()  # Why? WHY!?!? But needed...
+        tmp_dir = tempfile.TemporaryDirectory()
+        tiff_dir = _download_elevation(warp_bounds, tmp_dir)
 
-    fig.grdimage(hillshade_file, cmap = 'geo',
-                 dpi = 300, shading = True, monochrome = True)
-    fig.coast(rivers = 'r/2p,#CBE7FF', water = "#CBE7FF", resolution = "f")
+        proj = 'EPSG:3338'  # Alaska Albers
+        out_file = os.path.join(tiff_dir, 'hillshade.tiff')
+        in_files = [os.path.join(tiff_dir, f) for f in os.listdir(tiff_dir)]
+        print("Generating composite hillshade file")
+
+        osgeo.gdal.Warp(out_file, in_files, dstSRS='EPSG:4326',
+                        outputBounds=warp_bounds, multithread=True)
+        hillshade_file = out_file
+
+    fig.grdimage(hillshade_file, cmap='geo',
+                 dpi=300, shading=True, monochrome=True)
+    fig.coast(rivers='r/2p,#CBE7FF', water="#CBE7FF", resolution="f")
 
     if overview:
         ak_bounds = [
@@ -135,24 +197,24 @@ def get_map(data):
         inset_width = data['overviewWidth']
         pos = f"jBR+w{inset_width}{unit}+o0.1c"
         star_size = "16p"
-        with fig.inset(position = pos, box = "+gwhite+p1p"):
+        with fig.inset(position=pos, box="+gwhite+p1p"):
             fig.coast(
-                region = ak_bounds,
-                projection = "M?",
-                water = "#CBE7FF",
-                land = "lightgreen",
-                resolution = "l",
-                shorelines = True,
+                region=ak_bounds,
+                projection="M?",
+                water="#CBE7FF",
+                land="lightgreen",
+                resolution="l",
+                shorelines=True,
                 # area_thresh = 10000
             )
             x_loc = gmt_bounds[0] + (gmt_bounds[1] - gmt_bounds[0]) / 2
             y_loc = gmt_bounds[2] + (gmt_bounds[3] - gmt_bounds[2]) / 2
-            fig.plot(x = [x_loc, ], y = [y_loc, ],
-                     style = f"a{star_size}", color = "blue")
+            fig.plot(x=[x_loc, ], y=[y_loc, ],
+                     style=f"a{star_size}", color="blue")
 
     save_file = f'{uuid.uuid4().hex}.pdf'
     file_path = os.path.join('/tmp', save_file)
-    fig.savefig(file_path, dpi = 700)
+    fig.savefig(file_path, dpi=700)
 
     with open(file_path, 'rb') as file:
         file_data = file.read()
@@ -162,7 +224,6 @@ def get_map(data):
     response = flask.make_response(file_data)
     response.headers.set('Content-Type', 'application/pdf')
     response.headers.set('Content-Disposition', 'attachment',
-                         filename = "MapImage.pdf")
+                         filename="MapImage.pdf")
     response.set_cookie('DownloadComplete', b"1")
-
     return response

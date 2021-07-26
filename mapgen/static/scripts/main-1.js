@@ -1,6 +1,11 @@
 var map = null;
 var overviewRatio = 5;
 
+window.onbeforeunload=function(){
+    //make sure the downloading overlay is hidden whenever we navigate away from the page.
+    $('#downloading').hide();
+}
+
 function setCookie(name, value, expiresInSeconds) {
     var exdate = new Date();
     exdate.setTime(exdate.getTime() + expiresInSeconds * 1000);
@@ -49,6 +54,9 @@ $(document).ready(function() {
     $('#overlayFormat').change(changeFileType);
     changeFileType();
 });
+
+
+
 
 function changeFileType() {
     var type = $('#overlayFormat').val();

@@ -1,1 +1,6 @@
 pygmt
+flask>=2
+apiflask
+requests
+shapely
+shapely_geojson
