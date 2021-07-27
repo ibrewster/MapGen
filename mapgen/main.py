@@ -53,7 +53,6 @@ def _process_file(request, name, temp_dir = None):
 
         if temp_dir is None:
             temp_dir = tempfile.TemporaryDirectory()
-            print(temp_dir, temp_dir.name)
         filename = secure_filename(file.filename)
         file.save(os.path.join(temp_dir.name, filename))
         return (temp_dir, filename)
@@ -160,7 +159,6 @@ def get_map(data):
             proj = data['imgProj']
             # Should dump the world file to the same directory as the jpeg file
             _process_file(flask.request, 'worldFile', tmp_dir)
-            print("TempDir:", tmp_dir.name)
             out_file = os.path.join(tmp_dir.name, "hillshade.tiff")
             in_file = os.path.join(tmp_dir.name, filename)
             osgeo.gdal.Warp(out_file, in_file,
