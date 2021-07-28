@@ -1,7 +1,8 @@
 var map = null;
 var overviewRatio = 5;
+var staTimer = null;
 
-window.onbeforeunload=function(){
+window.onbeforeunload = function() {
     //make sure the downloading overlay is hidden whenever we navigate away from the page.
     $('#downloading').hide();
 }
@@ -24,6 +25,9 @@ function expireCookie(name) {
 
 $(document).ready(function() {
     $(document).on('change', '.mapSize', sizeMap);
+    $(document).on('click', 'input.staCheck', checkForAll);
+    $(document).on('click', 'input.staCatAll', toggleAll);
+    $(document).on('click', '#stationSelAll', toggleStations);
     $(window).resize(sizeMap);
     $('#overviewWidth').change(function() { overviewChanged = true; })
     $('#getMap').click(getMap);
@@ -42,6 +46,7 @@ $(document).ready(function() {
 
     map.on("moveend", updateBounds);
     map.on("zoomend", updateBounds);
+    map.on("moveend zoomend", getStationsDebounce);
 
     $('.latLon').change(setBounds);
     $('.reload').click(updateBounds);
@@ -54,8 +59,6 @@ $(document).ready(function() {
     $('#overlayFormat').change(changeFileType);
     changeFileType();
 });
-
-
 
 
 function changeFileType() {
@@ -200,4 +203,121 @@ function getMap() {
 
 function runGetMap() {
     $('#setupForm')[0].submit();
+}
+
+var stationCategories = {};
+
+function getStationsDebounce() {
+    if (staTimer !== null) {
+        clearTimeout(staTimer);
+    }
+    staTimer = setTimeout(getStations, 500);
+}
+
+var urlBase = 'https://volcanoes.usgs.gov';
+var instrumentUrl = `${urlBase}/vsc/api/instrumentApi/data`;
+
+function getStations() {
+    if (staTimer !== null) {
+        clearTimeout(staTimer);
+    }
+    staTimer = null;
+
+    updateBounds();
+    var minLat = $('#minLat').val();
+    var maxLat = $('#maxLat').val();
+    var minLon = $('#minLon').val();
+    var maxLon = $('#maxLon').val();
+
+    var url = `${instrumentUrl}?lat1=${minLat}&long1=${minLon}&lat2=${maxLat}&long2=${maxLon}`;
+    $.getJSON(url)
+        .done(function(data) {
+            $('#stationListTop').empty();
+
+            var cats = data['categories'];
+            for (var i = 0; i < cats.length; i++) {
+                var cat = cats[i];
+                stationCategories[cat['catId']] = cat;
+                createStationGroup(cat);
+            }
+
+            var stas = data['instruments'];
+            for (var i = 0; i < stas.length; i++) {
+                var sta = stas[i];
+                var cat = stationCategories[sta['catId']];
+                createStationDiv(sta, cat);
+            }
+
+            //check all by default
+            $('#stationSelAll')[0].checked = true;
+            toggleStations.call($('#stationSelAll')[0]);
+        });
+}
+
+function createStationDiv(sta, cat) {
+    var info = {
+        'lat': sta['lat'],
+        'lon': sta['long'],
+        'name': sta['staton'],
+        'icon': urlBase + cat['iconUrl']
+    }
+
+    var div = $('<div class="sta">')
+    var value = JSON.stringify(info);
+    var checkbox = $('<input type="checkbox" class="staCheck" name="station">');
+    checkbox.val(value);
+    div.append(checkbox);
+    div.append(sta['station']);
+    $(`#staCat${sta['catId']}`).append(div);
+}
+
+function createStationGroup(info) {
+    var staType = info['category'];
+    var div = $(`<div class="stationType" id="staCat${info['catId']}">`);
+    var typeTitle = $('<div class=stationTypeHead>')
+    var allCheck = $("<span class='leftEdge'>");
+    allCheck.append("<input type=checkbox class='staCatAll'>");
+    allCheck.append("All");
+    typeTitle.append(allCheck);
+    typeTitle.append(staType);
+    div.append(typeTitle);
+    $('#stationListTop').append(div);
+}
+
+function toggleStations() {
+    var checked = false;
+    if ($(this).is(':checked')) {
+        checked = true;
+    }
+
+    $(this).closest('div.setupHeader').next('div.setupContent').find('input.staCheck').each(function() {
+        this.checked = checked;
+        checkForAll.call(this);
+    })
+}
+
+function toggleAll() {
+    var checked = false;
+    if ($(this).is(':checked')) {
+        checked = true;
+    }
+    $(this).closest('div.stationType').find('input.staCheck').each(function() {
+        this.checked = checked;
+    })
+}
+
+function checkForAll() {
+    var parent = $(this).closest('div.stationType');
+    if (parent.find('input.staCheck').length == parent.find('input.staCheck:checked').length) {
+        parent.find('input.staCatAll')[0].checked = true;
+    } else {
+        parent.find('input.staCatAll')[0].checked = false;
+    }
+
+    var top = $(this).closest('div.setupContent');
+    if (top.find('input.staCheck').length == top.find('input.staCheck:checked').length) {
+        $('#stationSelAll')[0].checked = true;
+    } else {
+        $('#stationSelAll')[0].checked = false;
+    }
 }

@@ -1,6 +1,7 @@
 from shapely.geometry import Polygon
 import shapely_geojson
 
+import json
 import os
 import tempfile
 import uuid
@@ -14,7 +15,13 @@ from io import BytesIO
 from urllib.parse import unquote, quote
 
 from apiflask import Schema, input as api_input
-from apiflask.fields import Float, String, Boolean, Raw
+from apiflask.fields import (
+    Float,
+    String,
+    Boolean,
+    Raw,
+    List,
+)
 from apiflask.validators import OneOf
 from werkzeug.utils import secure_filename
 
@@ -24,6 +31,17 @@ from . import app
 @app.get('/')
 def index():
     return flask.render_template("index.html")
+
+
+class JSON(String):
+    def _deserialize(self, value, attr, data, **kwargs):
+        if value:
+            try:
+                return json.loads(value)
+            except ValueError:
+                return None
+
+        return None
 
 
 class MapRequestSchema(Schema):
@@ -36,6 +54,7 @@ class MapRequestSchema(Schema):
     imgType = String()
     imgProj = String(required = False, missing = None)
     imgFile = Raw(type = "file", required = False, missing = None)
+    station = List(JSON)
 
 
 def allowed_file(filename):
@@ -59,6 +78,7 @@ def _process_file(request, name, temp_dir = None):
 
     else:
         return (None, None)
+
 
 def _download_elevation(bounds, temp_dir):
     poly = Polygon.from_bounds(*bounds)
@@ -94,10 +114,10 @@ def _download_elevation(bounds, temp_dir):
                             zf2.extract(tiffile, path=tiff_dir)
     return tiff_dir
 
+
 @app.post('/getMap')
 @api_input(MapRequestSchema, location = 'form')
 def get_map(data):
-    print(data)
     width = data['width']
     bounds = data['bounds']
     unit = data['unit']
@@ -142,8 +162,6 @@ def get_map(data):
     fig = pygmt.Figure()
     fig.basemap(projection=proj, region=gmt_bounds, frame=('WeSn', 'afg'))
 
-
-
     # See if we have a file to deal with for this
     hillshade_file = "great_sitkin.tiff"
     tmp_dir, filename = _process_file(flask.request, 'imgFile')
@@ -183,6 +201,21 @@ def get_map(data):
     fig.grdimage(hillshade_file, cmap='geo',
                  dpi=300, shading=True, monochrome=True)
     fig.coast(rivers='r/2p,#CBE7FF', water="#CBE7FF", resolution="f")
+
+    main_dir = os.path.dirname(__file__)
+    for station in data['station']:
+        icon_url = station['icon']
+        icon_name = os.path.basename(icon_url)
+        icon_path = os.path.join(main_dir, 'static/img', icon_name)
+        if not os.path.isfile(icon_path):
+            req = requests.get(icon_url)
+            if req.status_code != 200:
+                continue  # Can't get an icon for this station, move on.
+            with open(icon_path, 'wb') as icon_file:
+                icon_file.write(req.content)
+
+        position = f"g{station['lon']}/{station['lat']}+w16p"
+        fig.image(icon_path, position = position)
 
     if overview:
         ak_bounds = [

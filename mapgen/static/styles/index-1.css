@@ -91,6 +91,7 @@ body {
     background-color: lightblue;
     padding: 2px 0px;
     text-align: center;
+    position: relative;
 }
 
 .setupHeader:first-of-type {
@@ -136,4 +137,29 @@ body {
 #latLonLimits {
     display: grid;
     grid-template-columns: repeat(3, auto);
+}
+
+.leftEdge {
+    position: absolute;
+    left: 5px;
+}
+
+.blockDisplay {
+    display: block;
+}
+
+.stationType {
+    text-align: left;
+}
+
+.stationTypeHead {
+    text-align: center;
+    position: relative;
+    margin-left: 10px;
+    margin-right: 10px;
+    background-color: lightblue;
+}
+
+.sta {
+    margin-left: 20px;
 }
