@@ -2,6 +2,7 @@ from shapely.geometry import Polygon
 import shapely_geojson
 
 import json
+import math
 import os
 import tempfile
 import uuid
@@ -10,6 +11,7 @@ import zipfile
 import flask
 import osgeo.gdal
 import requests
+import vincenty
 
 from io import BytesIO
 from urllib.parse import unquote, quote
@@ -56,6 +58,7 @@ class MapRequestSchema(Schema):
     imgFile = Raw(type = "file", required = False, missing = None)
     station = List(JSON)
     legend = String()
+    scale = String()
 
 
 def allowed_file(filename):
@@ -176,7 +179,13 @@ def get_map(data):
     # proj = f"U{utm_zone}{utm_char}/{width}{unit}"
     fig = pygmt.Figure()
 
-    fig.basemap(projection=proj, region=gmt_bounds, frame=('WeSn', 'afg'))
+    basemap_args = {
+        'projection': proj,
+        'region': gmt_bounds,
+        'frame': ('WeSn', 'afg'),
+    }
+
+    fig.basemap(**basemap_args)
 
     # See if we have a file to deal with for this
     hillshade_file = "great_sitkin.tiff"
@@ -218,6 +227,24 @@ def get_map(data):
                  dpi=300, shading=True, monochrome=True)
     fig.coast(rivers='r/2p,#CBE7FF', water="#CBE7FF", resolution="f")
 
+    if data['scale'] != 'False':
+        # figure out middle latitude for map
+        mid_lat = gmt_bounds[2] + ((gmt_bounds[3] - gmt_bounds[2]) / 2)
+        map_width = vincenty.vincenty((mid_lat, gmt_bounds[0]),
+                                      (mid_lat, gmt_bounds[1]))
+        scale_length = math.ceil(map_width / 8)
+        offset = .65
+        if data['scale'][0] == 'T':
+            offset += .3
+
+        offset = str(offset) + "c"
+
+        if data['scale'][1] in ['L', 'R']:
+            offset = '.375c/' + offset
+
+        map_scale = f'j{data["scale"]}+w{scale_length}k+f+o{offset}+c{mid_lat}N+l'
+        fig.basemap(map_scale = map_scale, F = '+gwhite+p')
+
     print("Plotting stations")
     main_dir = os.path.dirname(__file__)
     img_dir = os.path.join(main_dir, 'static/img')
@@ -257,16 +284,16 @@ def get_map(data):
         with tempfile.NamedTemporaryFile('w+') as file:
             for idx, (name, symbol) in enumerate(used_symbols.items()):
                 sym_label = name[:-4]
-                if isinstance(symbol, str):
-                    file.write('G 8p\n')
-                    file.write(f'I {symbol} 16p LM\n')
-                    file.write('G -1l\n')
-                    # file.write('G -4p\n')
-                    file.write('P .38 - - - - - - -\n')
-                    file.write(f'T {sym_label}\n')
-                    file.write('G 1l\n')
-                    file.write('G -5p\n')
-                    continue
+#                 if isinstance(symbol, str):
+#                     file.write('G 8p\n')
+#                     file.write(f'I {symbol} 16p LM\n')
+#                     file.write('G -1l\n')
+#                     # file.write('G -4p\n')
+#                     file.write('P .38 - - - - - - -\n')
+#                     file.write(f'T {sym_label}\n')
+#                     file.write('G 1l\n')
+#                     file.write('G -5p\n')
+#                     continue
 
                 sym_char = symbol['symbol'][0]  # First character
                 if sym_char == 'k':
@@ -281,11 +308,10 @@ def get_map(data):
                 file.write('\n')
 
             file.seek(0)
-            print(file.read())
             file_name = file.name
             fig.legend(
                 file_name,
-                position = f"J{legend}+j{legend}+o0.2c+w1.6i+l1.5",
+                position = f"J{legend}+j{legend}+o0.2c+l1.5",
                 box="+gwhite+p1p"
             )
 

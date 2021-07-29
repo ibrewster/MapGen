@@ -4,3 +4,4 @@ apiflask
 requests
 shapely
 shapely_geojson
+vincenty
