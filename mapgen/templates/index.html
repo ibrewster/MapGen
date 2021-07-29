@@ -103,9 +103,16 @@
                         </div>
                     </div>
 
-                    <div class="setupHeader">Overview</div>
+                    <div class="setupHeader">Overview Map</div>
                     <div class="setupContent">
-                        <input type="checkbox" name="overview" id="overview" checked><label for="overview">Show Overview Map</label>
+                        Show Map:
+                        <select id=overview name="overview">
+                            <option value="False">None</option>
+                            <option value="BR" selected>Bottom Right</option>
+                            <option value="BL">Bottom Left</option>
+                            <option value="TR">Top Right</option>
+                            <option value="TL">Top Left</option>
+                        </select>
                         <br>Width:
                         <input type="number" min=0 max=9999 name="overviewWidth" id="overviewWidth" value="256">
                         <span id="overviewUnits"></span>
@@ -128,6 +135,16 @@
                         <span class="leftEdge"><input type="checkbox" id="stationSelAll">All</span> Stations
                     </div>
                     <div class="setupContent blockDisplay">
+                        <div id="Legend Setup">
+                            Show Legend:
+                            <select id=legendShow name="legend">
+                                <option value="False">None</option>
+                                <option value="BR">Bottom Right</option>
+                                <option value="BL">Bottom Left</option>
+                                <option value="TR" selected>Top Right</option>
+                                <option value="TL">Top Left</option>
+                            </select>
+                        </div>
                         <div id="stationListTop">
 
                         </div>

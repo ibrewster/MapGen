@@ -49,12 +49,13 @@ class MapRequestSchema(Schema):
     height = Float(required = False)
     bounds = String(required = True)
     unit = String(required = True, validate = OneOf(['p', 'i', 'c']))
-    overview = Boolean(required = False, missing = False)
+    overview = String()
     overviewWidth = Float()
     imgType = String()
     imgProj = String(required = False, missing = None)
     imgFile = Raw(type = "file", required = False, missing = None)
     station = List(JSON)
+    legend = String()
 
 
 def allowed_file(filename):
@@ -122,6 +123,17 @@ def get_map(data):
     bounds = data['bounds']
     unit = data['unit']
     overview = data['overview']
+    if overview == "False":
+        overview = False
+
+    station_symbols = {
+        'gps.png': {'symbol': 'a16p',
+                    'color': 'red', },
+        'seismometer.png': {'symbol': 't16p',
+                            'color': 'green', },
+        'tiltmeter.png': {'symbol': 'i16p',
+                          'color': 'blue', },
+    }
 
     try:
         import pygmt
@@ -160,6 +172,7 @@ def get_map(data):
     proj = f"M{width}{unit}"
     # proj = f"U{utm_zone}{utm_char}/{width}{unit}"
     fig = pygmt.Figure()
+
     fig.basemap(projection=proj, region=gmt_bounds, frame=('WeSn', 'afg'))
 
     # See if we have a file to deal with for this
@@ -188,45 +201,88 @@ def get_map(data):
         osgeo.gdal.AllRegister()  # Why? WHY!?!? But needed...
         tmp_dir = tempfile.TemporaryDirectory()
         tiff_dir = _download_elevation(warp_bounds, tmp_dir)
-
+#
         proj = 'EPSG:3338'  # Alaska Albers
         out_file = os.path.join(tiff_dir, 'hillshade.tiff')
         in_files = [os.path.join(tiff_dir, f) for f in os.listdir(tiff_dir)]
         print("Generating composite hillshade file")
-
+#
         osgeo.gdal.Warp(out_file, in_files, dstSRS='EPSG:4326',
                         outputBounds=warp_bounds, multithread=True)
         hillshade_file = out_file
-
+#
     fig.grdimage(hillshade_file, cmap='geo',
                  dpi=300, shading=True, monochrome=True)
     fig.coast(rivers='r/2p,#CBE7FF', water="#CBE7FF", resolution="f")
 
+    print("Plotting stations")
     main_dir = os.path.dirname(__file__)
+    used_symbols = {}
     for station in data['station']:
         icon_url = station['icon']
         icon_name = os.path.basename(icon_url)
-        icon_path = os.path.join(main_dir, 'static/img', icon_name)
-        if not os.path.isfile(icon_path):
-            req = requests.get(icon_url)
-            if req.status_code != 200:
-                continue  # Can't get an icon for this station, move on.
-            with open(icon_path, 'wb') as icon_file:
-                icon_file.write(req.content)
+        sta_x = station['lon']
+        sta_y = station['lat']
 
-        position = f"g{station['lon']}/{station['lat']}+w16p"
-        fig.image(icon_path, position = position)
+        symbol = station_symbols.get(icon_name, {}).get('symbol')
+        color = station_symbols.get(icon_name, {}).get('color')
 
+        if symbol is not None:
+            used_symbols[icon_name] = station_symbols.get(icon_name)
+            fig.plot(x=[sta_x, ], y=[sta_y, ],
+                     style=symbol, color=color)
+        else:
+            icon_path = os.path.join(main_dir, 'static/img', icon_name)
+            used_symbols[icon_name] = icon_path
+
+            if not os.path.isfile(icon_path):
+                req = requests.get(icon_url)
+                if req.status_code != 200:
+                    continue  # Can't get an icon for this station, move on.
+                with open(icon_path, 'wb') as icon_file:
+                    icon_file.write(req.content)
+
+            position = f"g{sta_x}/{sta_y}+w16p"
+            fig.image(icon_path, position = position)
+
+    legend = data['legend']
+    if legend != "False":
+        print("Adding legend")
+        with tempfile.NamedTemporaryFile('w+') as file:
+            for idx, (name, symbol) in enumerate(used_symbols.items()):
+                sym_label = name[:-4]
+                if isinstance(symbol, str):
+                    file.write('G 8p\n')
+                    file.write(f'I {symbol} 16p LM\n')
+                    file.write('G -1l\n')
+                    # file.write('G -4p\n')
+                    file.write('P .38 - - - - - - -\n')
+                    file.write(f'T {sym_label}\n')
+                    file.write('G 1l\n')
+                    file.write('G -5p\n')
+                    continue
+                sym_char = symbol['symbol'][0]  # First character
+                sym_color = symbol['color']
+                file.write(f'S 11p {sym_char} 16p {sym_color} - 23p {sym_label}')
+                file.write('\n')
+
+            file.seek(0)
+            print(file.read())
+            file_name = file.name
+            fig.legend(
+                file_name,
+                position = f"J{legend}+j{legend}+o0.2c+w1.6i+l1.5",
+                box="+gwhite+p1p"
+            )
+
+    print("Adding Overview")
     if overview:
         ak_bounds = [
-            -190.0,
-            -147.68,
-            48.5,
-            69.5
+            -190.0, -147.68, 48.5, 69.5
         ]
 
         inset_width = data['overviewWidth']
-        pos = f"jBR+w{inset_width}{unit}+o0.1c"
+        pos = f"j{overview}+w{inset_width}{unit}+o0.1c"
         star_size = "16p"
         with fig.inset(position=pos, box="+gwhite+p1p"):
             fig.coast(
