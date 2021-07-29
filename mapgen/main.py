@@ -131,8 +131,11 @@ def get_map(data):
                     'color': 'red', },
         'seismometer.png': {'symbol': 't16p',
                             'color': 'green', },
-        'tiltmeter.png': {'symbol': 'i16p',
+        'tiltmeter.png': {'symbol': 'ktiltmeter.eps/16p',
                           'color': 'blue', },
+        'webcam.png': {'symbol': 'kwebcam.eps/16p',
+                       'color': 'blue',  # Really, could be anything...
+                       },
     }
 
     try:
@@ -201,22 +204,25 @@ def get_map(data):
         osgeo.gdal.AllRegister()  # Why? WHY!?!? But needed...
         tmp_dir = tempfile.TemporaryDirectory()
         tiff_dir = _download_elevation(warp_bounds, tmp_dir)
-#
+
         proj = 'EPSG:3338'  # Alaska Albers
         out_file = os.path.join(tiff_dir, 'hillshade.tiff')
         in_files = [os.path.join(tiff_dir, f) for f in os.listdir(tiff_dir)]
         print("Generating composite hillshade file")
-#
+
         osgeo.gdal.Warp(out_file, in_files, dstSRS='EPSG:4326',
                         outputBounds=warp_bounds, multithread=True)
         hillshade_file = out_file
-#
+
     fig.grdimage(hillshade_file, cmap='geo',
                  dpi=300, shading=True, monochrome=True)
     fig.coast(rivers='r/2p,#CBE7FF', water="#CBE7FF", resolution="f")
 
     print("Plotting stations")
     main_dir = os.path.dirname(__file__)
+    img_dir = os.path.join(main_dir, 'static/img')
+    cur_dir = os.getcwd()
+    os.chdir(img_dir)
     used_symbols = {}
     for station in data['station']:
         icon_url = station['icon']
@@ -261,7 +267,15 @@ def get_map(data):
                     file.write('G 1l\n')
                     file.write('G -5p\n')
                     continue
+
                 sym_char = symbol['symbol'][0]  # First character
+                if sym_char == 'k':
+                    try:
+                        end_idx = symbol['symbol'].index('/')
+                        sym_char = symbol['symbol'][:end_idx]
+                    except ValueError:
+                        pass
+
                 sym_color = symbol['color']
                 file.write(f'S 11p {sym_char} 16p {sym_color} - 23p {sym_label}')
                 file.write('\n')
@@ -275,6 +289,7 @@ def get_map(data):
                 box="+gwhite+p1p"
             )
 
+    os.chdir(cur_dir)
     print("Adding Overview")
     if overview:
         ak_bounds = [
