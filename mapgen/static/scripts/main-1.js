@@ -146,10 +146,10 @@ function changeFileType() {
     var fileDiv = $('#overlayFiles').empty();
     if (type == 't') {
         fileDiv.append("Image (.tiff):<br>");
-        fileDiv.append("<input type='file' name='imgFile'>")
+        fileDiv.append("<input type='file' id='imgFile'  name='imgFile'>")
     } else if (type == 'j') {
         fileDiv.append('Image (.jpg/.tif):<br>')
-        fileDiv.append("<input type='file' name='imgFile'>");
+        fileDiv.append("<input type='file' id='imgFile' name='imgFile'>");
         fileDiv.append("<br>World (.jgw/.tfw):<br>")
         fileDiv.append("<input type='file' name='worldFile'><br>");
         fileDiv.append("Projection: ");
@@ -239,15 +239,6 @@ function serialize(obj) {
     return str.join("&");
 }
 
-var checkDownloadCookie = function() {
-    if (getCookie("DownloadComplete") == "1") {
-        setCookie("DownloadComplete", "0", 100); //Expiration could be anything... As long as we reset the value
-        $('#downloading').hide();
-    } else {
-        downloadTimeout = setTimeout(checkDownloadCookie, 1000); //Re-run this function in 1 second.
-    }
-};
-
 function updateBounds() {
     var bounds = map.getBounds();
     $('#mapBounds').val(bounds.toBBoxString());
@@ -268,18 +259,61 @@ function updateBounds() {
     $('#maxLon').val(W);
 }
 
+var req_id = null;
+
+function checkDownloadStatus() {
+    if (req_id === null) {
+        $('#downloading').hide();
+        return; //no request
+    }
+
+    $.getJSON('checkstatus/' + req_id)
+        .done(function(resp) {
+            if (resp['done']) {
+                url = 'getMap/' + req_id;
+                window.location.href = url;
+                $('#downloading').hide();
+                req_id = null;
+                return
+            }
+            $('#downloadStatus').text(resp['status']);
+            setTimeout(checkDownloadStatus, 2000); //Check again in 2 seconds.
+        });
+};
+
 function getMap() {
     //make sure our bounds are up-to-date
     updateBounds();
 
-    setCookie("DownloadComplete", "0", 240);
+    //setCookie("DownloadComplete", "0", 240);
+    if ($('#imgFile').val() !== '')
+        $('#downloadStatus').text("Uploading images...");
+    else
+        $('#downloadStatus').text("Requesting...");
     $('#downloading').css('display', 'grid');
-    setTimeout(checkDownloadCookie, 1000);
+    //setTimeout(checkDownloadCookie, 1000);
     setTimeout(runGetMap, 50);
 }
 
+
+
 function runGetMap() {
-    $('#setupForm')[0].submit();
+    var formData = new FormData($('#setupForm')[0]);
+    $.ajax({
+            url: 'getMap',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            cache: false,
+        })
+        .done(function(resp) {
+            req_id = resp
+            console.log(resp);
+            checkDownloadStatus();
+        });
+
+    //$('#setupForm')[0].submit();
 }
 
 var stationCategories = {};

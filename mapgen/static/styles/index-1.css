@@ -174,3 +174,34 @@ body {
 .sta {
     margin-left: 20px;
 }
+
+#genInfo {
+    position: relative;
+    display: inline-block;
+    margin-top: 10px;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.loader {
+    border: .3em solid #f3f3f3;
+    /* Light grey */
+    border-top: .3em solid #3498db;
+    /* Blue */
+    border-radius: 50%;
+    width: 1em;
+    height: 1em;
+    animation: spin 2s linear infinite;
+    position: absolute;
+    left: 100%;
+    top: 0px;
+    margin-left: 10px;
+    box-sizing: border-box;
+}
