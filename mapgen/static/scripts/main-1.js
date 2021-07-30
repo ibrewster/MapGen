@@ -70,6 +70,10 @@ $(document).ready(function() {
 
 var overviewMap = null;
 
+function overviewWidthChanged() {
+    overviewRatio = $('#mapWidth').val() / $(this).val()
+}
+
 function resetOverview() {
     if (overviewMap === null) {
         setOverviewDiv();
@@ -124,6 +128,11 @@ function setOverviewDiv() {
             zoomSnap: 0,
             layers: [tiles]
         });
+
+        overviewMap.on('moveend zoomend', function() {
+            var bounds = overviewMap.getBounds().toBBoxString();
+            $('#overviewBounds').val(bounds);
+        })
 
         setTimeout(resetOverview, 100);
     }
@@ -186,10 +195,6 @@ function setBounds() {
         map.on("moveend", updateBounds);
         map.on("zoomend", updateBounds);
     });
-}
-
-function overviewWidthChanged() {
-    overviewRatio = $('#mapWidth').val() / $(this).val()
 }
 
 function sizeMap() {

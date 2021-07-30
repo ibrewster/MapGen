@@ -59,6 +59,7 @@ class MapRequestSchema(Schema):
     station = List(JSON)
     legend = String()
     scale = String()
+    overviewBounds = String(required = False, missing = None)
 
 
 def allowed_file(filename):
@@ -321,6 +322,21 @@ def get_map(data):
         ak_bounds = [
             -190.0, -147.68, 48.5, 69.5
         ]
+
+        if data['overviewBounds']:
+            (
+                sw_lng,
+                sw_lat,
+                ne_lng,
+                ne_lat
+            ) = unquote(data['overviewBounds']).split(',')
+
+            ak_bounds = [
+                float(sw_lng),
+                float(ne_lng),
+                float(sw_lat),
+                float(ne_lat)
+            ]
 
         inset_width = data['overviewWidth']
         pos = f"j{overview}+w{inset_width}{unit}+o0.1c"

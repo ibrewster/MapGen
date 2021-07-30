@@ -96,10 +96,10 @@
                             <span><input class="mapSize" id="mapHeight" name="height" type="number" min=32 max="9999" value="768"></span>
                             <span class="rightJustify">Units:</span>
                             <select class="cols2" id="sizeUnits" name="unit">
-                            <option value="p">Pixels</option>
-                            <option value="i">Inches</option>
-                            <option value="c">cm</option>
-                        </select>
+                                <option value="p">Pixels</option>
+                                <option value="i">Inches</option>
+                                <option value="c">cm</option>
+                            </select>
                         </div>
                     </div>
 
@@ -118,6 +118,7 @@
                         <span id="overviewUnits"></span>
                         <div><input type="checkbox" id="lockWidth" checked>Lock to map width</div>
                         <button type="button" id="resetOverview">Reset View</button>
+                        <input type="hidden" id="overviewBounds" name="overviewBounds">
                     </div>
 
                     <div class="setupHeader">Overlay Image</div>
