@@ -295,26 +295,31 @@ function getMap() {
     setTimeout(runGetMap, 50);
 }
 
-
+function xhrFunc() {
+    var xhr = new window.XMLHttpRequest();
+    xhr.upload.addEventListener("progress",
+        updateUploadPercent,
+        false
+    );
+    return xhr;
+}
 
 function runGetMap() {
     var formData = new FormData($('#setupForm')[0]);
-    $.ajax({
-            xhr: function() {
-                var xhr = new window.XMLHttpRequest();
-                xhr.upload.addEventListener("progress",
-                    updateUploadPercent,
-                    false
-                );
-                return xhr;
-            },
-            url: 'getMap',
-            method: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            cache: false,
-        })
+    ajax_opts = {
+        url: 'getMap',
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        cache: false,
+    }
+
+    if ($('#imgFile').val() !== '') {
+        ajax_opts['xhr'] = xhrFunc;
+    }
+
+    $.ajax(ajax_opts)
         .done(function(resp) {
             req_id = resp
             console.log(resp);

@@ -254,8 +254,8 @@ def generate(req_id):
     legend = data['legend']
     if legend != "False":
         print("Adding legend")
-        data['gen_status'] = "Adding Legend..."
-        _global_session[req_id] = data
+        # data['gen_status'] = "Adding Legend..."
+        # _global_session[req_id] = data
         with tempfile.NamedTemporaryFile('w+') as file:
             for idx, (name, symbol) in enumerate(used_symbols.items()):
                 sym_label = name[:-4]
