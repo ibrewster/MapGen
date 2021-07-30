@@ -300,6 +300,14 @@ function getMap() {
 function runGetMap() {
     var formData = new FormData($('#setupForm')[0]);
     $.ajax({
+            xhr: function() {
+                var xhr = new window.XMLHttpRequest();
+                xhr.upload.addEventListener("progress",
+                    updateUploadPercent,
+                    false
+                );
+                return xhr;
+            },
             url: 'getMap',
             method: 'POST',
             data: formData,
@@ -314,6 +322,15 @@ function runGetMap() {
         });
 
     //$('#setupForm')[0].submit();
+}
+
+function updateUploadPercent(evt) {
+    if (evt.lengthComputable) {
+        var pc = (evt.loaded / evt.total) * 100
+        pc = Math.round(pc * 10) / 10;
+        pc = pc.toFixed(1);
+        $('#downloadStatus').text(`Uploading images (${pc}%)...`);
+    }
 }
 
 var stationCategories = {};
