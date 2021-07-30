@@ -117,6 +117,7 @@
                         <input type="number" min=0 max=9999 name="overviewWidth" id="overviewWidth" value="256">
                         <span id="overviewUnits"></span>
                         <div><input type="checkbox" id="lockWidth" checked>Lock to map width</div>
+                        <button type="button" id="resetOverview">Reset View</button>
                     </div>
 
                     <div class="setupHeader">Overlay Image</div>
@@ -172,9 +173,16 @@
             </div>
         </div>
 
+
+
         <div id="mapContainer">
-            <div id="topMap">
+            <div id="maps">
+                <div id="overviewMap" class="insetMap" style="display:none">
+                </div>
+                <div id="topMap">
+                </div>
             </div>
+
         </div>
     </div>
 

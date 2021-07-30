@@ -35,14 +35,19 @@ $(document).ready(function() {
     sizeMap();
 
     var tiles = L.tileLayer('https://basemap.nationalmap.gov/ArcGIS/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}')
-    tiles.once('load', updateBounds);
+
 
     map = L.map('topMap', {
-        "center": [58, -164],
-        "zoom": 5,
         zoomSnap: 0,
         layers: [tiles]
-    })
+    });
+
+    map.on('load', function() {
+        updateBounds();
+        setTimeout(sizeMap, 10);
+    });
+
+    map.setView([58, -164], 5);
 
     map.on("moveend", updateBounds);
     map.on("zoomend", updateBounds);
@@ -50,6 +55,7 @@ $(document).ready(function() {
 
     $('.latLon').change(setBounds);
     $('.reload').click(updateBounds);
+    $('#resetOverview').click(resetOverview);
     $('#mapLocation').change(locSelectChanged);
     $('#overviewWidth').change(overviewWidthChanged);
     $('#overviewUnits').text($('#sizeUnits option:selected').text());
@@ -57,8 +63,73 @@ $(document).ready(function() {
         $('#overviewUnits').text($('#sizeUnits option:selected').text());
     });
     $('#overlayFormat').change(changeFileType);
+    $(document).on('change', '#overview, #overviewWidth', setOverviewDiv);
     changeFileType();
+    setOverviewDiv();
 });
+
+var overviewMap = null;
+
+function resetOverview() {
+    if (overviewMap === null) {
+        setOverviewDiv();
+    }
+
+    ak_bounds = [
+        [48.5, -190.0],
+        [69.5, -147.68]
+    ]
+
+    overviewMap.fitBounds(ak_bounds);
+}
+
+function setOverviewDiv() {
+    var pos = $('#overview').val();
+
+    if (pos === 'False') {
+        $('#overviewMap').hide();
+    } else {
+        $('#overviewMap').show();
+    }
+
+    $('#overviewMap').css('inset', '');
+    var offset = "10px";
+
+    switch (pos) {
+        case "BR":
+            $('#overviewMap').css('bottom', offset).css('right', offset);
+            break;
+        case "BL":
+            $('#overviewMap').css('bottom', offset).css('left', offset);
+            break;
+        case "TR":
+            $('#overviewMap').css('top', offset).css('right', offset);
+            break;
+        case "TL":
+            $('#overviewMap').css('top', offset).css('left', offset);
+            break;
+    }
+
+    var mapWidth = $('#topMap').width();
+    var desiredWidth = Number($('#mapWidth').val());
+    var ratio = mapWidth / desiredWidth;
+    var disp_size = ratio * Number($('#overviewWidth').val());
+    $('#overviewMap')
+        .css('width', disp_size + "px")
+        .css('height', disp_size + "px");
+
+    if (overviewMap === null) {
+        var tiles = L.tileLayer('https://basemap.nationalmap.gov/ArcGIS/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}')
+        overviewMap = L.map('overviewMap', {
+            zoomSnap: 0,
+            layers: [tiles]
+        });
+
+        setTimeout(resetOverview, 100);
+    }
+
+    overviewMap.invalidateSize(true);
+}
 
 
 function changeFileType() {
@@ -124,10 +195,6 @@ function overviewWidthChanged() {
 function sizeMap() {
     var width = $('#mapWidth').val();
 
-    if ($('#lockWidth').is(':checked')) {
-        $('#overviewWidth').val(Math.round(width / overviewRatio));
-    }
-
     var height = $('#mapHeight').val();
 
     var ratio = width / height;
@@ -150,6 +217,11 @@ function sizeMap() {
 
     if (map !== null) {
         map.invalidateSize(true);
+    }
+
+    if ($('#lockWidth').is(':checked')) {
+        $('#overviewWidth').val(Math.round(width / overviewRatio));
+        setTimeout(setOverviewDiv, 250);
     }
 }
 
@@ -251,6 +323,9 @@ function getStations() {
             //check all by default
             $('#stationSelAll')[0].checked = true;
             toggleStations.call($('#stationSelAll')[0]);
+
+            //make sure the map size is correct
+            sizeMap();
         });
 }
 

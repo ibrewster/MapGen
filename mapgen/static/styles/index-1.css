@@ -26,6 +26,17 @@ body {
     align-items: center;
 }
 
+#maps {
+    position: relative;
+    display: inline-block;
+}
+
+.insetMap {
+    position: absolute;
+    z-index: 1000;
+    border: 1px solid black;
+}
+
 #topMap {
     height: 100%;
     border: 3px inset;
