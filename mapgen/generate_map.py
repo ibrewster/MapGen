@@ -25,33 +25,36 @@ _global_session = FileCache()
 def run_process(queue):
     logging.info("Starting map generator process")
     print("Starting map generator process")
-    with multiprocessing.Pool() as pool:
-        while True:
-            try:
-                (client, addr) = queue.accept()
-            except KeyboardInterrupt:
-                pool.close()
-                return
+    try:
+        with multiprocessing.Pool() as pool:
+            while True:
+                try:
+                    (client, addr) = queue.accept()
+                except KeyboardInterrupt:
+                    pool.close()
+                    return
 
-            msg_len = b""
-            while len(msg_len) < 4:
-                msg_len += client.recv(4 - len(msg_len))
+                msg_len = b""
+                while len(msg_len) < 4:
+                    msg_len += client.recv(4 - len(msg_len))
 
-            msg_len = int(msg_len)
-            msg = b''
-            while len(msg) < msg_len:
-                msg += client.recv(msg_len - len(msg))
+                msg_len = int(msg_len)
+                msg = b''
+                while len(msg) < msg_len:
+                    msg += client.recv(msg_len - len(msg))
 
-            if msg == b'':
-                continue  # No data
+                if msg == b'':
+                    continue  # No data
 
-            print("Message received:", msg)
-            msg = pickle.loads(msg)
-            if not isinstance(msg, dict):
-                logging.warning(f"Unknown message received: {msg}")
-                continue
-            if msg.get('cmd') == "generate":
-                pool.apply_async(generate, (msg.get('data'), ))
+                print("Message received:", msg)
+                msg = pickle.loads(msg)
+                if not isinstance(msg, dict):
+                    logging.warning(f"Unknown message received: {msg}")
+                    continue
+                if msg.get('cmd') == "generate":
+                    pool.apply_async(generate, (msg.get('data'), ))
+    except KeyboardInterrupt:
+        pass
 
 def _download_elevation(bounds, temp_dir, req_id):
     poly = Polygon.from_bounds(*bounds)
