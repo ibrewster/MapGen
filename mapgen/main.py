@@ -1,8 +1,7 @@
-from .generate_map import run_process
-
 import json
-import multiprocessing
 import os
+import pickle
+import socket
 import uuid
 
 import flask
@@ -20,16 +19,6 @@ from werkzeug.utils import secure_filename
 
 from . import app, _global_session
 
-
-gen_queue = None
-
-@app.before_first_request
-def initalize_generator():
-    global gen_queue
-    if gen_queue is None:
-        gen_queue = multiprocessing.Queue()
-    multiprocessing.Process(target=run_process, args=(gen_queue, ),
-                                                 daemon=True).start()
 
 @app.get('/')
 def index():
@@ -88,8 +77,10 @@ def _process_file(request, name, save_dir):
 @api_input(MapRequestSchema, location = 'form')
 def get_map(data):
     # Generate a unique id for this request
-    if gen_queue is None:
-        abort(500, "Generator not initialized")
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock_dir = os.path.join(os.path.dirname(__file__), 'cache')
+    sock_file = os.path.join(sock_dir, 'gen_sock.socket')
+    sock.connect(sock_file)
 
     req_id = uuid.uuid4().hex
     _global_session[req_id] = data
@@ -111,7 +102,12 @@ def get_map(data):
         'cmd': 'generate',
         'data': req_id
     }
-    gen_queue.put(req)
+
+    msg_pickle = pickle.dumps(req)
+    msg_size = format(len(msg_pickle), '04d').encode('utf-8')
+    sock.send(msg_size)
+    sock.send(msg_pickle)
+    sock.close()
 
     return req_id
 

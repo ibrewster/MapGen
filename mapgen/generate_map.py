@@ -3,34 +3,55 @@ import shapely_geojson
 
 import logging
 import math
+import multiprocessing
 import os
+import pickle
+import socket
 import tempfile
 import uuid
 import zipfile
 
 from io import BytesIO
-from queue import Empty
 
 import osgeo.gdal
 import requests
 import vincenty
 
 from urllib.parse import unquote, quote
-from . import _global_session
+from file_cache import FileCache
+
+_global_session = FileCache()
 
 def run_process(queue):
     logging.info("Starting map generator process")
-    while True:
-        try:
-            msg = queue.get(timeout=1)
-        except Empty:
-            continue
-        if not isinstance(msg, dict):
-            logging.warning(f"Unknown message received: {msg}")
-            continue
-        if msg.get('cmd') == "generate":
-            generate(msg.get('data'))  # Will block process until done.
+    print("Starting map generator process")
+    with multiprocessing.Pool() as pool:
+        while True:
+            try:
+                (client, addr) = queue.accept()
+            except KeyboardInterrupt:
+                pool.close()
+                return
 
+            msg_len = b""
+            while len(msg_len) < 4:
+                msg_len += client.recv(4 - len(msg_len))
+
+            msg_len = int(msg_len)
+            msg = b''
+            while len(msg) < msg_len:
+                msg += client.recv(msg_len - len(msg))
+
+            if msg == b'':
+                continue  # No data
+
+            print("Message received:", msg)
+            msg = pickle.loads(msg)
+            if not isinstance(msg, dict):
+                logging.warning(f"Unknown message received: {msg}")
+                continue
+            if msg.get('cmd') == "generate":
+                pool.apply_async(generate, (msg.get('data'), ))
 
 def _download_elevation(bounds, temp_dir, req_id):
     poly = Polygon.from_bounds(*bounds)
@@ -359,3 +380,19 @@ def generate(req_id):
     data['gen_status'] = "Complete"
     _global_session[req_id] = data
     print(file_path)
+
+
+if __name__ == "__main__":
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    cache_dir = os.path.join(os.path.dirname(__file__), 'cache')
+    os.makedirs(cache_dir, exist_ok=True)
+    sock_file = os.path.join(cache_dir, "gen_sock.socket")
+    try:
+        sock.bind(sock_file)
+    except OSError:
+        os.remove(sock_file)
+        sock.bind(sock_file)
+
+    sock.listen(5)
+    run_process(sock)
+    os.unlink(sock_file)
