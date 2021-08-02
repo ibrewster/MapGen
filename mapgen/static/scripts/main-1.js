@@ -278,6 +278,9 @@ function checkDownloadStatus() {
             }
             $('#downloadStatus').text(resp['status']);
             setTimeout(checkDownloadStatus, 2000); //Check again in 2 seconds.
+        })
+        .fail(function(jqXHR,textStatus,errorThrown){
+            alert("Unable to check status of download request. Please try again later.");
         });
 };
 
@@ -291,7 +294,8 @@ function getMap() {
     else
         $('#downloadStatus').text("Requesting...");
     $('#downloading').css('display', 'grid');
-    //setTimeout(checkDownloadCookie, 1000);
+
+    //use a small timeout so the waiting dialog can be displayed immediately
     setTimeout(runGetMap, 50);
 }
 
@@ -324,6 +328,9 @@ function runGetMap() {
             req_id = resp
             console.log(resp);
             checkDownloadStatus();
+        })
+        .fail(function(jqXHR,textStatus,errorThrown){
+            alert(`Unable to request map. Server returned code ${textStatus}, error ${errorThrown}`);
         });
 
     //$('#setupForm')[0].submit();
@@ -333,6 +340,10 @@ function updateUploadPercent(evt) {
     if (evt.lengthComputable) {
         var pc = (evt.loaded / evt.total) * 100
         pc = Math.round(pc * 10) / 10;
+        if(pc>=100){
+            $('#downloadStatus').text("Waiting for server...");
+            return;
+        }
         pc = pc.toFixed(1);
         $('#downloadStatus').text(`Uploading images (${pc}%)...`);
     }
