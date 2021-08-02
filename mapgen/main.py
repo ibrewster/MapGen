@@ -1,4 +1,4 @@
-from .generate_map import generate
+from .generate_map import run_process
 
 import json
 import multiprocessing
@@ -20,6 +20,15 @@ from werkzeug.utils import secure_filename
 
 from . import app, _global_session
 
+
+gen_queue = None
+
+@app.before_first_request
+def initalize_generator():
+    global gen_queue
+    if gen_queue is None:
+        gen_queue = multiprocessing.Queue()
+    multiprocessing.Process(target=run_process, args=(gen_queue, ), daemon=True).start()
 
 @app.get('/')
 def index():
@@ -78,6 +87,9 @@ def _process_file(request, name, save_dir):
 @api_input(MapRequestSchema, location = 'form')
 def get_map(data):
     # Generate a unique id for this request
+    if gen_queue is None:
+        abort(500, "Generator not initialized")
+
     req_id = uuid.uuid4().hex
     _global_session[req_id] = data
 
@@ -94,9 +106,12 @@ def get_map(data):
         data['hillshade_file'] = os.path.join(upload_dir, filename)
         _global_session[req_id] = data
 
-    process = multiprocessing.Process(target = generate,
-                                      args = (req_id, ))
-    process.start()
+    req = {
+        'cmd': 'generate',
+        'data': req_id
+    }
+    gen_queue.put(req)
+
     return req_id
 
 

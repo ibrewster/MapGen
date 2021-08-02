@@ -1,6 +1,7 @@
 from shapely.geometry import Polygon
 import shapely_geojson
 
+import logging
 import math
 import os
 import tempfile
@@ -8,6 +9,7 @@ import uuid
 import zipfile
 
 from io import BytesIO
+from queue import Empty
 
 import osgeo.gdal
 import requests
@@ -15,6 +17,19 @@ import vincenty
 
 from urllib.parse import unquote, quote
 from . import _global_session
+
+def run_process(queue):
+    logging.info("Starting map generator process")
+    while True:
+        try:
+            msg = queue.get(timeout=1)
+        except Empty:
+            continue
+        if not isinstance(msg, dict):
+            logging.warning(f"Unknown message received: {msg}")
+            continue
+        if msg.get('cmd') == "generate":
+            generate(msg.get('data'))  # Will block process until done.
 
 
 def _download_elevation(bounds, temp_dir, req_id):
