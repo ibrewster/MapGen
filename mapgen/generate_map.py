@@ -398,6 +398,8 @@ if __name__ == "__main__":
         os.remove(sock_file)
         sock.bind(sock_file)
 
+    os.chmod(sock_file, 777)
+
     sock.listen(5)
     run_process(sock)
     os.unlink(sock_file)
