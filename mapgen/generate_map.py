@@ -398,7 +398,7 @@ if __name__ == "__main__":
         os.remove(sock_file)
         sock.bind(sock_file)
 
-    os.chmod(sock_file, 0777)
+    os.chmod(sock_file, 0o777)
 
     sock.listen(5)
     run_process(sock)
