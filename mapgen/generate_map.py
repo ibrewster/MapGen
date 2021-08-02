@@ -7,6 +7,7 @@ import multiprocessing
 import os
 import pickle
 import socket
+import signal
 import tempfile
 import uuid
 import zipfile
@@ -25,13 +26,14 @@ _global_session = FileCache()
 def run_process(queue):
     logging.info("Starting map generator process")
     print("Starting map generator process")
+    original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
     try:
         with multiprocessing.Pool() as pool:
+            signal.signal(signal.SIGINT, original_sigint_handler)
             while True:
                 try:
                     (client, addr) = queue.accept()
                 except KeyboardInterrupt:
-                    pool.close()
                     return
 
                 msg_len = b""
@@ -54,7 +56,7 @@ def run_process(queue):
                 if msg.get('cmd') == "generate":
                     pool.apply_async(generate, (msg.get('data'), ))
     except KeyboardInterrupt:
-        pass
+        return
 
 def _download_elevation(bounds, temp_dir, req_id):
     poly = Polygon.from_bounds(*bounds)
