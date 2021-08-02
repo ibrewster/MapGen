@@ -9,8 +9,11 @@ import io
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('uwsgi')
+    parser.add_argument('inifile')
     args = parser.parse_args()
+
     uwsgi = args.uwsgi
+    uwsgi_config = args.inifile
 
     comm_pipe = io.BytesIO()
 
@@ -21,8 +24,7 @@ if __name__ == "__main__":
 
     comm_pipe = gen_proc.stdout
 
-    uwsgi_ini_file = os.path.join(top_dir, 'mapgen-dev.ini')
-    uwsgi_proc = subprocess.Popen([uwsgi, '-i', uwsgi_ini_file], stdout=comm_pipe)
+    uwsgi_proc = subprocess.Popen([uwsgi, '-i', uwsgi_config], stdout=comm_pipe)
 
     while True:
         try:
