@@ -28,7 +28,7 @@ def initalize_generator():
     global gen_queue
     if gen_queue is None:
         gen_queue = multiprocessing.Queue()
-    multiprocessing.get_context('spawn').Process(target=run_process, args=(gen_queue, ),
+    multiprocessing.Process(target=run_process, args=(gen_queue, ),
                                                  daemon=True).start()
 
 @app.get('/')
