@@ -34,7 +34,7 @@ class ReverseProxied(object):
         return self.app(environ, start_response)
 
 app = APIFlask(__name__)
-app.wsgi_app = ReverseProxied(app.wsgi_app)
+# app.wsgi_app = ReverseProxied(app.wsgi_app)
 
 from .file_cache import FileCache
 _global_session = FileCache()
