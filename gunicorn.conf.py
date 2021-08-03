@@ -6,5 +6,5 @@ wsgi_app = "mapgen:app"
 chdir = script_dir
 user = "mapgen"
 group = "nginx"
-bind = ['unix:/var/run/mapgen/gunicorn.sock', '0.0.0.0:8000']
+bind = ['unix:/var/run/mapgen/gunicorn.sock']
 workers = 2
