@@ -31,6 +31,13 @@ except ImportError:
     _global_session = FileCache()
 
 def run_process(queue):
+    """
+    If running as a standalone script, this function will launch
+    the process and create a listening socket for communication.
+
+    You can also simply call the generate function directly, either
+    in a process/thread or synchronously if desired.
+    """
     logging.info("Starting map generator process")
     print("Starting map generator process")
     original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -307,6 +314,9 @@ def generate(req_id):
         with tempfile.NamedTemporaryFile('w+') as file:
             for idx, (name, symbol) in enumerate(used_symbols.items()):
                 sym_label = name[:-4]
+
+                # This section handles images rather than symbols. Hacky, and *hopefully*
+                # not needed, but left in for now just in case.
 #                 if isinstance(symbol, str):
 #                     file.write('G 8p\n')
 #                     file.write(f'I {symbol} 16p LM\n')
