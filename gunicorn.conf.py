@@ -9,4 +9,5 @@ group = "nginx"
 bind = ['unix:/var/run/mapgen/gunicorn.sock']
 workers = 2
 raw_env = ["SCRIPT_NAME=/mapgen"]
-worker_class="gevent"
+worker_class = "gevent"
+worker_connections = 50
