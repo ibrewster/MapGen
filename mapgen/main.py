@@ -1,7 +1,6 @@
 import json
+import multiprocessing
 import os
-import pickle
-import socket
 import uuid
 
 import flask
@@ -18,6 +17,7 @@ from apiflask.validators import OneOf
 from werkzeug.utils import secure_filename
 
 from . import app, _global_session
+from .generate_map import generate
 
 
 @app.get('/')
@@ -76,12 +76,6 @@ def _process_file(request, name, save_dir):
 @app.post('/getMap')
 @api_input(MapRequestSchema, location = 'form')
 def get_map(data):
-    # Generate a unique id for this request
-    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    sock_dir = os.path.join(os.path.dirname(__file__), 'cache')
-    sock_file = os.path.join(sock_dir, 'gen_sock.socket')
-    sock.connect(sock_file)
-
     req_id = uuid.uuid4().hex
     _global_session[req_id] = data
 
@@ -103,11 +97,8 @@ def get_map(data):
         'data': req_id
     }
 
-    msg_pickle = pickle.dumps(req)
-    msg_size = format(len(msg_pickle), '04d').encode('utf-8')
-    sock.send(msg_size)
-    sock.send(msg_pickle)
-    sock.close()
+    mp = multiprocessing.get_context('spawn')
+    mp.Process(target=generate, args=(req_id, )).start()
 
     return req_id
 

@@ -19,9 +19,16 @@ import requests
 import vincenty
 
 from urllib.parse import unquote, quote
-from file_cache import FileCache
 
-_global_session = FileCache()
+try:
+    from . import _global_session
+except ImportError:
+    try:
+        from file_cache import FileCache
+    except ImportError:
+        from .file_cache import FileCache
+
+    _global_session = FileCache()
 
 def run_process(queue):
     logging.info("Starting map generator process")
