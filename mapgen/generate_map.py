@@ -136,74 +136,98 @@ def _get_extents(src):
 
 
 def _download_elevation(bounds, temp_dir, req_id):
-    poly = Polygon.from_bounds(*bounds)
-    geojson = shapely_geojson.dumps(poly)
+    if bounds[0] < -180 or bounds[2] > 180 or bounds[0] > bounds[2]:
+        # Crossing dateline. Need to split request.
+        bounds2 = bounds.copy()
+        bounds3 = bounds.copy()
+        # Make bounds be only west of dateline
+        if bounds3[0] < 0:
+            bounds3[0] += 360
+        bounds3[2] = 180
+
+        bounds2[0] = -180
+        if bounds2[2] > 0:
+            bounds2[2] -= 360
+
+        bounds_list = [bounds3, bounds2]
+    else:
+        bounds_list = [bounds, ]
+
     ids = 151  # DSM hillshade
     URL_BASE = 'https://elevation.alaska.gov'
-
-    # get file listings
     list_url = f'{URL_BASE}/query.json'
-    req = requests.post(list_url, data = {'geojson': geojson, })
-    est_size = -1
-    if req.status_code != 200:
-        print("Unable to get file listings")
-    else:
-        files = req.json()
-        print(files)
-        try:
-            file_info = next((x for x in files if x['project_id'] == ids))
-        except StopIteration:
-            pass
-        else:
-            print(file_info)
-            est_size = file_info.get('bytes', -1)
-
     url = f'{URL_BASE}/download'
+    est_size = 0
     print("Downloading hillshade files")
     tempdir = temp_dir.name
-    req = requests.get(url,
-                       params = {'geojson': geojson,
-                                 'ids': ids},
-                       stream=True)
-    if req.status_code != 200:
-        print(req.status_code)
-        print(req.text)
-        return "Error!"
     zf_path = os.path.join(tempdir, 'custom_download.zip')
-    loaded_bytes = 0
-    pc = 0
-    chunk_size = 1024 * 1024 * 10  # 10 MB
-    with open(zf_path, 'wb') as zf:
-        for chunk in req.iter_content(chunk_size=chunk_size):
-            if chunk:
-                loaded_bytes += zf.write(chunk)
-                if est_size > 0:
-                    pc = round((loaded_bytes / est_size) * 100, 1)
-                    data = _global_session[req_id]
-                    data['gen_status'] = {'status': "Downloading hillshade files...",
-                                          'progress': pc}
-                    _global_session[req_id] = data
-    print("Downloaded", loaded_bytes, "bytes")
-
-    # Pull out the various tiff files needed
     tiff_dir = os.path.join(tempdir, 'tiffs')
     os.makedirs(tiff_dir, exist_ok=True)
 
-    print("Extracting tiffs")
-    data = _global_session[req_id]
-    data['gen_status'] = "Decompressing hillshade data..."
-    _global_session[req_id] = data
+    loaded_bytes = 0
+    pc = 0
+    chunk_size = 1024 * 1024 * 10  # 10 MB
 
-    with zipfile.ZipFile(zf_path, 'r') as zf:
-        for file in zf.namelist():
-            if file.endswith('.zip'):
-                print(f"Reading {file}")
-                zf_data = BytesIO(zf.read(file))
-                with zipfile.ZipFile(zf_data, 'r') as zf2:
-                    for tiffile in zf2.namelist():
-                        if tiffile.endswith('.tif'):
-                            print(f"Extracting {tiffile}")
-                            zf2.extract(tiffile, path=tiff_dir)
+    for bound in bounds_list:
+        poly = Polygon.from_bounds(*bound)
+        geojson = shapely_geojson.dumps(poly)
+
+        # get file listings
+        req = requests.post(list_url, data = {'geojson': geojson, })
+
+        if req.status_code != 200:
+            print("Unable to get file listings")
+        else:
+            files = req.json()
+            print(files)
+            try:
+                file_info = next((x for x in files if x['project_id'] == ids))
+            except StopIteration:
+                pass
+            else:
+                print(file_info)
+                est_size += file_info.get('bytes', -1)
+
+        req = requests.get(url,
+                           params = {'geojson': geojson,
+                                     'ids': ids},
+                           stream=True)
+        if req.status_code != 200:
+            print(req.status_code)
+            print(req.text)
+            continue
+
+        with open(zf_path, 'wb') as zf:
+            for chunk in req.iter_content(chunk_size=chunk_size):
+                if chunk:
+                    loaded_bytes += zf.write(chunk)
+                    if est_size > 0:
+                        pc = round((loaded_bytes / est_size) * 100, 1)
+
+                        data = _global_session[req_id]
+                        data['gen_status'] = {'status': "Downloading hillshade files...",
+                                              'progress': pc}
+                        _global_session[req_id] = data
+
+        print("Downloaded", loaded_bytes, "bytes")
+
+        # Pull out the various tiff files needed
+        print("Extracting tiffs")
+
+        data = _global_session[req_id]
+        data['gen_status'] = "Decompressing hillshade data..."
+        _global_session[req_id] = data
+
+        with zipfile.ZipFile(zf_path, 'r') as zf:
+            for file in zf.namelist():
+                if file.endswith('.zip'):
+                    print(f"Reading {file}")
+                    zf_data = BytesIO(zf.read(file))
+                    with zipfile.ZipFile(zf_data, 'r') as zf2:
+                        for tiffile in zf2.namelist():
+                            if tiffile.endswith('.tif'):
+                                print(f"Extracting {tiffile}")
+                                zf2.extract(tiffile, path=tiff_dir)
     return tiff_dir
 
 
@@ -248,8 +272,6 @@ def _process_download(tiff_dir, warp_bounds):
             file_bounds[3] = warp_bounds[3]
             use_bounds = True
 
-        file_bounds[3] = warp_bounds[3]
-
         kwargs = {
             "dstSRS": "EPSG:4326",
             "multithread": True,
@@ -257,9 +279,9 @@ def _process_download(tiff_dir, warp_bounds):
             "creationOptions": ['NUM_THREADS=ALL_CPUS'],
         }
 
-#        if use_bounds:
-        kwargs['outputBounds'] = file_bounds
-        print("Using bounds of", file_bounds)
+        if use_bounds:
+            kwargs['outputBounds'] = file_bounds
+            print("Using bounds of", file_bounds)
 
         osgeo.gdal.Warp(out_file, in_file, **kwargs)
 
