@@ -33,6 +33,14 @@ except ImportError:
     _global_session = FileCache()
 
 
+def _update_status(status, req_id, data = None):
+    if data is None:
+        data = _global_session[req_id]
+
+    data['gen_status'] = status
+    _global_session[req_id] = data
+
+
 def run_process(queue):
     """
     If running as a standalone script, this function will launch
@@ -204,19 +212,18 @@ def _download_elevation(bounds, temp_dir, req_id):
                     if est_size > 0:
                         pc = round((loaded_bytes / est_size) * 100, 1)
 
-                        data = _global_session[req_id]
-                        data['gen_status'] = {'status': "Downloading hillshade files...",
-                                              'progress': pc}
-                        _global_session[req_id] = data
+                        _update_status({
+                            'status': "Downloading hillshade files...",
+                            'progress': pc
+                        }, req_id
+                        )
 
         print("Downloaded", loaded_bytes, "bytes")
 
         # Pull out the various tiff files needed
         print("Extracting tiffs")
 
-        data = _global_session[req_id]
-        data['gen_status'] = "Decompressing hillshade data..."
-        _global_session[req_id] = data
+        _update_status("Decompressing hillshade data...", req_id)
 
         with zipfile.ZipFile(zf_path, 'r') as zf:
             for file in zf.namelist():
@@ -231,9 +238,10 @@ def _download_elevation(bounds, temp_dir, req_id):
     return tiff_dir
 
 
-def _process_download(tiff_dir, warp_bounds):
+def _process_download(tiff_dir, warp_bounds, req_id):
     all_files = os.listdir(tiff_dir)
     files = []
+    num_files = len(all_files)
     for idx, file in enumerate(all_files):
         print("Processing image", idx, "of", len(all_files))
         out_file = os.path.join(tiff_dir, f"{idx}.tiff")
@@ -284,6 +292,11 @@ def _process_download(tiff_dir, warp_bounds):
             print("Using bounds of", file_bounds)
 
         osgeo.gdal.Warp(out_file, in_file, **kwargs)
+        _update_status({
+            'status': "Processing hillshade data...",
+            'progress': (idx / num_files) * 100
+        }, req_id
+        )
 
     return files
 
@@ -367,12 +380,13 @@ def generate(req_id):
             out_dir = os.path.dirname(hillshade_file)
             out_file = os.path.join(out_dir, "hillshade.tiff")
 
-            data['gen_status'] = "Processing uploads..."
-            _global_session[req_id] = data
+            _update_status("Processing uploads...", req_id, data)
 
             osgeo.gdal.Warp(out_file, hillshade_file,
                             srcSRS=proj, dstSRS='EPSG:4326',
                             outputBounds=warp_bounds,
+                            warpOptions = ['NUM_THREADS=ALL_CPUS'],
+                            creationOptions = ['NUM_THREADS=ALL_CPUS'],
                             multithread=True)
 
             world_file = os.path.basename(hillshade_file)
@@ -398,38 +412,38 @@ def generate(req_id):
     else:
         osgeo.gdal.AllRegister()  # Why? WHY!?!? But needed...
         tmp_dir = tempfile.TemporaryDirectory()
-        data['gen_status'] = "Downloading hillshade files..."
-        _global_session[req_id] = data
+        _update_status("Downloading hillshade files...", req_id, data)
+
         tiff_dir = _download_elevation(warp_bounds, tmp_dir, req_id)
         print("Generating composite hillshade file")
 
-        data['gen_status'] = "Processing hillshade data..."
-        _global_session[req_id] = data
+        _update_status("Processing hillshade data...", req_id, data)
 
-        out_files = _process_download(tiff_dir, warp_bounds)
-
-#         out_files = os.path.join(tiff_dir, "hillshade.tiff")
-#         in_files = [os.path.join(tiff_dir, x) for x in os.listdir(tiff_dir)]
-#         kwargs = {
-#             "dstSRS": "EPSG:4326",
-#             "multithread": True,
-#             "warpOptions": ['NUM_THREADS=ALL_CPUS'],
-#             "creationOptions": ['NUM_THREADS=ALL_CPUS'],
-#             "outputBounds": warp_bounds,
-#         }
-#
-#         osgeo.gdal.Warp(out_files, in_files, **kwargs)
+        out_files = _process_download(tiff_dir, warp_bounds, req_id)
 
         hillshade_file = out_files
 
-    data['gen_status'] = "Drawing map image..."
-    _global_session[req_id] = data
     if not isinstance(hillshade_file, (list, tuple)):
         hillshade_file = [hillshade_file, ]
+
+    multi_status = True
+    num_files = len(hillshade_file)
+    if num_files == 1:
+        multi_status = False
+        _update_status("Drawing map image...", req_id, data)
 
     for idx, file in enumerate(hillshade_file):
         if not os.path.isfile(file):
             continue  # Probably paranoid, but...
+
+        if multi_status:
+            _update_status(
+                {
+                    'status': "Drawing map image...",
+                    'progress': (idx / num_files) * 100
+                }, req_id,
+                data
+            )
 
         print("Adding image", idx, "of", len(hillshade_file), ":", file)
         fig.grdimage(file, cmap = "topo", nan_transparent = True,
@@ -441,18 +455,18 @@ def generate(req_id):
         except FileNotFoundError:
             print("Unable to remove upload")
 
-    data['gen_status'] = "Drawing coastlines..."
-    _global_session[req_id] = data
+    _update_status("Drawing coastlines...", req_id, data)
+
     fig.coast(rivers='r/2p,#CBE7FF', water="#CBE7FF", resolution="f")
 
     if data['scale'] != 'False':
-        data['gen_status'] = "Adding Scale Bar..."
-        _global_session[req_id] = data
+        _update_status("Adding Scale Bar...", req_id, data)
+
         # figure out middle latitude for map
         mid_lat = gmt_bounds[2] + ((gmt_bounds[3] - gmt_bounds[2]) / 2)
         map_width = vincenty.vincenty((mid_lat, gmt_bounds[0]),
                                       (mid_lat, gmt_bounds[1]))
-        scale_length = math.ceil(map_width / 8)
+        scale_length = math.ceil((map_width / 8) / 2) * 2  # Make an even number
         offset = .65
         if data['scale'][0] == 'T':
             offset += .3
@@ -466,8 +480,7 @@ def generate(req_id):
         fig.basemap(map_scale = map_scale, F = '+gwhite+p')
 
     print("Plotting stations")
-    data['gen_status'] = "Plotting Stations..."
-    _global_session[req_id] = data
+    _update_status("Plotting Stations...", req_id, data)
 
     main_dir = os.path.dirname(__file__)
     img_dir = os.path.join(main_dir, 'static/img')
@@ -504,8 +517,8 @@ def generate(req_id):
     legend = data['legend']
     if legend != "False":
         print("Adding legend")
-        # data['gen_status'] = "Adding Legend..."
-        # _global_session[req_id] = data
+        _update_status("Adding Legend...", req_id, data)
+
         with tempfile.NamedTemporaryFile('w+') as file:
             for idx, (name, symbol) in enumerate(used_symbols.items()):
                 sym_label = name[:-4]
@@ -545,8 +558,9 @@ def generate(req_id):
 
     os.chdir(cur_dir)
     print("Adding Overview")
-    data['gen_status'] = "Adding Overview Map..."
-    _global_session[req_id] = data
+
+    _update_status("Adding Overview Map...", req_id, data)
+
     if overview:
         ak_bounds = [
             -190.0, -147.68, 48.5, 69.5
@@ -585,8 +599,7 @@ def generate(req_id):
             fig.plot(x=[x_loc, ], y=[y_loc, ],
                      style=f"a{star_size}", color="blue")
 
-    data['gen_status'] = "Saving final image..."
-    _global_session[req_id] = data
+    _update_status("Saving final image...", req_id, data)
     save_file = f'{uuid.uuid4().hex}.pdf'
     script_dir = os.path.dirname(__file__)
     cache_dir = os.path.join(script_dir, "cache")
