@@ -487,7 +487,7 @@ def generate(req_id):
     cur_dir = os.getcwd()
     os.chdir(img_dir)
     used_symbols = {}
-    for station in data['station']:
+    for station in data.get('station', []):
         icon_url = station['icon']
         icon_name = os.path.basename(icon_url)
         sta_x = station['lon']
