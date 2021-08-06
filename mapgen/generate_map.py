@@ -515,7 +515,7 @@ def generate(req_id):
             fig.image(icon_path, position = position)
 
     legend = data['legend']
-    if legend != "False":
+    if legend != "False" and 'station' in data:
         print("Adding legend")
         _update_status("Adding Legend...", req_id, data)
 
