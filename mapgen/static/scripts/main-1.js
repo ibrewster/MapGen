@@ -42,6 +42,19 @@ $(document).ready(function() {
         layers: [tiles]
     });
 
+    L.latlngGraticule({
+        showLabel: true,
+        zoomInterval: [
+            { start: 2, end: 3, interval: 30 },
+            { start: 3, end: 4, interval: 10 },
+            { start: 4, end: 8, interval: 2 },
+            { start: 8, end: 10, interval: .5 },
+            { start: 10, end: 15, interval: .25 }
+        ]
+    }).addTo(map);
+
+
+
     map.on('load', function() {
         updateBounds();
         setTimeout(sizeMap, 10);

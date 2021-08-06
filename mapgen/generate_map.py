@@ -466,7 +466,7 @@ def generate(req_id):
         mid_lat = gmt_bounds[2] + ((gmt_bounds[3] - gmt_bounds[2]) / 2)
         map_width = vincenty.vincenty((mid_lat, gmt_bounds[0]),
                                       (mid_lat, gmt_bounds[1]))
-        scale_length = math.ceil((map_width / 8) / 2) * 2  # Make an even number
+        scale_length = math.ceil((map_width / 8))  # Make an even number
         offset = .65
         if data['scale'][0] == 'T':
             offset += .3
