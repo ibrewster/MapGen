@@ -205,3 +205,17 @@ body {
     margin-left: 10px;
     box-sizing: border-box;
 }
+
+div.insetMap.User{
+    display:grid;
+    grid-template-rows:auto 1fr;
+}
+
+div.insetMap.User div.insetTitle{
+    background-color: whitesmoke;
+    text-align: center;
+    padding-top:2px;
+    padding-bottom:2px;
+    border-bottom:1px solid;
+    cursor:move;
+}

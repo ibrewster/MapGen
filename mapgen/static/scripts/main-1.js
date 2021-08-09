@@ -28,6 +28,7 @@ $(document).ready(function() {
     $(document).on('click', 'input.staCheck', checkForAll);
     $(document).on('click', 'input.staCatAll', toggleAll);
     $(document).on('click', '#stationSelAll', toggleStations);
+    $(document).on('click', 'button.deleteInset',removeInsetMap);
     $(window).resize(sizeMap);
     $('#overviewWidth').change(function() { overviewChanged = true; })
     $('#getMap').click(getMap);
@@ -68,6 +69,7 @@ $(document).ready(function() {
 
     $('.latLon').change(setBounds);
     $('.reload').click(updateBounds);
+    $('#addNewMap').click(addNewMap);
     $('#resetOverview').click(resetOverview);
     $('#mapLocation').change(locSelectChanged);
     $('#overviewWidth').change(overviewWidthChanged);
@@ -243,13 +245,91 @@ function sizeMap() {
     }
 }
 
-function serialize(obj) {
-    var str = [];
-    for (var p in obj)
-        if (obj.hasOwnProperty(p)) {
-            str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
-        }
-    return str.join("&");
+var insetId=0;
+var insetMaps={};
+function addNewMap(){
+    insetId+=1;
+    var mapDiv=$('<div class="insetMap User"></div>');
+    mapDiv.data('mapID',insetId);
+    var titleDiv=$(`<div class=insetTitle>Inset ${insetId}</div>`);
+    var innerMap=$('<div class=insetInner>')
+
+    mapDiv.append(titleDiv);
+    mapDiv.append(innerMap);
+    var mapID=`insetMap${insetId}`
+    innerMap.prop('id',mapID);
+
+    var mapWidth=$('#maps').width()/3;
+    var mapHeight=$('#maps').height()/3;
+    mapDiv.css('width',mapWidth);
+    mapDiv.css('height',mapHeight);
+    mapDiv.css('top','5px');
+    mapDiv.css('left','5px');
+
+    $('#maps').append(mapDiv);
+
+    var mapTiles=L.tileLayer('https://basemap.nationalmap.gov/ArcGIS/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}');
+    var insetMap=L.map(mapID,{
+        zoomSnap:0,
+        layers:[mapTiles]
+    })
+
+    insetMaps[insetId]=insetMap;
+
+    var insetSettings=$('<div class="insetSettings">')
+    insetSettings.data('mapID',insetId);
+    insetSettings.append('<div class="insetSettingsTitle">').text(`Inset ${insetId}`);
+    insetSettings.append('<button type=button class="deleteInset">Delete</button>');
+    insetSettings.append(`<input type="hidden" id="insetBounds${insetId}" name="insetBounds">`);
+    $('#insetMaps').append(insetSettings);
+
+    insetMap.on("moveend zoomend", function(){
+        updateInsetBounds(insetId);
+    });
+
+    insetMap.fitBounds(map.getBounds());
+
+    //Set up mapDiv for moving/resizing
+    mapDiv.draggable({
+        containment: "parent",
+        handle:"div.insetTitle",
+        stop:updateInsetPosition
+    })
+    .resizable({
+        containment:'#maps',
+        zIndex:9000,
+        stop:updateInsetSize
+    })
+}
+
+function updateInsetSize(event,ui){
+    var width=ui.size['width'];
+    var height=ui.size['height'];
+    var insetID=ui.helper.closest('div.insetMap.User').data('mapID');
+
+    console.log(`Resized map ${insetID} to ${width}x${height}`);
+    insetMaps[insetID].invalidateSize();
+    updateInsetPosition(event,ui);
+}
+function updateInsetPosition(event,ui){
+    var top=ui['position']['top'];
+    var left=ui['position']['left'];
+    console.log(`New position top: ${top}, left: ${left}`);
+
+    var insetID=ui.helper.closest('div.insetMap.User').data('mapID');
+    console.log(`Dragged map ID ${insetID}`);
+}
+
+function removeInsetMap(){
+    var settingsDiv=$(this).closest('div.insetSettings')
+    var mapID=settingsDiv.data('mapID');
+    $(`#insetMap${mapID}`).closest('div.insetMap.User').remove();
+    settingsDiv.remove();
+}
+
+function updateInsetBounds(inset_id){
+    var bounds=insetMaps[inset_id].getBounds();
+    $(`#insetBounds${inset_id}`).val(bounds.toBBoxString());
 }
 
 function updateBounds() {

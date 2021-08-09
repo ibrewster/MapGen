@@ -50,7 +50,8 @@ class MapRequestSchema(Schema):
     station = List(JSON)
     legend = String()
     scale = String()
-    overviewBounds = String(required = False, missing = None)
+    overviewBounds = String(required=False, missing=None)
+    insetBounds = List(String, required=False, missing=[])
 
 
 def allowed_file(filename):
