@@ -14,11 +14,13 @@ import zipfile
 
 from io import BytesIO
 
+from osgeo import osr
+
 import osgeo.gdal
 import requests
 import vincenty
 
-from urllib.parse import unquote, quote
+from urllib.parse import unquote
 
 try:
     from . import _global_session
@@ -29,6 +31,15 @@ except ImportError:
         from .file_cache import FileCache
 
     _global_session = FileCache()
+
+
+def _update_status(status, req_id, data = None):
+    if data is None:
+        data = _global_session[req_id]
+
+    data['gen_status'] = status
+    _global_session[req_id] = data
+
 
 def run_process(queue):
     """
@@ -72,44 +83,222 @@ def run_process(queue):
     except KeyboardInterrupt:
         return
 
+
+def _get_extents(src):
+    ulx, xres, xskew, uly, yskew, yres = src.GetGeoTransform()
+    lrx = ulx + (src.RasterXSize * xres)
+    lry = uly + (src.RasterYSize * yres)
+
+    src_srs = osr.SpatialReference()
+    src_srs.ImportFromWkt(src.GetProjection())
+
+    tgt_srs = src_srs.CloneGeogCS()
+
+    transform = osr.CoordinateTransformation(src_srs, tgt_srs)
+    # top-left, top-right,bottom-right,bottom-left
+    corners = ((ulx, uly), (lrx, uly), (lrx, lry), (ulx, lry))
+    trans_corners = transform.TransformPoints(corners)
+
+    uly, ulx, _ = trans_corners[0]
+    ury, urx, _ = trans_corners[1]
+    lry, lrx, _ = trans_corners[2]
+    lly, llx, _ = trans_corners[3]
+
+    # figure out which X is to the left.
+    # Make both upper and lower coordinates
+    # negitive for easy comparison
+    comp_upper = ulx
+    comp_lower = llx
+
+    if comp_upper > 0:
+        comp_upper -= 360
+
+    if comp_lower > 0:
+        comp_lower -= 360
+
+    if comp_upper < comp_lower:
+        minx = ulx
+    else:
+        minx = llx
+
+    comp_upper = urx
+    comp_lower = lrx
+    if comp_upper > 0:
+        comp_upper -= 360
+
+    if comp_lower > 0:
+        comp_lower -= 360
+
+    if comp_upper > comp_lower:
+        maxx = urx
+    else:
+        maxx = lrx
+
+    miny = min(lly, lry)
+    maxy = max(uly, ury)
+
+    if minx > maxx:
+        minx -= 360
+
+    return [minx, miny, maxx, maxy]
+
+
 def _download_elevation(bounds, temp_dir, req_id):
-    poly = Polygon.from_bounds(*bounds)
-    geojson = quote(shapely_geojson.dumps(poly))
+    if bounds[0] < -180 or bounds[2] > 180 or bounds[0] > bounds[2]:
+        # Crossing dateline. Need to split request.
+        bounds2 = bounds.copy()
+        bounds3 = bounds.copy()
+        # Make bounds be only west of dateline
+        if bounds3[0] < 0:
+            bounds3[0] += 360
+        bounds3[2] = 180
+
+        bounds2[0] = -180
+        if bounds2[2] > 0:
+            bounds2[2] -= 360
+
+        bounds_list = [bounds3, bounds2]
+    else:
+        bounds_list = [bounds, ]
+
     ids = 151  # DSM hillshade
-    url = f'https://elevation.alaska.gov/download?geojson={geojson}&ids={ids}'
+    URL_BASE = 'https://elevation.alaska.gov'
+    list_url = f'{URL_BASE}/query.json'
+    url = f'{URL_BASE}/download'
+    est_size = 0
     print("Downloading hillshade files")
     tempdir = temp_dir.name
-    req = requests.get(url, stream=True)
-    if req.status_code != 200:
-        print(req.status_code)
-        print(req.text)
-        return "Error!"
     zf_path = os.path.join(tempdir, 'custom_download.zip')
-    with open(zf_path, 'wb') as zf:
-        for chunk in req.iter_content(chunk_size=8192):
-            if chunk:
-                zf.write(chunk)
-
-    # Pull out the various tiff files needed
     tiff_dir = os.path.join(tempdir, 'tiffs')
     os.makedirs(tiff_dir, exist_ok=True)
 
-    print("Extracting tiffs")
-    data = _global_session[req_id]
-    data['gen_status'] = "Processing hillshade data..."
-    _global_session[req_id] = data
+    loaded_bytes = 0
+    pc = 0
+    chunk_size = 1024 * 1024 * 10  # 10 MB
 
-    with zipfile.ZipFile(zf_path, 'r') as zf:
-        for file in zf.namelist():
-            if file.endswith('.zip'):
-                print(f"Reading {file}")
-                zf_data = BytesIO(zf.read(file))
-                with zipfile.ZipFile(zf_data, 'r') as zf2:
-                    for tiffile in zf2.namelist():
-                        if tiffile.endswith('.tif'):
-                            print(f"Extracting {tiffile}")
-                            zf2.extract(tiffile, path=tiff_dir)
+    for bound in bounds_list:
+        poly = Polygon.from_bounds(*bound)
+        geojson = shapely_geojson.dumps(poly)
+
+        # get file listings
+        req = requests.post(list_url, data = {'geojson': geojson, })
+
+        if req.status_code != 200:
+            print("Unable to get file listings")
+        else:
+            files = req.json()
+            print(files)
+            try:
+                file_info = next((x for x in files if x['project_id'] == ids))
+            except StopIteration:
+                pass
+            else:
+                print(file_info)
+                est_size += file_info.get('bytes', -1)
+
+        req = requests.get(url,
+                           params = {'geojson': geojson,
+                                     'ids': ids},
+                           stream=True)
+        if req.status_code != 200:
+            print(req.status_code)
+            print(req.text)
+            continue
+
+        with open(zf_path, 'wb') as zf:
+            for chunk in req.iter_content(chunk_size=chunk_size):
+                if chunk:
+                    loaded_bytes += zf.write(chunk)
+                    if est_size > 0:
+                        pc = round((loaded_bytes / est_size) * 100, 1)
+
+                        _update_status({
+                            'status': "Downloading hillshade files...",
+                            'progress': pc
+                        }, req_id
+                        )
+
+        print("Downloaded", loaded_bytes, "bytes")
+
+        # Pull out the various tiff files needed
+        print("Extracting tiffs")
+
+        _update_status("Decompressing hillshade data...", req_id)
+
+        with zipfile.ZipFile(zf_path, 'r') as zf:
+            for file in zf.namelist():
+                if file.endswith('.zip'):
+                    print(f"Reading {file}")
+                    zf_data = BytesIO(zf.read(file))
+                    with zipfile.ZipFile(zf_data, 'r') as zf2:
+                        for tiffile in zf2.namelist():
+                            if tiffile.endswith('.tif'):
+                                print(f"Extracting {tiffile}")
+                                zf2.extract(tiffile, path=tiff_dir)
     return tiff_dir
+
+
+def _process_download(tiff_dir, warp_bounds, req_id):
+    all_files = os.listdir(tiff_dir)
+    files = []
+    num_files = len(all_files)
+    for idx, file in enumerate(all_files):
+        print("Processing image", idx, "of", len(all_files))
+        out_file = os.path.join(tiff_dir, f"{idx}.tiff")
+        in_file = os.path.join(tiff_dir, file)
+        files.append(out_file)
+
+        ds = osgeo.gdal.Open(in_file)
+        file_bounds = _get_extents(ds)
+        del ds
+
+        use_bounds = False
+
+        # Make signs of warp and file bounds match
+        # Stupid dateline!
+        if file_bounds[0] < 0 and warp_bounds[0] > 0:
+            file_bounds[0] += 360
+        if file_bounds[0] > 0 and warp_bounds[0] < 0:
+            file_bounds[0] -= 360
+
+        if file_bounds[2] < 0 and warp_bounds[2] > 0:
+            file_bounds[2] += 360
+        if file_bounds[2] > 0 and warp_bounds[2] < 0:
+            file_bounds[2] -= 360
+
+        # limit extents to warp_bounds
+        if file_bounds[0] < warp_bounds[0]:
+            file_bounds[0] = warp_bounds[0]
+            use_bounds = True
+        if file_bounds[1] < warp_bounds[1]:
+            file_bounds[1] = warp_bounds[1]
+            use_bounds = True
+        if file_bounds[2] > warp_bounds[2]:
+            file_bounds[2] = warp_bounds[2]
+            use_bounds = True
+        if file_bounds[3] > warp_bounds[3]:
+            file_bounds[3] = warp_bounds[3]
+            use_bounds = True
+
+        kwargs = {
+            "dstSRS": "EPSG:4326",
+            "multithread": True,
+            "warpOptions": ['NUM_THREADS=ALL_CPUS'],
+            "creationOptions": ['NUM_THREADS=ALL_CPUS'],
+        }
+
+        if use_bounds:
+            kwargs['outputBounds'] = file_bounds
+            print("Using bounds of", file_bounds)
+
+        osgeo.gdal.Warp(out_file, in_file, **kwargs)
+        _update_status({
+            'status': "Processing hillshade data...",
+            'progress': (idx / num_files) * 100
+        }, req_id
+        )
+
+    return files
 
 
 def generate(req_id):
@@ -191,12 +380,13 @@ def generate(req_id):
             out_dir = os.path.dirname(hillshade_file)
             out_file = os.path.join(out_dir, "hillshade.tiff")
 
-            data['gen_status'] = "Processing uploads..."
-            _global_session[req_id] = data
+            _update_status("Processing uploads...", req_id, data)
 
             osgeo.gdal.Warp(out_file, hillshade_file,
                             srcSRS=proj, dstSRS='EPSG:4326',
                             outputBounds=warp_bounds,
+                            warpOptions = ['NUM_THREADS=ALL_CPUS'],
+                            creationOptions = ['NUM_THREADS=ALL_CPUS'],
                             multithread=True)
 
             world_file = os.path.basename(hillshade_file)
@@ -222,42 +412,61 @@ def generate(req_id):
     else:
         osgeo.gdal.AllRegister()  # Why? WHY!?!? But needed...
         tmp_dir = tempfile.TemporaryDirectory()
-        data['gen_status'] = "Downloading hillshade files..."
-        _global_session[req_id] = data
-        tiff_dir = _download_elevation(warp_bounds, tmp_dir, req_id)
+        _update_status("Downloading hillshade files...", req_id, data)
 
-        proj = 'EPSG:3338'  # Alaska Albers
-        out_file = os.path.join(tiff_dir, 'hillshade.tiff')
-        in_files = [os.path.join(tiff_dir, f) for f in os.listdir(tiff_dir)]
+        tiff_dir = _download_elevation(warp_bounds, tmp_dir, req_id)
         print("Generating composite hillshade file")
 
-        osgeo.gdal.Warp(out_file, in_files, dstSRS='EPSG:4326',
-                        outputBounds=warp_bounds, multithread=True)
-        hillshade_file = out_file
+        _update_status("Processing hillshade data...", req_id, data)
 
-    data['gen_status'] = "Drawing map image..."
-    _global_session[req_id] = data
-    fig.grdimage(hillshade_file, cmap='geo',
-                 dpi=300, shading=True, monochrome=True)
+        out_files = _process_download(tiff_dir, warp_bounds, req_id)
 
-    # Done with the uploaded file (if any), delete it
-    try:
-        os.remove(hillshade_file)
-    except FileNotFoundError:
-        print("Unable to remove upload")
+        hillshade_file = out_files
 
-    data['gen_status'] = "Drawing coastlines..."
-    _global_session[req_id] = data
+    if not isinstance(hillshade_file, (list, tuple)):
+        hillshade_file = [hillshade_file, ]
+
+    multi_status = True
+    num_files = len(hillshade_file)
+    if num_files == 1:
+        multi_status = False
+        _update_status("Drawing map image...", req_id, data)
+
+    for idx, file in enumerate(hillshade_file):
+        if not os.path.isfile(file):
+            continue  # Probably paranoid, but...
+
+        if multi_status:
+            _update_status(
+                {
+                    'status': "Drawing map image...",
+                    'progress': (idx / num_files) * 100
+                }, req_id,
+                data
+            )
+
+        print("Adding image", idx, "of", len(hillshade_file), ":", file)
+        fig.grdimage(file, cmap = "topo", nan_transparent = True,
+                     dpi = 300, shading =True)
+
+        # Done with the uploaded file (if any), delete it
+        try:
+            os.remove(file)
+        except FileNotFoundError:
+            print("Unable to remove upload")
+
+    _update_status("Drawing coastlines...", req_id, data)
+
     fig.coast(rivers='r/2p,#CBE7FF', water="#CBE7FF", resolution="f")
 
     if data['scale'] != 'False':
-        data['gen_status'] = "Adding Scale Bar..."
-        _global_session[req_id] = data
+        _update_status("Adding Scale Bar...", req_id, data)
+
         # figure out middle latitude for map
         mid_lat = gmt_bounds[2] + ((gmt_bounds[3] - gmt_bounds[2]) / 2)
         map_width = vincenty.vincenty((mid_lat, gmt_bounds[0]),
                                       (mid_lat, gmt_bounds[1]))
-        scale_length = math.ceil(map_width / 8)
+        scale_length = math.ceil((map_width / 8))  # Make an even number
         offset = .65
         if data['scale'][0] == 'T':
             offset += .3
@@ -271,15 +480,14 @@ def generate(req_id):
         fig.basemap(map_scale = map_scale, F = '+gwhite+p')
 
     print("Plotting stations")
-    data['gen_status'] = "Plotting Stations..."
-    _global_session[req_id] = data
+    _update_status("Plotting Stations...", req_id, data)
 
     main_dir = os.path.dirname(__file__)
     img_dir = os.path.join(main_dir, 'static/img')
     cur_dir = os.getcwd()
     os.chdir(img_dir)
     used_symbols = {}
-    for station in data['station']:
+    for station in data.get('station', []):
         icon_url = station['icon']
         icon_name = os.path.basename(icon_url)
         sta_x = station['lon']
@@ -307,10 +515,10 @@ def generate(req_id):
             fig.image(icon_path, position = position)
 
     legend = data['legend']
-    if legend != "False":
+    if legend != "False" and 'station' in data:
         print("Adding legend")
-        # data['gen_status'] = "Adding Legend..."
-        # _global_session[req_id] = data
+        _update_status("Adding Legend...", req_id, data)
+
         with tempfile.NamedTemporaryFile('w+') as file:
             for idx, (name, symbol) in enumerate(used_symbols.items()):
                 sym_label = name[:-4]
@@ -350,8 +558,9 @@ def generate(req_id):
 
     os.chdir(cur_dir)
     print("Adding Overview")
-    data['gen_status'] = "Adding Overview Map..."
-    _global_session[req_id] = data
+
+    _update_status("Adding Overview Map...", req_id, data)
+
     if overview:
         ak_bounds = [
             -190.0, -147.68, 48.5, 69.5
@@ -390,8 +599,7 @@ def generate(req_id):
             fig.plot(x=[x_loc, ], y=[y_loc, ],
                      style=f"a{star_size}", color="blue")
 
-    data['gen_status'] = "Saving final image..."
-    _global_session[req_id] = data
+    _update_status("Saving final image...", req_id, data)
     save_file = f'{uuid.uuid4().hex}.pdf'
     script_dir = os.path.dirname(__file__)
     cache_dir = os.path.join(script_dir, "cache")

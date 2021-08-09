@@ -42,6 +42,19 @@ $(document).ready(function() {
         layers: [tiles]
     });
 
+    L.latlngGraticule({
+        showLabel: true,
+        zoomInterval: [
+            { start: 2, end: 3, interval: 30 },
+            { start: 3, end: 4, interval: 10 },
+            { start: 4, end: 8, interval: 2 },
+            { start: 8, end: 10, interval: .5 },
+            { start: 10, end: 15, interval: .25 }
+        ]
+    }).addTo(map);
+
+
+
     map.on('load', function() {
         updateBounds();
         setTimeout(sizeMap, 10);
@@ -276,10 +289,19 @@ function checkDownloadStatus() {
                 req_id = null;
                 return
             }
-            $('#downloadStatus').text(resp['status']);
+            var payload = resp['status'];
+            if (typeof(payload) == 'object') {
+                var stat = payload['status'];
+                $('#progBar').val(payload['progress']);
+            } else {
+                var stat = payload;
+                $('#progBar').removeAttr('value');
+            }
+            $('#downloadStatus').html(stat);
+
             setTimeout(checkDownloadStatus, 2000); //Check again in 2 seconds.
         })
-        .fail(function(jqXHR,textStatus,errorThrown){
+        .fail(function(jqXHR, textStatus, errorThrown) {
             alert("Unable to check status of download request. Please try again later.");
         });
 };
@@ -329,7 +351,7 @@ function runGetMap() {
             console.log(resp);
             checkDownloadStatus();
         })
-        .fail(function(jqXHR,textStatus,errorThrown){
+        .fail(function(jqXHR, textStatus, errorThrown) {
             alert(`Unable to request map. Server returned code ${textStatus}, error ${errorThrown}`);
         });
 
@@ -340,12 +362,12 @@ function updateUploadPercent(evt) {
     if (evt.lengthComputable) {
         var pc = (evt.loaded / evt.total) * 100
         pc = Math.round(pc * 10) / 10;
-        if(pc>=100){
+        if (pc >= 100) {
             $('#downloadStatus').text("Waiting for server...");
             return;
         }
-        pc = pc.toFixed(1);
-        $('#downloadStatus').text(`Uploading images (${pc}%)...`);
+        $('#progBar').val(pc);
+        $('#downloadStatus').text("Uploading images...");
     }
 }
 

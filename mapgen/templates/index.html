@@ -11,6 +11,7 @@
     <script src="static/scripts/jquery-3.6.0.min.js" defer></script>
     <script src="static/scripts/jquery-ui.min.js" defer></script>
     <script src="static/scripts/leaflet.js" defer></script>
+    <script src="static/scripts/Leaflet.Graticule.js" defer></script>
     <script src="static/scripts/main-1.js" defer></script>
 
 </head>
@@ -24,7 +25,9 @@
             <div>
                 <div id="genInfo">
                     <div id="downloadStatus"></div>
-                    <div class=loader></div>
+                    <div id="genProgress">
+                        <progress id="progBar" max="100"></progress>
+                    </div>
                 </div>
             </div>
         </div>
@@ -97,13 +100,13 @@
                             <span class="sizeLabel">Width:</span>
                             <span></span>
                             <span class="sizeLabel">Height:</span>
-                            <span><input class="mapSize" id="mapWidth" name="width" type="number" min=32 max="9999" value="1024"></span>
+                            <span><input class="mapSize" id="mapWidth" name="width" type="number" min=32 max="9999" value="10"></span>
                             <span id="xMarker">X</span>
-                            <span><input class="mapSize" id="mapHeight" name="height" type="number" min=32 max="9999" value="768"></span>
+                            <span><input class="mapSize" id="mapHeight" name="height" type="number" min=32 max="9999" value="7.5"></span>
                             <span class="rightJustify">Units:</span>
                             <select class="cols2" id="sizeUnits" name="unit">
                                 <option value="p">Pixels</option>
-                                <option value="i">Inches</option>
+                                <option value="i" selected>Inches</option>
                                 <option value="c">cm</option>
                             </select>
                         </div>
@@ -120,7 +123,7 @@
                             <option value="TL">Top Left</option>
                         </select>
                         <br>Width:
-                        <input type="number" min=0 max=9999 name="overviewWidth" id="overviewWidth" value="256">
+                        <input type="number" min=0 max=9999 name="overviewWidth" id="overviewWidth" value="2.5">
                         <span id="overviewUnits"></span>
                         <div><input type="checkbox" id="lockWidth" checked>Lock to map width</div>
                         <button type="button" id="resetOverview">Reset View</button>
