@@ -255,6 +255,8 @@ function serialize(obj) {
 function updateBounds() {
     var bounds = map.getBounds();
     $('#mapBounds').val(bounds.toBBoxString());
+    $('#mapZoom').val(map.getZoom());
+
     var N = Math.round(bounds.getNorth() * 1000) / 1000;
     var S = Math.round(bounds.getSouth() * 1000) / 1000;
     var E = Math.round(bounds.getWest() * 1000) / 1000;
@@ -355,7 +357,6 @@ function runGetMap() {
             alert(`Unable to request map. Server returned code ${textStatus}, error ${errorThrown}`);
         });
 
-    //$('#setupForm')[0].submit();
 }
 
 function updateUploadPercent(evt) {

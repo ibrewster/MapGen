@@ -239,6 +239,7 @@ def _download_elevation(bounds, temp_dir, req_id):
 
 
 def _process_download(tiff_dir, warp_bounds, req_id):
+    osgeo.gdal.AllRegister()  # Why? WHY!?!? But needed...
     all_files = os.listdir(tiff_dir)
     files = []
     num_files = len(all_files)
@@ -410,18 +411,24 @@ def generate(req_id):
 
             hillshade_file = out_file
     else:
-        osgeo.gdal.AllRegister()  # Why? WHY!?!? But needed...
-        tmp_dir = tempfile.TemporaryDirectory()
-        _update_status("Downloading hillshade files...", req_id, data)
+        zoom = data['mapZoom']
+        if zoom < 8:
+            hillshade_file = "@earth_relief_15s"
+        elif zoom < 10.5:
+            hillshade_file = "@srtm_relief_01s"
+        else:
+            # For higher zooms, use elevation.alaska.gov data
+            tmp_dir = tempfile.TemporaryDirectory()
+            _update_status("Downloading hillshade files...", req_id, data)
 
-        tiff_dir = _download_elevation(warp_bounds, tmp_dir, req_id)
-        print("Generating composite hillshade file")
+            tiff_dir = _download_elevation(warp_bounds, tmp_dir, req_id)
+            print("Generating composite hillshade file")
 
-        _update_status("Processing hillshade data...", req_id, data)
+            _update_status("Processing hillshade data...", req_id, data)
 
-        out_files = _process_download(tiff_dir, warp_bounds, req_id)
+            out_files = _process_download(tiff_dir, warp_bounds, req_id)
 
-        hillshade_file = out_files
+            hillshade_file = out_files
 
     if not isinstance(hillshade_file, (list, tuple)):
         hillshade_file = [hillshade_file, ]
@@ -433,7 +440,7 @@ def generate(req_id):
         _update_status("Drawing map image...", req_id, data)
 
     for idx, file in enumerate(hillshade_file):
-        if not os.path.isfile(file):
+        if not file.startswith("@") and not os.path.isfile(file):
             continue  # Probably paranoid, but...
 
         if multi_status:
@@ -525,16 +532,16 @@ def generate(req_id):
 
                 # This section handles images rather than symbols. Hacky, and *hopefully*
                 # not needed, but left in for now just in case.
-#                 if isinstance(symbol, str):
-#                     file.write('G 8p\n')
-#                     file.write(f'I {symbol} 16p LM\n')
-#                     file.write('G -1l\n')
-#                     # file.write('G -4p\n')
-#                     file.write('P .38 - - - - - - -\n')
-#                     file.write(f'T {sym_label}\n')
-#                     file.write('G 1l\n')
-#                     file.write('G -5p\n')
-#                     continue
+                if isinstance(symbol, str):
+                    file.write('G 8p\n')
+                    file.write(f'I {symbol} 16p LM\n')
+                    file.write('G -1l\n')
+                    # file.write('G -4p\n')
+                    file.write('P .38 - - - - - - -\n')
+                    file.write(f'T {sym_label}\n')
+                    file.write('G 1l\n')
+                    file.write('G -5p\n')
+                    continue
 
                 sym_char = symbol['symbol'][0]  # First character
                 if sym_char == 'k':

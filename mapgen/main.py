@@ -39,7 +39,8 @@ class JSON(String):
 class MapRequestSchema(Schema):
     width = Float(required = True)
     height = Float(required = False)
-    bounds = String(required = True)
+    bounds = String(required=True)
+    mapZoom = Float(required=True)
     unit = String(required = True, validate = OneOf(['p', 'i', 'c']))
     overview = String()
     overviewWidth = Float()
