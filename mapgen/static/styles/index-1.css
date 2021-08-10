@@ -124,7 +124,7 @@ body {
 
 #downloading {
     position: fixed;
-    z-index: 1000;
+    z-index: 1002;
     background-color: lightgrey;
     border: 1px solid black;
     border-radius: 10px;
@@ -218,4 +218,20 @@ div.insetMap.User div.insetTitle{
     padding-bottom:2px;
     border-bottom:1px solid;
     cursor:move;
+}
+
+div.insetSettingsTitle{
+    background-color: aliceblue;
+    border-top-left-radius:5px;
+    border-top-right-radius:5px;
+    padding-bottom:3px;
+    padding-top:3px;
+    margin-bottom:3px;
+    border-bottom:1px solid;
+}
+
+div.insetSettings{
+    border:1px solid;
+    border-radius: 5px;
+    margin-bottom:5px;
 }

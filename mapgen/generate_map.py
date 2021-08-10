@@ -84,13 +84,17 @@ def run_process(queue):
         return
 
 
-def _get_extents(src):
+def _get_extents(src, proj=None):
     ulx, xres, xskew, uly, yskew, yres = src.GetGeoTransform()
     lrx = ulx + (src.RasterXSize * xres)
     lry = uly + (src.RasterYSize * yres)
 
     src_srs = osr.SpatialReference()
-    src_srs.ImportFromWkt(src.GetProjection())
+    if proj is not None:
+        epsg_code = int(proj.replace('EPSG:', ''))
+        src_srs.ImportFromEPSG(epsg_code)
+    else:
+        src_srs.ImportFromWkt(src.GetProjection())
 
     tgt_srs = src_srs.CloneGeogCS()
 
@@ -301,15 +305,112 @@ def _process_download(tiff_dir, warp_bounds, req_id):
 
     return files
 
+def _set_hillshade(data, zoom, warp_bounds, req_id):
+    tmp_dir = None
+    if zoom < 8:
+        hillshade_files = ["@earth_relief_15s"]
+    elif zoom < 10.5:
+        hillshade_files = ["@srtm_relief_01s"]
+    else:
+        # For higher zooms, use elevation.alaska.gov data
+        tmp_dir = tempfile.TemporaryDirectory()
+        _update_status("Downloading hillshade files...", req_id, data)
 
-def generate(req_id):
-    data = _global_session.get(req_id)
-    width = data['width']
-    bounds = data['bounds']
-    unit = data['unit']
-    overview = data['overview']
-    if overview == "False":
-        overview = False
+        tiff_dir = _download_elevation(warp_bounds, tmp_dir, req_id)
+        print("Generating composite hillshade file")
+
+        _update_status("Processing hillshade data...", req_id, data)
+
+        out_files = _process_download(tiff_dir, warp_bounds, req_id)
+
+        hillshade_files = out_files
+
+    # If a file was uploaded, add it at the end so it overlays anything else.
+    # See if we have a file to deal with for this
+    uploaded_file = data.get('hillshade_file')
+    if uploaded_file:
+        # See if we need to process this
+        img_type = data['imgType']
+        if img_type == 'j':
+            osgeo.gdal.AllRegister()  # Why? WHY!?!? But needed...
+            # Image/World files need to be combined.
+            proj = data['imgProj']
+            out_dir = os.path.dirname(uploaded_file)
+            out_file = os.path.join(out_dir, "hillshade.tiff")
+
+            _update_status("Processing uploads...", req_id, data)
+
+            osgeo.gdal.Warp(out_file, uploaded_file,
+                            srcSRS=proj, dstSRS='EPSG:4326',
+                            outputBounds=warp_bounds,
+                            warpOptions=['NUM_THREADS=ALL_CPUS'],
+                            creationOptions=['NUM_THREADS=ALL_CPUS'],
+                            multithread=True)
+
+            world_file = os.path.basename(uploaded_file)
+            extension = world_file[world_file.index('.') + 1:]
+            wf_ext = f'{extension[0]}{extension[-1]}w'
+            wf_name = world_file[:world_file.index('.')]
+            world_file = f'{wf_name}.{wf_ext}'
+            try:
+                os.remove(os.path.join(os.path.dirname(uploaded_file),
+                                       world_file)
+                          )
+            except FileNotFoundError:
+                print("Unable to remove world fie")
+                print(world_file)
+
+            # Done with the uploaded file (if any), delete it
+            try:
+                os.remove(uploaded_file)
+            except FileNotFoundError:
+                print("Unable to remove upload")
+
+            uploaded_file = out_file
+
+        hillshade_files.append(uploaded_file)
+
+    return (hillshade_files, tmp_dir)
+
+def _draw_hillshades(hillshade_file, fig, req_id, data, **kwargs):
+    if not isinstance(hillshade_file, (list, tuple)):
+        hillshade_file = [hillshade_file, ]
+
+    multi_status = True
+    num_files = len(hillshade_file)
+    if num_files == 1:
+        multi_status = False
+        _update_status("Drawing map image...", req_id, data)
+
+    for idx, file in enumerate(hillshade_file):
+        if not file.startswith("@") and not os.path.isfile(file):
+            continue  # Probably paranoid, but...
+
+        if multi_status:
+            _update_status(
+                {
+                    'status': "Drawing map image...",
+                    'progress': (idx / num_files) * 100
+                    }, req_id,
+                data
+            )
+
+        print("Adding image", idx, "of", len(hillshade_file), ":", file)
+        fig.grdimage(file, **kwargs)
+
+        # Done with the uploaded file (if any), delete it
+        try:
+            os.remove(file)
+        except FileNotFoundError:
+            print("Unable to remove upload")
+
+def _add_stations(stations, fig, req_id, data):
+    print("Plotting stations")
+    _update_status("Plotting Stations...", req_id, data)
+
+    main_dir = os.path.dirname(__file__)
+    img_dir = os.path.join(main_dir, 'static/img')
+    os.chdir(img_dir)
 
     station_symbols = {
         'gps.png': {'symbol': 'a16p',
@@ -322,6 +423,45 @@ def generate(req_id):
                        'color': 'blue',  # Really, could be anything...
                        },
     }
+    used_symbols = {}
+
+    for station in data.get('station', []):
+        icon_url = station['icon']
+        icon_name = os.path.basename(icon_url)
+        sta_x = station['lon']
+        sta_y = station['lat']
+
+        symbol = station_symbols.get(icon_name, {}).get('symbol')
+        color = station_symbols.get(icon_name, {}).get('color')
+
+        if symbol is not None:
+            used_symbols[icon_name] = station_symbols.get(icon_name)
+            fig.plot(x=[sta_x, ], y=[sta_y, ],
+                     style=symbol, color=color)
+        else:
+            icon_path = os.path.join(main_dir, 'static/img', icon_name)
+            used_symbols[icon_name] = icon_path
+
+            if not os.path.isfile(icon_path):
+                req = requests.get(icon_url)
+                if req.status_code != 200:
+                    continue  # Can't get an icon for this station, move on.
+                with open(icon_path, 'wb') as icon_file:
+                    icon_file.write(req.content)
+
+            position = f"g{sta_x}/{sta_y}+w16p"
+            fig.image(icon_path, position=position)
+
+    return used_symbols
+
+def generate(req_id):
+    data = _global_session.get(req_id)
+    width = data['width']
+    bounds = data['bounds']
+    unit = data['unit']
+    overview = data['overview']
+    if overview == "False":
+        overview = False
 
     try:
         import pygmt
@@ -369,98 +509,17 @@ def generate(req_id):
 
     fig.basemap(**basemap_args)
 
-    # See if we have a file to deal with for this
-    hillshade_file = data.get('hillshade_file')
-    if hillshade_file:
-        # See if we need to process this
-        img_type = data['imgType']
-        if img_type == 'j':
-            osgeo.gdal.AllRegister()  # Why? WHY!?!? But needed...
-            # Image/World files need to be combined.
-            proj = data['imgProj']
-            out_dir = os.path.dirname(hillshade_file)
-            out_file = os.path.join(out_dir, "hillshade.tiff")
 
-            _update_status("Processing uploads...", req_id, data)
+    hillshade_file, tmp_dir = _set_hillshade(data, data['mapZoom'], warp_bounds, req_id)
 
-            osgeo.gdal.Warp(out_file, hillshade_file,
-                            srcSRS=proj, dstSRS='EPSG:4326',
-                            outputBounds=warp_bounds,
-                            warpOptions = ['NUM_THREADS=ALL_CPUS'],
-                            creationOptions = ['NUM_THREADS=ALL_CPUS'],
-                            multithread=True)
+    hillshade_args = {
+        "cmap": "topo",
+        "nan_transparent": True,
+        "dpi": 300,
+        "shading": True
+    }
 
-            world_file = os.path.basename(hillshade_file)
-            extension = world_file[world_file.index('.') + 1:]
-            wf_ext = f'{extension[0]}{extension[-1]}w'
-            wf_name = world_file[:world_file.index('.')]
-            world_file = f'{wf_name}.{wf_ext}'
-            try:
-                os.remove(os.path.join(os.path.dirname(hillshade_file),
-                                       world_file)
-                          )
-            except FileNotFoundError:
-                print("Unable to remove world fie")
-                print(world_file)
-
-            # Done with the uploaded file (if any), delete it
-            try:
-                os.remove(hillshade_file)
-            except FileNotFoundError:
-                print("Unable to remove upload")
-
-            hillshade_file = out_file
-    else:
-        zoom = data['mapZoom']
-        if zoom < 8:
-            hillshade_file = "@earth_relief_15s"
-        elif zoom < 10.5:
-            hillshade_file = "@srtm_relief_01s"
-        else:
-            # For higher zooms, use elevation.alaska.gov data
-            tmp_dir = tempfile.TemporaryDirectory()
-            _update_status("Downloading hillshade files...", req_id, data)
-
-            tiff_dir = _download_elevation(warp_bounds, tmp_dir, req_id)
-            print("Generating composite hillshade file")
-
-            _update_status("Processing hillshade data...", req_id, data)
-
-            out_files = _process_download(tiff_dir, warp_bounds, req_id)
-
-            hillshade_file = out_files
-
-    if not isinstance(hillshade_file, (list, tuple)):
-        hillshade_file = [hillshade_file, ]
-
-    multi_status = True
-    num_files = len(hillshade_file)
-    if num_files == 1:
-        multi_status = False
-        _update_status("Drawing map image...", req_id, data)
-
-    for idx, file in enumerate(hillshade_file):
-        if not file.startswith("@") and not os.path.isfile(file):
-            continue  # Probably paranoid, but...
-
-        if multi_status:
-            _update_status(
-                {
-                    'status': "Drawing map image...",
-                    'progress': (idx / num_files) * 100
-                }, req_id,
-                data
-            )
-
-        print("Adding image", idx, "of", len(hillshade_file), ":", file)
-        fig.grdimage(file, cmap = "topo", nan_transparent = True,
-                     dpi = 300, shading =True)
-
-        # Done with the uploaded file (if any), delete it
-        try:
-            os.remove(file)
-        except FileNotFoundError:
-            print("Unable to remove upload")
+    _draw_hillshades(hillshade_file, fig, req_id, data, **hillshade_args)
 
     _update_status("Drawing coastlines...", req_id, data)
 
@@ -486,40 +545,10 @@ def generate(req_id):
         map_scale = f'j{data["scale"]}+w{scale_length}k+f+o{offset}+c{mid_lat}N+l'
         fig.basemap(map_scale = map_scale, F = '+gwhite+p')
 
-    print("Plotting stations")
-    _update_status("Plotting Stations...", req_id, data)
 
-    main_dir = os.path.dirname(__file__)
-    img_dir = os.path.join(main_dir, 'static/img')
     cur_dir = os.getcwd()
-    os.chdir(img_dir)
-    used_symbols = {}
-    for station in data.get('station', []):
-        icon_url = station['icon']
-        icon_name = os.path.basename(icon_url)
-        sta_x = station['lon']
-        sta_y = station['lat']
 
-        symbol = station_symbols.get(icon_name, {}).get('symbol')
-        color = station_symbols.get(icon_name, {}).get('color')
-
-        if symbol is not None:
-            used_symbols[icon_name] = station_symbols.get(icon_name)
-            fig.plot(x=[sta_x, ], y=[sta_y, ],
-                     style=symbol, color=color)
-        else:
-            icon_path = os.path.join(main_dir, 'static/img', icon_name)
-            used_symbols[icon_name] = icon_path
-
-            if not os.path.isfile(icon_path):
-                req = requests.get(icon_url)
-                if req.status_code != 200:
-                    continue  # Can't get an icon for this station, move on.
-                with open(icon_path, 'wb') as icon_file:
-                    icon_file.write(req.content)
-
-            position = f"g{sta_x}/{sta_y}+w16p"
-            fig.image(icon_path, position = position)
+    used_symbols = _add_stations(data.get('station', []), fig, req_id, data)
 
     legend = data['legend']
     if legend != "False" and 'station' in data:
@@ -579,7 +608,7 @@ def generate(req_id):
                 sw_lat,
                 ne_lng,
                 ne_lat
-            ) = unquote(data['overviewBounds']).split(',')
+            ) = data['overviewBounds']
 
             ak_bounds = [
                 float(sw_lng),
@@ -605,6 +634,39 @@ def generate(req_id):
             y_loc = gmt_bounds[2] + (gmt_bounds[3] - gmt_bounds[2]) / 2
             fig.plot(x=[x_loc, ], y=[y_loc, ],
                      style=f"a{star_size}", color="blue")
+
+    inset_maps = zip(
+        data['insetBounds'],
+        data['insetZoom'],
+        data['insetLeft'],
+        data['insetTop'],
+        data['insetWidth'],
+        data['insetHeight']
+    )
+    for bounds, zoom, left, top, width, height in inset_maps:
+        inset_bounds = [
+            bounds[0],
+            bounds[2],
+            bounds[1],
+            bounds[3]
+        ]
+
+        hillshade_file, tmp_dir = _set_hillshade(data, zoom, bounds, req_id)
+        pos = f"x{left}{unit}/{top}{unit}+w{width}{unit}/{height}{unit}+jTL"
+
+        with fig.inset(position=pos, box="+gwhite+p1p"):
+            hillshade_args = {
+                "region": inset_bounds,
+                "projection": "M?",
+                "nan_transparent": True,
+                "shading": True,
+                "dpi": 300,
+            }
+            _draw_hillshades(hillshade_file, fig, req_id, data, **hillshade_args)
+
+            fig.coast(water='#CBE7FF',
+                      resolution='f')
+
 
     _update_status("Saving final image...", req_id, data)
     save_file = f'{uuid.uuid4().hex}.pdf'

@@ -5,6 +5,7 @@ import uuid
 
 import flask
 
+from urllib.parse import unquote
 
 from apiflask import abort, Schema, input as api_input
 from apiflask.fields import (
@@ -35,6 +36,17 @@ class JSON(String):
 
         return None
 
+class Bounds(String):
+    """Returns a sw_lng, sw_lat, ne_lng, ne_lat tupple"""
+    def _deserialize(self, value, attr, data, **kwargs):
+        if value:
+            try:
+                return tuple(map(float, unquote(value).split(',')))
+            except ValueError:
+                return None
+
+        return None
+
 
 class MapRequestSchema(Schema):
     width = Float(required = True)
@@ -50,8 +62,13 @@ class MapRequestSchema(Schema):
     station = List(JSON)
     legend = String()
     scale = String()
-    overviewBounds = String(required=False, missing=None)
-    insetBounds = List(String, required=False, missing=[])
+    overviewBounds = Bounds(required=False, missing=None)
+    insetBounds = List(Bounds, required=False, missing=[])
+    insetZoom = List(Float, required=False, missing=[])
+    insetLeft = List(Float, required=False, missing=[])
+    insetTop = List(Float, required=False, missing=[])
+    insetWidth = List(Float, required=False, missing=[])
+    insetHeight = List(Float, required=False, missing=[])
 
 
 def allowed_file(filename):

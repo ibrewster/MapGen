@@ -40,6 +40,7 @@ $(document).ready(function() {
 
     map = L.map('topMap', {
         zoomSnap: 0,
+        tap: false,
         layers: [tiles]
     });
 
@@ -140,6 +141,7 @@ function setOverviewDiv() {
     if (overviewMap === null) {
         var tiles = L.tileLayer('https://basemap.nationalmap.gov/ArcGIS/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}')
         overviewMap = L.map('overviewMap', {
+            tap: false,
             zoomSnap: 0,
             layers: [tiles]
         });
@@ -270,6 +272,7 @@ function addNewMap(){
 
     var mapTiles=L.tileLayer('https://basemap.nationalmap.gov/ArcGIS/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}');
     var insetMap=L.map(mapID,{
+        tap: false,
         zoomSnap:0,
         layers:[mapTiles]
     })
@@ -278,9 +281,15 @@ function addNewMap(){
 
     var insetSettings=$('<div class="insetSettings">')
     insetSettings.data('mapID',insetId);
-    insetSettings.append('<div class="insetSettingsTitle">').text(`Inset ${insetId}`);
+    insetSettings.append(`<div class="insetSettingsTitle">Inset ${insetId}</div>`);
     insetSettings.append('<button type=button class="deleteInset">Delete</button>');
     insetSettings.append(`<input type="hidden" id="insetBounds${insetId}" name="insetBounds">`);
+    insetSettings.append(`<input type="hidden" id="insetZoom${insetId}" name="insetZoom">`);
+    insetSettings.append(`<input type="hidden" id="insetLeft${insetId}" name="insetLeft">`);
+    insetSettings.append(`<input type="hidden" id="insetTop${insetId}" name="insetTop">`);
+    insetSettings.append(`<input type="hidden" id="insetWidth${insetId}" name="insetWidth">`);
+    insetSettings.append(`<input type="hidden" id="insetHeight${insetId}" name="insetHeight">`);
+    insetSettings.append
     $('#insetMaps').append(insetSettings);
 
     insetMap.on("moveend zoomend", function(){
@@ -297,27 +306,69 @@ function addNewMap(){
     })
     .resizable({
         containment:'#maps',
-        zIndex:9000,
+        zIndex:1001,
         stop:updateInsetSize
-    })
+    });
+
+    updateInsetSize.call(mapDiv[0]);
 }
 
 function updateInsetSize(event,ui){
-    var width=ui.size['width'];
-    var height=ui.size['height'];
-    var insetID=ui.helper.closest('div.insetMap.User').data('mapID');
+    var height=$(this).find('div.insetInner').height();
 
-    console.log(`Resized map ${insetID} to ${width}x${height}`);
+    if(typeof(ui)!=='undefined'){
+        var width=ui.size['width'];
+        var insetID=ui.helper.closest('div.insetMap.User').data('mapID');
+    }
+    else{
+        //this should be the div in question
+        var width=$(this).width();
+        var insetID=$(this).data('mapID');
+    }
+
+    var percentWidth=width/$('#maps').width();
+    var percentHeight=height/$('#maps').height();
+    var unitWidth=Number($('#mapWidth').val())*percentWidth;
+    var unitHeight=Number($('#mapHeight').val())*percentHeight;
+
+    $(`#insetWidth${insetID}`).val(unitWidth);
+    $(`#insetHeight${insetID}`).val(unitHeight);
+
     insetMaps[insetID].invalidateSize();
-    updateInsetPosition(event,ui);
+    updateInsetPosition.call(this,[event,ui]);
 }
-function updateInsetPosition(event,ui){
-    var top=ui['position']['top'];
-    var left=ui['position']['left'];
-    console.log(`New position top: ${top}, left: ${left}`);
 
-    var insetID=ui.helper.closest('div.insetMap.User').data('mapID');
-    console.log(`Dragged map ID ${insetID}`);
+function updateInsetPosition(event,ui){
+    if(typeof(ui)!=='undefined'){
+        var top=ui['position']['top'];
+        var left=ui['position']['left'];
+        var insetID=ui.helper.closest('div.insetMap.User').data('mapID');
+    }
+    else{
+        var top=$(this).position().top;
+        var left=$(this).position().left;
+        var insetID=$(this).data('mapID');
+    }
+
+    //1- to invert, since gmt is bottom left, not top left
+    var percentTop=1-top/$('#maps').height();
+    var percentLeft=left/$('#maps').width();
+
+    var unitTop=Number($('#mapHeight').val())*percentTop;
+    var unitLeft=Number($('#mapWidth').val())*percentLeft;
+
+    $(`#insetTop${insetID}`).val(unitTop);
+    $(`#insetLeft${insetID}`).val(unitLeft);
+
+    updateInsetBounds(insetID); //for good measure
+}
+
+function updateInsetBounds(inset_id){
+    var bounds=insetMaps[inset_id].getBounds();
+    var zoom=insetMaps[inset_id].getZoom();
+
+    $(`#insetBounds${inset_id}`).val(bounds.toBBoxString());
+    $(`#insetZoom${inset_id}`).val(zoom);
 }
 
 function removeInsetMap(){
@@ -325,11 +376,6 @@ function removeInsetMap(){
     var mapID=settingsDiv.data('mapID');
     $(`#insetMap${mapID}`).closest('div.insetMap.User').remove();
     settingsDiv.remove();
-}
-
-function updateInsetBounds(inset_id){
-    var bounds=insetMaps[inset_id].getBounds();
-    $(`#insetBounds${inset_id}`).val(bounds.toBBoxString());
 }
 
 function updateBounds() {
