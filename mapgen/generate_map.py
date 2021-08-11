@@ -351,7 +351,7 @@ def _set_hillshade(data, zoom, map_bounds, req_id):
     tmp_dir = None
     if zoom <= 7:
         hillshade_files = ["@earth_relief_15s"]
-    elif zoom < 10.5:
+    elif zoom < 10:
         hillshade_files = ["@srtm_relief_01s"]
     else:
         # For higher zooms, use elevation.alaska.gov data
