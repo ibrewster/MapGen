@@ -237,24 +237,30 @@ def _download_elevation(bounds, temp_dir, req_id):
                     with zipfile.ZipFile(zf_data, 'r') as zf2:
                         for tiffile in zf2.namelist():
                             if tiffile.endswith('.tif'):
+                                if os.path.isfile(os.path.join(tiff_dir, tiffile)):
+                                    continue  # already extracted, move on
                                 print(f"Extracting {tiffile}")
                                 zf2.extract(tiffile, path=tiff_dir)
     return tiff_dir
 
 
-def _process_download(tiff_dir, warp_bounds, req_id):
+def _process_files(dest_dir, all_files, warp_bounds, req_id, proj = None):
     osgeo.gdal.AllRegister()  # Why? WHY!?!? But needed...
-    all_files = os.listdir(tiff_dir)
     files = []
     num_files = len(all_files)
-    for idx, file in enumerate(all_files):
+    for idx, in_file in enumerate(all_files):
         print("Processing image", idx, "of", len(all_files))
-        out_file = os.path.join(tiff_dir, f"{idx}.tiff")
-        in_file = os.path.join(tiff_dir, file)
+
+        in_path, in_ext = os.path.splitext(in_file)
+        out_file = f"{in_path}-processed.tiff"
+        # Considered skipping if already processed, but the bounds might be different
+        # if os.path.isfile(out_file):
+        # continue  # Already processed. Move on.
+
         files.append(out_file)
 
         ds = osgeo.gdal.Open(in_file)
-        file_bounds = _get_extents(ds)
+        file_bounds = _get_extents(ds, proj)
         del ds
 
         use_bounds = False
@@ -292,6 +298,9 @@ def _process_download(tiff_dir, warp_bounds, req_id):
             "creationOptions": ['NUM_THREADS=ALL_CPUS'],
         }
 
+        if proj is not None:
+            kwargs['srcSRS'] = proj
+
         if use_bounds:
             kwargs['outputBounds'] = file_bounds
             print("Using bounds of", file_bounds)
@@ -305,9 +314,35 @@ def _process_download(tiff_dir, warp_bounds, req_id):
 
     return files
 
-def _set_hillshade(data, zoom, warp_bounds, req_id):
+
+def _clear_uploads(data):
+    uploaded_file = data.get('hillshade_file')
+    if not uploaded_file:
+        return
+
+    world_file = os.path.basename(uploaded_file)
+    extension = world_file[world_file.index('.') + 1:]
+    wf_ext = f'{extension[0]}{extension[-1]}w'
+    wf_name = world_file[:world_file.index('.')]
+    world_file = f'{wf_name}.{wf_ext}'
+    try:
+        os.remove(os.path.join(os.path.dirname(uploaded_file),
+                               world_file)
+                  )
+    except FileNotFoundError:
+        print("Unable to remove world fie")
+        print(world_file)
+
+    # Done with the uploaded file (if any), delete it
+    try:
+        os.remove(uploaded_file)
+    except FileNotFoundError:
+        print("Unable to remove upload")
+
+
+def _set_hillshade(data, zoom, map_bounds, req_id):
     tmp_dir = None
-    if zoom < 8:
+    if zoom < 7:
         hillshade_files = ["@earth_relief_15s"]
     elif zoom < 10.5:
         hillshade_files = ["@srtm_relief_01s"]
@@ -316,12 +351,13 @@ def _set_hillshade(data, zoom, warp_bounds, req_id):
         tmp_dir = tempfile.TemporaryDirectory()
         _update_status("Downloading hillshade files...", req_id, data)
 
-        tiff_dir = _download_elevation(warp_bounds, tmp_dir, req_id)
+        tiff_dir = _download_elevation(map_bounds, tmp_dir, req_id)
         print("Generating composite hillshade file")
 
         _update_status("Processing hillshade data...", req_id, data)
 
-        out_files = _process_download(tiff_dir, warp_bounds, req_id)
+        all_files = [os.path.join(tiff_dir, x) for x in os.listdir(tiff_dir)]
+        out_files = _process_files(tiff_dir, all_files, map_bounds, req_id)
 
         hillshade_files = out_files
 
@@ -332,45 +368,21 @@ def _set_hillshade(data, zoom, warp_bounds, req_id):
         # See if we need to process this
         img_type = data['imgType']
         if img_type == 'j':
-            osgeo.gdal.AllRegister()  # Why? WHY!?!? But needed...
-            # Image/World files need to be combined.
+            # Image/World files need to be combined, along with their specified projection
             proj = data['imgProj']
             out_dir = os.path.dirname(uploaded_file)
-            out_file = os.path.join(out_dir, "hillshade.tiff")
 
             _update_status("Processing uploads...", req_id, data)
 
-            osgeo.gdal.Warp(out_file, uploaded_file,
-                            srcSRS=proj, dstSRS='EPSG:4326',
-                            outputBounds=warp_bounds,
-                            warpOptions=['NUM_THREADS=ALL_CPUS'],
-                            creationOptions=['NUM_THREADS=ALL_CPUS'],
-                            multithread=True)
-
-            world_file = os.path.basename(uploaded_file)
-            extension = world_file[world_file.index('.') + 1:]
-            wf_ext = f'{extension[0]}{extension[-1]}w'
-            wf_name = world_file[:world_file.index('.')]
-            world_file = f'{wf_name}.{wf_ext}'
-            try:
-                os.remove(os.path.join(os.path.dirname(uploaded_file),
-                                       world_file)
-                          )
-            except FileNotFoundError:
-                print("Unable to remove world fie")
-                print(world_file)
-
-            # Done with the uploaded file (if any), delete it
-            try:
-                os.remove(uploaded_file)
-            except FileNotFoundError:
-                print("Unable to remove upload")
+            out_file = _process_files(out_dir, [uploaded_file], map_bounds, req_id, proj=proj)
+            out_file = out_file[0]
 
             uploaded_file = out_file
 
         hillshade_files.append(uploaded_file)
 
     return (hillshade_files, tmp_dir)
+
 
 def _draw_hillshades(hillshade_file, fig, req_id, data, **kwargs):
     if not isinstance(hillshade_file, (list, tuple)):
@@ -391,7 +403,7 @@ def _draw_hillshades(hillshade_file, fig, req_id, data, **kwargs):
                 {
                     'status': "Drawing map image...",
                     'progress': (idx / num_files) * 100
-                    }, req_id,
+                }, req_id,
                 data
             )
 
@@ -403,6 +415,7 @@ def _draw_hillshades(hillshade_file, fig, req_id, data, **kwargs):
             os.remove(file)
         except FileNotFoundError:
             print("Unable to remove upload")
+
 
 def _add_stations(stations, fig, req_id, data):
     print("Plotting stations")
@@ -453,6 +466,7 @@ def _add_stations(stations, fig, req_id, data):
             fig.image(icon_path, position=position)
 
     return used_symbols
+
 
 def generate(req_id):
     data = _global_session.get(req_id)
@@ -509,7 +523,6 @@ def generate(req_id):
 
     fig.basemap(**basemap_args)
 
-
     hillshade_file, tmp_dir = _set_hillshade(data, data['mapZoom'], warp_bounds, req_id)
 
     hillshade_args = {
@@ -544,7 +557,6 @@ def generate(req_id):
 
         map_scale = f'j{data["scale"]}+w{scale_length}k+f+o{offset}+c{mid_lat}N+l'
         fig.basemap(map_scale = map_scale, F = '+gwhite+p')
-
 
     cur_dir = os.getcwd()
 
@@ -667,7 +679,7 @@ def generate(req_id):
             fig.coast(water='#CBE7FF',
                       resolution='f')
 
-
+    _clear_uploads(data)
     _update_status("Saving final image...", req_id, data)
     save_file = f'{uuid.uuid4().hex}.pdf'
     script_dir = os.path.dirname(__file__)
