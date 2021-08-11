@@ -90,6 +90,7 @@ def _get_extents(src, proj=None):
     lry = uly + (src.RasterYSize * yres)
 
     src_srs = osr.SpatialReference()
+    src_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
     if proj is not None:
         epsg_code = int(proj.replace('EPSG:', ''))
         src_srs.ImportFromEPSG(epsg_code)
@@ -103,10 +104,10 @@ def _get_extents(src, proj=None):
     corners = ((ulx, uly), (lrx, uly), (lrx, lry), (ulx, lry))
     trans_corners = transform.TransformPoints(corners)
 
-    uly, ulx, _ = trans_corners[0]
-    ury, urx, _ = trans_corners[1]
-    lry, lrx, _ = trans_corners[2]
-    lly, llx, _ = trans_corners[3]
+    ulx, uly, _ = trans_corners[0]
+    urx, ury, _ = trans_corners[1]
+    lrx, lry, _ = trans_corners[2]
+    llx, lly, _ = trans_corners[3]
 
     # figure out which X is to the left.
     # Make both upper and lower coordinates
@@ -257,8 +258,6 @@ def _process_files(dest_dir, all_files, warp_bounds, req_id, proj = None):
         # if os.path.isfile(out_file):
         # continue  # Already processed. Move on.
 
-        files.append(out_file)
-
         ds = osgeo.gdal.Open(in_file)
         file_bounds = _get_extents(ds, proj)
         del ds
@@ -304,8 +303,17 @@ def _process_files(dest_dir, all_files, warp_bounds, req_id, proj = None):
         if use_bounds:
             kwargs['outputBounds'] = file_bounds
             print("Using bounds of", file_bounds)
+            if ((file_bounds[0] < 0) == (file_bounds[2] < 0)) and file_bounds[0] > file_bounds[2]:
+                print("Skipping file due to negative bounds")
+                continue
+
+            # this seems unlikely, but still would be wrong
+            if ((file_bounds[0] < 0) != (file_bounds[2] < 0)) and file_bounds[0] < file_bounds[2]:
+                print("Skipping file due to really weird bounds")
+                continue
 
         osgeo.gdal.Warp(out_file, in_file, **kwargs)
+        files.append(out_file)
         _update_status({
             'status': "Processing hillshade data...",
             'progress': (idx / num_files) * 100
@@ -330,14 +338,13 @@ def _clear_uploads(data):
                                world_file)
                   )
     except FileNotFoundError:
-        print("Unable to remove world fie")
-        print(world_file)
+        pass  # Nothing to remove
 
     # Done with the uploaded file (if any), delete it
     try:
         os.remove(uploaded_file)
     except FileNotFoundError:
-        print("Unable to remove upload")
+        pass  # Nothing to remove
 
 
 def _set_hillshade(data, zoom, map_bounds, req_id):
@@ -366,20 +373,21 @@ def _set_hillshade(data, zoom, map_bounds, req_id):
     uploaded_file = data.get('hillshade_file')
     if uploaded_file:
         # See if we need to process this
+        _update_status("Processing uploads...", req_id, data)
+
         img_type = data['imgType']
+        out_dir = os.path.dirname(uploaded_file)
+        proj = None
+
         if img_type == 'j':
-            # Image/World files need to be combined, along with their specified projection
+            # Image/World files need to have their projection specified. GeoTIFF files have it embeded.
             proj = data['imgProj']
-            out_dir = os.path.dirname(uploaded_file)
 
-            _update_status("Processing uploads...", req_id, data)
-
-            out_file = _process_files(out_dir, [uploaded_file], map_bounds, req_id, proj=proj)
-            out_file = out_file[0]
-
-            uploaded_file = out_file
-
-        hillshade_files.append(uploaded_file)
+        # Either way, we need to convert to lat/lon and trim to map area
+        out_file = _process_files(out_dir, [uploaded_file],
+                                  map_bounds, req_id, proj=proj)
+        if out_file:
+            hillshade_files.append(out_file[0])
 
     return (hillshade_files, tmp_dir)
 
@@ -411,10 +419,11 @@ def _draw_hillshades(hillshade_file, fig, req_id, data, **kwargs):
         fig.grdimage(file, **kwargs)
 
         # Done with the processed file (if any), delete it
-        try:
-            os.remove(file)
-        except FileNotFoundError:
-            print("Unable to remove processed file")
+        if not file.startswith("@"):
+            try:
+                os.remove(file)
+            except FileNotFoundError:
+                print("Unable to remove processed file")
 
 
 def _add_stations(stations, fig, req_id, data):
