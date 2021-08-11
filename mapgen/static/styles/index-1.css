@@ -206,32 +206,39 @@ body {
     box-sizing: border-box;
 }
 
-div.insetMap.User{
-    display:grid;
-    grid-template-rows:auto 1fr;
+div.insetMap.User {
+    display: grid;
+    grid-template-rows: auto 1fr;
 }
 
-div.insetMap.User div.insetTitle{
+div.insetMap.User div.insetTitle {
     background-color: whitesmoke;
     text-align: center;
-    padding-top:2px;
-    padding-bottom:2px;
-    border-bottom:1px solid;
-    cursor:move;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    border-bottom: 1px solid;
+    cursor: move;
 }
 
-div.insetSettingsTitle{
-    background-color: aliceblue;
-    border-top-left-radius:5px;
-    border-top-right-radius:5px;
-    padding-bottom:3px;
-    padding-top:3px;
-    margin-bottom:3px;
-    border-bottom:1px solid;
+div.insetSettingsTitle {
+    padding-bottom: 3px;
+    padding-top: 3px;
+    justify-self: start;
+    align-self: center;
 }
 
-div.insetSettings{
-    border:1px solid;
+div.insetSettings {
+    border: 1px solid;
     border-radius: 5px;
-    margin-bottom:5px;
+    margin-bottom: 5px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background-color: aliceblue;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+div.insetSettings button.deleteInset {
+    justify-self: end;
+    align-self: center;
 }

@@ -695,6 +695,8 @@ def generate(req_id):
             fig.coast(water='#CBE7FF',
                       resolution='f')
 
+            _add_stations(data.get('station', []), fig, req_id, data)
+
     _clear_uploads(data)
     _update_status("Saving final image...", req_id, data)
     save_file = f'{uuid.uuid4().hex}.pdf'
