@@ -28,7 +28,7 @@ $(document).ready(function() {
     $(document).on('click', 'input.staCheck', checkForAll);
     $(document).on('click', 'input.staCatAll', toggleAll);
     $(document).on('click', '#stationSelAll', toggleStations);
-    $(document).on('click', 'button.deleteInset',removeInsetMap);
+    $(document).on('click', 'button.deleteInset', removeInsetMap);
     $(window).resize(sizeMap);
     $('#overviewWidth').change(function() { overviewChanged = true; })
     $('#getMap').click(getMap);
@@ -247,40 +247,41 @@ function sizeMap() {
     }
 }
 
-var insetId=0;
-var insetMaps={};
-function addNewMap(){
-    insetId+=1;
-    var mapDiv=$('<div class="insetMap User"></div>');
-    mapDiv.data('mapID',insetId);
-    var titleDiv=$(`<div class=insetTitle>Inset ${insetId}</div>`);
-    var innerMap=$('<div class=insetInner>')
+var insetId = 0;
+var insetMaps = {};
+
+function addNewMap() {
+    insetId += 1;
+    var mapDiv = $('<div class="insetMap User"></div>');
+    mapDiv.data('mapID', insetId);
+    var titleDiv = $(`<div class=insetTitle>Inset ${insetId}</div>`);
+    var innerMap = $('<div class=insetInner>')
 
     mapDiv.append(titleDiv);
     mapDiv.append(innerMap);
-    var mapID=`insetMap${insetId}`
-    innerMap.prop('id',mapID);
+    var mapID = `insetMap${insetId}`
+    innerMap.prop('id', mapID);
 
-    var mapWidth=$('#maps').width()/3;
-    var mapHeight=$('#maps').height()/3;
-    mapDiv.css('width',mapWidth);
-    mapDiv.css('height',mapHeight);
-    mapDiv.css('top','5px');
-    mapDiv.css('left','5px');
+    var mapWidth = $('#maps').width() / 3;
+    var mapHeight = $('#maps').height() / 3;
+    mapDiv.css('width', mapWidth);
+    mapDiv.css('height', mapHeight);
+    mapDiv.css('top', '5px');
+    mapDiv.css('left', '5px');
 
     $('#maps').append(mapDiv);
 
-    var mapTiles=L.tileLayer('https://basemap.nationalmap.gov/ArcGIS/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}');
-    var insetMap=L.map(mapID,{
+    var mapTiles = L.tileLayer('https://basemap.nationalmap.gov/ArcGIS/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}');
+    var insetMap = L.map(mapID, {
         tap: false,
-        zoomSnap:0,
-        layers:[mapTiles]
+        zoomSnap: 0,
+        layers: [mapTiles]
     })
 
-    insetMaps[insetId]=insetMap;
+    insetMaps[insetId] = insetMap;
 
-    var insetSettings=$('<div class="insetSettings">')
-    insetSettings.data('mapID',insetId);
+    var insetSettings = $('<div class="insetSettings">')
+    insetSettings.data('mapID', insetId);
     insetSettings.append(`<div class="insetSettingsTitle">Inset ${insetId}</div>`);
     insetSettings.append('<button type=button class="deleteInset">Delete</button>');
     insetSettings.append(`<input type="hidden" id="insetBounds${insetId}" name="insetBounds">`);
@@ -292,7 +293,7 @@ function addNewMap(){
     insetSettings.append
     $('#insetMaps').append(insetSettings);
 
-    insetMap.on("moveend zoomend", function(){
+    insetMap.on("moveend zoomend", function() {
         updateInsetBounds(insetId);
     });
 
@@ -300,62 +301,60 @@ function addNewMap(){
 
     //Set up mapDiv for moving/resizing
     mapDiv.draggable({
-        containment: "parent",
-        handle:"div.insetTitle",
-        stop:updateInsetPosition
-    })
-    .resizable({
-        containment:'#maps',
-        zIndex:1001,
-        stop:updateInsetSize
-    });
+            containment: "parent",
+            handle: "div.insetTitle",
+            stop: updateInsetPosition
+        })
+        .resizable({
+            containment: '#maps',
+            zIndex: 1001,
+            stop: updateInsetSize
+        });
 
     updateInsetSize.call(mapDiv[0]);
 }
 
-function updateInsetSize(event,ui){
-    var height=$(this).find('div.insetInner').height();
+function updateInsetSize(event, ui) {
+    var height = $(this).find('div.insetInner').height();
 
-    if(typeof(ui)!=='undefined'){
-        var width=ui.size['width'];
-        var insetID=ui.helper.closest('div.insetMap.User').data('mapID');
-    }
-    else{
+    if (typeof(ui) !== 'undefined') {
+        var width = ui.size['width'];
+        var insetID = ui.helper.closest('div.insetMap.User').data('mapID');
+    } else {
         //this should be the div in question
-        var width=$(this).width();
-        var insetID=$(this).data('mapID');
+        var width = $(this).width();
+        var insetID = $(this).data('mapID');
     }
 
-    var percentWidth=width/$('#maps').width();
-    var percentHeight=height/$('#maps').height();
-    var unitWidth=Number($('#mapWidth').val())*percentWidth;
-    var unitHeight=Number($('#mapHeight').val())*percentHeight;
+    var percentWidth = width / $('#maps').width();
+    var percentHeight = height / $('#maps').height();
+    var unitWidth = Number($('#mapWidth').val()) * percentWidth;
+    var unitHeight = Number($('#mapHeight').val()) * percentHeight;
 
     $(`#insetWidth${insetID}`).val(unitWidth);
     $(`#insetHeight${insetID}`).val(unitHeight);
 
     insetMaps[insetID].invalidateSize();
-    updateInsetPosition.call(this,[event,ui]);
+    updateInsetPosition.call(this, [event, ui]);
 }
 
-function updateInsetPosition(event,ui){
-    if(typeof(ui)!=='undefined'){
-        var top=ui['position']['top'];
-        var left=ui['position']['left'];
-        var insetID=ui.helper.closest('div.insetMap.User').data('mapID');
-    }
-    else{
-        var top=$(this).position().top;
-        var left=$(this).position().left;
-        var insetID=$(this).data('mapID');
+function updateInsetPosition(event, ui) {
+    if (typeof(ui) !== 'undefined') {
+        var top = ui['position']['top'];
+        var left = ui['position']['left'];
+        var insetID = ui.helper.closest('div.insetMap.User').data('mapID');
+    } else {
+        var top = $(this).position().top;
+        var left = $(this).position().left;
+        var insetID = $(this).data('mapID');
     }
 
     //1- to invert, since gmt is bottom left, not top left
-    var percentTop=1-top/$('#maps').height();
-    var percentLeft=left/$('#maps').width();
+    var percentTop = 1 - top / $('#maps').height();
+    var percentLeft = left / $('#maps').width();
 
-    var unitTop=Number($('#mapHeight').val())*percentTop;
-    var unitLeft=Number($('#mapWidth').val())*percentLeft;
+    var unitTop = Number($('#mapHeight').val()) * percentTop;
+    var unitLeft = Number($('#mapWidth').val()) * percentLeft;
 
     $(`#insetTop${insetID}`).val(unitTop);
     $(`#insetLeft${insetID}`).val(unitLeft);
@@ -363,17 +362,17 @@ function updateInsetPosition(event,ui){
     updateInsetBounds(insetID); //for good measure
 }
 
-function updateInsetBounds(inset_id){
-    var bounds=insetMaps[inset_id].getBounds();
-    var zoom=insetMaps[inset_id].getZoom();
+function updateInsetBounds(inset_id) {
+    var bounds = insetMaps[inset_id].getBounds();
+    var zoom = insetMaps[inset_id].getZoom();
 
     $(`#insetBounds${inset_id}`).val(bounds.toBBoxString());
     $(`#insetZoom${inset_id}`).val(zoom);
 }
 
-function removeInsetMap(){
-    var settingsDiv=$(this).closest('div.insetSettings')
-    var mapID=settingsDiv.data('mapID');
+function removeInsetMap() {
+    var settingsDiv = $(this).closest('div.insetSettings')
+    var mapID = settingsDiv.data('mapID');
     $(`#insetMap${mapID}`).closest('div.insetMap.User').remove();
     settingsDiv.remove();
 }
@@ -510,6 +509,9 @@ function getStationsDebounce() {
 var urlBase = 'https://volcanoes.usgs.gov';
 var instrumentUrl = `${urlBase}/vsc/api/instrumentApi/data`;
 
+var all_stations = [];
+var all_categories = [];
+
 function getStations() {
     if (staTimer !== null) {
         clearTimeout(staTimer);
@@ -517,37 +519,75 @@ function getStations() {
     staTimer = null;
 
     updateBounds();
+
     var minLat = $('#minLat').val();
     var maxLat = $('#maxLat').val();
-    var minLon = $('#minLon').val();
-    var maxLon = $('#maxLon').val();
+    var westLon = $('#minLon').val();
+    var eastLon = $('#maxLon').val();
+    all_stations = [];
+    all_categories = [];
 
-    var url = `${instrumentUrl}?lat1=${minLat}&long1=${minLon}&lat2=${maxLat}&long2=${maxLon}`;
+    var westLon2 = null;
+    var eastLon2 = null;
+    if (westLon > eastLon) {
+        westLon2 = westLon;
+        eastLon2 = 180;
+        westLon = -180
+    }
+
+    query_stations(minLat, maxLat, eastLon, westLon, eastLon2, westLon2);
+}
+
+function query_stations(minLat, maxLat, eastLon, westLon, eastLon2, westLon2) {
+    var url = `${instrumentUrl}?lat1=${minLat}&long1=${westLon}&lat2=${maxLat}&long2=${eastLon}`;
     $.getJSON(url)
         .done(function(data) {
-            $('#stationListTop').empty();
-
-            var cats = data['categories'];
-            for (var i = 0; i < cats.length; i++) {
-                var cat = cats[i];
-                stationCategories[cat['catId']] = cat;
-                createStationGroup(cat);
+            all_categories = all_categories.concat(data['categories']);
+            all_stations = all_stations.concat(data['instruments']);
+            if (westLon2 !== null && eastLon2 !== null) {
+                query_stations(minLat, maxLat, eastLon2, westLon2, null, null);
+            } else {
+                displayStations();
             }
-
-            var stas = data['instruments'];
-            for (var i = 0; i < stas.length; i++) {
-                var sta = stas[i];
-                var cat = stationCategories[sta['catId']];
-                createStationDiv(sta, cat);
-            }
-
-            //check all by default
-            $('#stationSelAll')[0].checked = true;
-            toggleStations.call($('#stationSelAll')[0]);
-
-            //make sure the map size is correct
-            sizeMap();
         });
+}
+
+function displayStations() {
+    var seenStations = []
+    stationCategories = {};
+
+    $('#stationListTop').empty();
+
+    for (var i = 0; i < all_categories.length; i++) {
+        var cat = all_categories[i];
+        var catID = cat['catId'];
+
+        if (catID in stationCategories) {
+            continue //already seen this category
+        }
+
+        stationCategories[catID] = cat;
+        createStationGroup(cat);
+    }
+
+    for (var i = 0; i < all_stations.length; i++) {
+        var sta = all_stations[i];
+        var staName = sta['station'];
+        if (seenStations.indexOf(staName) !== -1) {
+            continue //already seen this station
+        }
+        seenStations.push(staName);
+
+        var cat = stationCategories[sta['catId']];
+        createStationDiv(sta, cat);
+    }
+
+    //check all by default
+    $('#stationSelAll')[0].checked = true;
+    toggleStations.call($('#stationSelAll')[0]);
+
+    //make sure the map size is correct
+    sizeMap();
 }
 
 function createStationDiv(sta, cat) {

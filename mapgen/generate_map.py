@@ -342,7 +342,7 @@ def _clear_uploads(data):
 
 def _set_hillshade(data, zoom, map_bounds, req_id):
     tmp_dir = None
-    if zoom < 7:
+    if zoom <= 7:
         hillshade_files = ["@earth_relief_15s"]
     elif zoom < 10.5:
         hillshade_files = ["@srtm_relief_01s"]
@@ -410,11 +410,11 @@ def _draw_hillshades(hillshade_file, fig, req_id, data, **kwargs):
         print("Adding image", idx, "of", len(hillshade_file), ":", file)
         fig.grdimage(file, **kwargs)
 
-        # Done with the uploaded file (if any), delete it
+        # Done with the processed file (if any), delete it
         try:
             os.remove(file)
         except FileNotFoundError:
-            print("Unable to remove upload")
+            print("Unable to remove processed file")
 
 
 def _add_stations(stations, fig, req_id, data):
@@ -441,8 +441,8 @@ def _add_stations(stations, fig, req_id, data):
     for station in data.get('station', []):
         icon_url = station['icon']
         icon_name = os.path.basename(icon_url)
-        sta_x = station['lon']
-        sta_y = station['lat']
+        sta_x = float(station['lon'])
+        sta_y = float(station['lat'])
 
         symbol = station_symbols.get(icon_name, {}).get('symbol')
         color = station_symbols.get(icon_name, {}).get('color')
@@ -568,12 +568,15 @@ def generate(req_id):
         _update_status("Adding Legend...", req_id, data)
 
         with tempfile.NamedTemporaryFile('w+') as file:
+            pos = f"J{legend}+j{legend}+o0.2c+l1.5"
+            use_width = False
             for idx, (name, symbol) in enumerate(used_symbols.items()):
                 sym_label = name[:-4]
 
                 # This section handles images rather than symbols. Hacky, and *hopefully*
                 # not needed, but left in for now just in case.
                 if isinstance(symbol, str):
+                    use_width = True
                     file.write('G 8p\n')
                     file.write(f'I {symbol} 16p LM\n')
                     file.write('G -1l\n')
@@ -598,9 +601,13 @@ def generate(req_id):
 
             file.seek(0)
             file_name = file.name
+
+            if use_width:
+                pos += "+w1.5i"
+
             fig.legend(
                 file_name,
-                position = f"J{legend}+j{legend}+o0.2c+l1.5",
+                position = pos,
                 box="+gwhite+p1p"
             )
 
