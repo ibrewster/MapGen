@@ -518,12 +518,18 @@ function getStations() {
     }
     staTimer = null;
 
-    updateBounds();
+    var bounds = map.getBounds();
 
-    var minLat = $('#minLat').val();
-    var maxLat = $('#maxLat').val();
-    var westLon = $('#minLon').val();
-    var eastLon = $('#maxLon').val();
+    var minLat = bounds.getSouth();
+    var maxLat = bounds.getNorth();
+    var westLon = bounds.getWest();
+    while (westLon < -180) {
+        westLon += 360;
+    }
+    var eastLon = bounds.getEast();
+    while (eastLon < -180) {
+        eastLon += 360
+    }
     all_stations = [];
     all_categories = [];
 

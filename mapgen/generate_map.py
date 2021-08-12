@@ -682,7 +682,7 @@ def generate(req_id):
         hillshade_file, tmp_dir = _set_hillshade(data, zoom, bounds, req_id)
         pos = f"x{left}{unit}/{top}{unit}+w{width}{unit}/{height}{unit}+jTL"
 
-        with fig.inset(position=pos, box="+gwhite+p1p"):
+        with fig.inset(position=pos, box="+gwhite+p1p+s3p/-3p"):
             hillshade_args = {
                 "region": inset_bounds,
                 "projection": "M?",
