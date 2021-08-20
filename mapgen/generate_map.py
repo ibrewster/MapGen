@@ -451,6 +451,10 @@ def _add_stations(stations, fig, req_id, data, zoom):
         'webcam.png': {'symbol': 'kwebcam.eps/',
                        'color': 'blue',  # Really, could be anything...
                        },
+        "UserSupplied.png": {
+            'symbol': 'a',
+            'color': 'yellow',
+        }
     }
     used_symbols = {}
 

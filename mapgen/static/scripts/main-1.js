@@ -74,6 +74,7 @@ $(document).ready(function() {
     $('#resetOverview').click(resetOverview);
     $('#mapLocation').change(locSelectChanged);
     $('#overviewWidth').change(overviewWidthChanged);
+    $('#addStationCSV').change(addCSVStations);
     $('#overviewUnits').text($('#sizeUnits option:selected').text());
     $('#sizeUnits').change(function() {
         $('#overviewUnits').text($('#sizeUnits option:selected').text());
@@ -553,27 +554,85 @@ function query_stations(minLat, maxLat, eastLon, westLon, eastLon2, westLon2) {
             if (westLon2 !== null && eastLon2 !== null) {
                 query_stations(minLat, maxLat, eastLon2, westLon2, null, null);
             } else {
-                displayStations();
+                addCSVStations();
             }
         });
+}
+
+var csv_categories = {}
+var allCSVCategories = []
+
+function addCSVStations() {
+    csv_categories = [];
+
+    var file = $('#addStationCSV')[0].files;
+    if (file.length == 0) {
+        displayStations();
+        return;
+    }
+
+    file = file[0];
+    var reader = new FileReader();
+    reader.onload = function() {
+        var data = $.csv.toArrays(reader.result);
+        for (var i = 1; i < data.length; i++) {
+            var station = data[i];
+            var staDict = {
+                'station': station[2],
+                'catId': station[3],
+                'lat': station[0],
+                'long': station[1],
+                'custom': true
+            }
+
+            all_stations.push(staDict);
+            if (!(station[3] in csv_categories)) {
+                var csv_cat_dict = {
+                    'category': 'User Supplied',
+                    'catId': station[3],
+                    'iconUrl': '/UserSupplied.png',
+                    'custom': true
+                }
+
+                allCSVCategories.push(csv_cat_dict);
+            }
+
+        }
+
+        displayStations();
+    }
+    reader.readAsBinaryString(file);
 }
 
 function displayStations() {
     var seenStations = []
     stationCategories = {};
+    csv_categories = {};
 
     $('#stationListTop').empty();
 
-    for (var i = 0; i < all_categories.length; i++) {
-        var cat = all_categories[i];
-        var catID = cat['catId'];
+    var cats = [all_categories, allCSVCategories];
+    for (var j = 0; j < cats.length; j++) {
+        var catList = cats[j];
+        for (var i = 0; i < catList.length; i++) {
+            var cat = catList[i];
+            var catID = cat['catId'];
 
-        if (catID in stationCategories) {
-            continue //already seen this category
+            if ('custom' in cat) {
+                if (catID in csv_categories) {
+                    continue //already seen this category
+                }
+
+                csv_categories[catID] = cat;
+            } else {
+                if (catID in stationCategories) {
+                    continue //already seen this category
+                }
+                stationCategories[catID] = cat;
+            }
+
+            createStationGroup(cat);
         }
-
-        stationCategories[catID] = cat;
-        createStationGroup(cat);
     }
 
     for (var i = 0; i < all_stations.length; i++) {
@@ -584,7 +643,11 @@ function displayStations() {
         }
         seenStations.push(staName);
 
-        var cat = stationCategories[sta['catId']];
+        if ('custom' in sta) {
+            var cat = csv_categories[sta['catId']];
+        } else {
+            var cat = stationCategories[sta['catId']];
+        }
         createStationDiv(sta, cat);
     }
 
@@ -610,12 +673,20 @@ function createStationDiv(sta, cat) {
     checkbox.val(value);
     div.append(checkbox);
     div.append(sta['station']);
-    $(`#staCat${sta['catId']}`).append(div);
+    var destID = `staCat${sta['catId']}`;
+    if ('custom' in cat) {
+        destID += '-1';
+    }
+    $(`#${destID}`).append(div);
 }
 
 function createStationGroup(info) {
     var staType = info['category'];
-    var div = $(`<div class="stationType" id="staCat${info['catId']}">`);
+    var divID = `staCat${info['catId']}`
+    if ('custom' in info) {
+        divID += '-1';
+    }
+    var div = $(`<div class="stationType" id="${divID}">`);
     var typeTitle = $('<div class=stationTypeHead>')
     var allCheck = $("<span class='leftEdge'>");
     allCheck.append("<input type=checkbox class='staCatAll'>");
