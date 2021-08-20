@@ -163,9 +163,13 @@ def _download_elevation(bounds, temp_dir, req_id):
         if bounds2[2] > 0:
             bounds2[2] -= 360
 
-        bounds_list = [bounds3, bounds2]
+        poly2 = Polygon.from_bounds(*bounds2)
+        poly3 = Polygon.from_bounds(*bounds3)
+        bounds_list = [shapely_geojson.dumps(poly3),
+                       shapely_geojson.dumps(poly2)]
     else:
-        bounds_list = [bounds, ]
+        poly = Polygon.from_bounds(*bounds)
+        bounds_list = [shapely_geojson.dumps(poly), ]
 
     ids = 151  # DSM hillshade
     URL_BASE = 'https://elevation.alaska.gov'
@@ -182,10 +186,7 @@ def _download_elevation(bounds, temp_dir, req_id):
     pc = 0
     chunk_size = 1024 * 1024 * 10  # 10 MB
 
-    for bound in bounds_list:
-        poly = Polygon.from_bounds(*bound)
-        geojson = shapely_geojson.dumps(poly)
-
+    for geojson in bounds_list:
         # get file listings
         req = requests.post(list_url, data = {'geojson': geojson, })
 
@@ -193,15 +194,17 @@ def _download_elevation(bounds, temp_dir, req_id):
             print("Unable to get file listings")
         else:
             files = req.json()
-            print(files)
             try:
-                file_info = next((x for x in files if x['project_id'] == ids))
+                file_info = next((x for x
+                                  in files
+                                  if x['dataset_id'] == ids))
             except StopIteration:
                 pass
             else:
                 print(file_info)
                 est_size += file_info.get('bytes', -1)
 
+    for geojson in bounds_list:
         req = requests.get(url,
                            params = {'geojson': geojson,
                                      'ids': ids},
@@ -454,9 +457,7 @@ def _add_stations(stations, fig, req_id, data, zoom):
     sym_outline = "faint,128" if zoom < 10 else 'thin,128'
 
     sym_size = (8 / 3) * zoom - (13 + (1 / 3))
-#     # cap the size at 16pt
-#     if sym_size > 16:
-#         sym_size = 16
+
     sym_size = f"{sym_size}p"
     for station in data.get('station', []):
         icon_url = station['icon']
@@ -720,7 +721,7 @@ def generate(req_id):
     cache_dir = os.path.join(script_dir, "cache")
     os.makedirs(cache_dir, exist_ok = True)
     file_path = os.path.join(cache_dir, save_file)
-    fig.savefig(file_path, dpi=700)
+    fig.savefig(file_path, anti_alias = True)
     data['map_file'] = file_path
     data['gen_status'] = "Complete"
     _global_session[req_id] = data
