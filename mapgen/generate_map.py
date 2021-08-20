@@ -151,6 +151,7 @@ def _get_extents(src, proj=None):
 def _download_elevation(bounds, temp_dir, req_id):
     if bounds[0] < -180 or bounds[2] > 180 or bounds[0] > bounds[2]:
         # Crossing dateline. Need to split request.
+        bounds = list(bounds)
         bounds2 = bounds.copy()
         bounds3 = bounds.copy()
         # Make bounds be only west of dateline
@@ -426,7 +427,10 @@ def _draw_hillshades(hillshade_file, fig, req_id, data, **kwargs):
                 print("Unable to remove processed file")
 
 
-def _add_stations(stations, fig, req_id, data):
+def _add_stations(stations, fig, req_id, data, zoom):
+    if zoom < 8:
+        return {}  # Don't plot stations at low zoom levels
+
     print("Plotting stations")
     _update_status("Plotting Stations...", req_id, data)
 
@@ -435,18 +439,25 @@ def _add_stations(stations, fig, req_id, data):
     os.chdir(img_dir)
 
     station_symbols = {
-        'gps.png': {'symbol': 'a16p',
+        'gps.png': {'symbol': 'a',
                     'color': 'red', },
-        'seismometer.png': {'symbol': 't16p',
+        'seismometer.png': {'symbol': 't',
                             'color': 'green', },
-        'tiltmeter.png': {'symbol': 'ktiltmeter.eps/16p',
+        'tiltmeter.png': {'symbol': 'ktiltmeter.eps/',
                           'color': 'blue', },
-        'webcam.png': {'symbol': 'kwebcam.eps/16p',
+        'webcam.png': {'symbol': 'kwebcam.eps/',
                        'color': 'blue',  # Really, could be anything...
                        },
     }
     used_symbols = {}
 
+    sym_outline = "faint,128" if zoom < 10 else 'thin,128'
+
+    sym_size = (8 / 3) * zoom - (13 + (1 / 3))
+#     # cap the size at 16pt
+#     if sym_size > 16:
+#         sym_size = 16
+    sym_size = f"{sym_size}p"
     for station in data.get('station', []):
         icon_url = station['icon']
         icon_name = os.path.basename(icon_url)
@@ -457,9 +468,11 @@ def _add_stations(stations, fig, req_id, data):
         color = station_symbols.get(icon_name, {}).get('color')
 
         if symbol is not None:
+            symbol += sym_size
             used_symbols[icon_name] = station_symbols.get(icon_name)
             fig.plot(x=[sta_x, ], y=[sta_y, ],
-                     style=symbol, color=color)
+                     style=symbol, color=color,
+                     pen = sym_outline)
         else:
             icon_path = os.path.join(main_dir, 'static/img', icon_name)
             used_symbols[icon_name] = icon_path
@@ -471,7 +484,7 @@ def _add_stations(stations, fig, req_id, data):
                 with open(icon_path, 'wb') as icon_file:
                     icon_file.write(req.content)
 
-            position = f"g{sta_x}/{sta_y}+w16p"
+            position = f"g{sta_x}/{sta_y}+w{sym_size}"
             fig.image(icon_path, position=position)
 
     return used_symbols
@@ -532,10 +545,10 @@ def generate(req_id):
 
     fig.basemap(**basemap_args)
 
-    hillshade_file, tmp_dir = _set_hillshade(data, data['mapZoom'], warp_bounds, req_id)
+    zoom = data['mapZoom']
+    hillshade_file, tmp_dir = _set_hillshade(data, zoom, warp_bounds, req_id)
 
     hillshade_args = {
-        "cmap": "topo",
         "nan_transparent": True,
         "dpi": 300,
         "shading": True
@@ -569,58 +582,9 @@ def generate(req_id):
 
     cur_dir = os.getcwd()
 
-    used_symbols = _add_stations(data.get('station', []), fig, req_id, data)
+    used_symbols = _add_stations(data.get('station', []),
+                                 fig, req_id, data, zoom)
 
-    legend = data['legend']
-    if legend != "False" and 'station' in data:
-        print("Adding legend")
-        _update_status("Adding Legend...", req_id, data)
-
-        with tempfile.NamedTemporaryFile('w+') as file:
-            pos = f"J{legend}+j{legend}+o0.2c+l1.5"
-            use_width = False
-            for idx, (name, symbol) in enumerate(used_symbols.items()):
-                sym_label = name[:-4]
-
-                # This section handles images rather than symbols. Hacky, and *hopefully*
-                # not needed, but left in for now just in case.
-                if isinstance(symbol, str):
-                    use_width = True
-                    file.write('G 8p\n')
-                    file.write(f'I {symbol} 16p LM\n')
-                    file.write('G -1l\n')
-                    # file.write('G -4p\n')
-                    file.write('P .38 - - - - - - -\n')
-                    file.write(f'T {sym_label}\n')
-                    file.write('G 1l\n')
-                    file.write('G -5p\n')
-                    continue
-
-                sym_char = symbol['symbol'][0]  # First character
-                if sym_char == 'k':
-                    try:
-                        end_idx = symbol['symbol'].index('/')
-                        sym_char = symbol['symbol'][:end_idx]
-                    except ValueError:
-                        pass
-
-                sym_color = symbol['color']
-                file.write(f'S 11p {sym_char} 16p {sym_color} - 23p {sym_label}')
-                file.write('\n')
-
-            file.seek(0)
-            file_name = file.name
-
-            if use_width:
-                pos += "+w1.5i"
-
-            fig.legend(
-                file_name,
-                position = pos,
-                box="+gwhite+p1p"
-            )
-
-    os.chdir(cur_dir)
     print("Adding Overview")
 
     _update_status("Adding Overview Map...", req_id, data)
@@ -682,7 +646,7 @@ def generate(req_id):
         hillshade_file, tmp_dir = _set_hillshade(data, zoom, bounds, req_id)
         pos = f"x{left}{unit}/{top}{unit}+w{width}{unit}/{height}{unit}+jTL"
 
-        with fig.inset(position=pos, box="+gwhite+p1p+s3p/-3p"):
+        with fig.inset(position=pos, box="+gwhite+p1p"):
             hillshade_args = {
                 "region": inset_bounds,
                 "projection": "M?",
@@ -695,8 +659,60 @@ def generate(req_id):
             fig.coast(water='#CBE7FF',
                       resolution='f')
 
-            _add_stations(data.get('station', []), fig, req_id, data)
+            adtl_symbols = _add_stations(data.get('station', []), fig, req_id, data, zoom)
 
+        used_symbols.update(adtl_symbols)
+
+    legend = data['legend']
+    if legend != "False" and 'station' in data:
+        print("Adding legend")
+        _update_status("Adding Legend...", req_id, data)
+
+        with tempfile.NamedTemporaryFile('w+') as file:
+            pos = f"J{legend}+j{legend}+o0.2c+l1.5"
+            use_width = False
+            for idx, (name, symbol) in enumerate(used_symbols.items()):
+                sym_label = name[:-4]
+
+                # This section handles images rather than symbols. Hacky, and *hopefully*
+                # not needed, but left in for now just in case.
+                if isinstance(symbol, str):
+                    use_width = True
+                    file.write('G 8p\n')
+                    file.write(f'I {symbol} 16p LM\n')
+                    file.write('G -1l\n')
+                    # file.write('G -4p\n')
+                    file.write('P .38 - - - - - - -\n')
+                    file.write(f'T {sym_label}\n')
+                    file.write('G 1l\n')
+                    file.write('G -5p\n')
+                    continue
+
+                sym_char = symbol['symbol'][0]  # First character
+                if sym_char == 'k':
+                    try:
+                        end_idx = symbol['symbol'].index('/')
+                        sym_char = symbol['symbol'][:end_idx]
+                    except ValueError:
+                        pass
+
+                sym_color = symbol['color']
+                file.write(f'S 11p {sym_char} 16p {sym_color} - 23p {sym_label}')
+                file.write('\n')
+
+            file.seek(0)
+            file_name = file.name
+
+            if use_width:
+                pos += "+w1.5i"
+
+            fig.legend(
+                file_name,
+                position = pos,
+                box="+gwhite+p1p"
+            )
+
+    os.chdir(cur_dir)
     _clear_uploads(data)
     _update_status("Saving final image...", req_id, data)
     save_file = f'{uuid.uuid4().hex}.pdf'
