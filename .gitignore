@@ -1,3 +1,7 @@
+cache
+*.wpu
+pyvenv.cfg
+include
 alaska_2s.grd
 bin/
 lib/

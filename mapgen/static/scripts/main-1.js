@@ -2,6 +2,17 @@ var map = null;
 var overviewRatio = 5;
 var staTimer = null;
 
+var staCategories={
+    999:'User Defined',
+    1:'Seismometer',
+    3:'Tiltmeter',
+    4:'GPS',
+    7:'Gas',
+    12:'Temperature',
+    22:'Camera',
+    23:'Infrasound'
+}
+
 window.onbeforeunload = function() {
     //make sure the downloading overlay is hidden whenever we navigate away from the page.
     $('#downloading').hide();
@@ -498,8 +509,6 @@ function updateUploadPercent(evt) {
     }
 }
 
-var stationCategories = {};
-
 function getStationsDebounce() {
     if (staTimer !== null) {
         clearTimeout(staTimer);
@@ -511,7 +520,6 @@ var urlBase = 'https://volcanoes.usgs.gov';
 var instrumentUrl = `${urlBase}/vsc/api/instrumentApi/data`;
 
 var all_stations = [];
-var all_categories = [];
 
 function getStations() {
     if (staTimer !== null) {
@@ -531,8 +539,8 @@ function getStations() {
     while (eastLon < -180) {
         eastLon += 360
     }
+
     all_stations = [];
-    all_categories = [];
 
     var westLon2 = null;
     var eastLon2 = null;
@@ -549,7 +557,6 @@ function query_stations(minLat, maxLat, eastLon, westLon, eastLon2, westLon2) {
     var url = `${instrumentUrl}?lat1=${minLat}&long1=${westLon}&lat2=${maxLat}&long2=${eastLon}`;
     $.getJSON(url)
         .done(function(data) {
-            all_categories = all_categories.concat(data['categories']);
             all_stations = all_stations.concat(data['instruments']);
             if (westLon2 !== null && eastLon2 !== null) {
                 query_stations(minLat, maxLat, eastLon2, westLon2, null, null);
@@ -559,12 +566,7 @@ function query_stations(minLat, maxLat, eastLon, westLon, eastLon2, westLon2) {
         });
 }
 
-var csv_categories = {}
-var allCSVCategories = []
-
 function addCSVStations() {
-    csv_categories = [];
-
     var file = $('#addStationCSV')[0].files;
     if (file.length == 0) {
         displayStations();
@@ -577,26 +579,19 @@ function addCSVStations() {
         var data = $.csv.toArrays(reader.result);
         for (var i = 1; i < data.length; i++) {
             var station = data[i];
+            
             var staDict = {
                 'station': station[2],
                 'catId': station[3],
                 'lat': station[0],
                 'long': station[1],
-                'custom': true
+            }
+
+            if(!(station[3] in staCategories)){
+                staDict['catId']=999; //user defined/unknown
             }
 
             all_stations.push(staDict);
-            if (!(station[3] in csv_categories)) {
-                var csv_cat_dict = {
-                    'category': 'User Supplied',
-                    'catId': station[3],
-                    'iconUrl': '/UserSupplied.png',
-                    'custom': true
-                }
-
-                allCSVCategories.push(csv_cat_dict);
-            }
-
         }
 
         displayStations();
@@ -606,34 +601,9 @@ function addCSVStations() {
 
 function displayStations() {
     var seenStations = []
-    stationCategories = {};
-    csv_categories = {};
+    var seenCategories=[]
 
     $('#stationListTop').empty();
-
-    var cats = [all_categories, allCSVCategories];
-    for (var j = 0; j < cats.length; j++) {
-        var catList = cats[j];
-        for (var i = 0; i < catList.length; i++) {
-            var cat = catList[i];
-            var catID = cat['catId'];
-
-            if ('custom' in cat) {
-                if (catID in csv_categories) {
-                    continue //already seen this category
-                }
-
-                csv_categories[catID] = cat;
-            } else {
-                if (catID in stationCategories) {
-                    continue //already seen this category
-                }
-                stationCategories[catID] = cat;
-            }
-
-            createStationGroup(cat);
-        }
-    }
 
     for (var i = 0; i < all_stations.length; i++) {
         var sta = all_stations[i];
@@ -643,11 +613,14 @@ function displayStations() {
         }
         seenStations.push(staName);
 
-        if ('custom' in sta) {
-            var cat = csv_categories[sta['catId']];
-        } else {
-            var cat = stationCategories[sta['catId']];
+        var catID=sta['catId'];
+        var cat = staCategories[catID];
+
+        if(seenCategories.indexOf(catID) ==-1 ){
+            createStationGroup(cat,catID);
+            seenCategories.push(catID);
         }
+
         createStationDiv(sta, cat);
     }
 
@@ -664,7 +637,7 @@ function createStationDiv(sta, cat) {
         'lat': sta['lat'],
         'lon': sta['long'],
         'name': sta['staton'],
-        'icon': urlBase + cat['iconUrl']
+        'category':cat
     }
 
     var div = $('<div class="sta">')
@@ -674,18 +647,12 @@ function createStationDiv(sta, cat) {
     div.append(checkbox);
     div.append(sta['station']);
     var destID = `staCat${sta['catId']}`;
-    if ('custom' in cat) {
-        destID += '-1';
-    }
     $(`#${destID}`).append(div);
 }
 
-function createStationGroup(info) {
-    var staType = info['category'];
-    var divID = `staCat${info['catId']}`
-    if ('custom' in info) {
-        divID += '-1';
-    }
+function createStationGroup(cat,id) {
+    var staType = cat;
+    var divID = `staCat${id}`
     var div = $(`<div class="stationType" id="${divID}">`);
     var typeTitle = $('<div class=stationTypeHead>')
     var allCheck = $("<span class='leftEdge'>");

@@ -442,16 +442,20 @@ def _add_stations(stations, fig, req_id, data, zoom):
     os.chdir(img_dir)
 
     station_symbols = {
-        'gps.png': {'symbol': 'a',
-                    'color': 'red', },
-        'seismometer.png': {'symbol': 't',
-                            'color': 'green', },
-        'tiltmeter.png': {'symbol': 'ktiltmeter.eps/',
-                          'color': 'blue', },
-        'webcam.png': {'symbol': 'kwebcam.eps/',
-                       'color': 'blue',  # Really, could be anything...
-                       },
-        "UserSupplied.png": {
+        'GPS': {'symbol': 'a',
+                'color': 'red', },
+        'Seismometer': {'symbol': 't',
+                        'color': 'green', },
+        'Tiltmeter': {'symbol': 'ktiltmeter.eps/',
+                      'color': 'blue', },
+        'Camera': {'symbol': 'kwebcam.eps/',
+                   'color': 'blue',  # Really, could be anything...
+                   },
+        'Gas': {
+            'symbol': 'kgas.eps/',
+            'color': 'gray',
+        },
+        "User Defined": {
             'symbol': 'a',
             'color': 'yellow',
         }
@@ -464,33 +468,33 @@ def _add_stations(stations, fig, req_id, data, zoom):
 
     sym_size = f"{sym_size}p"
     for station in data.get('station', []):
-        icon_url = station['icon']
-        icon_name = os.path.basename(icon_url)
+        category = station['category']
         sta_x = float(station['lon'])
         sta_y = float(station['lat'])
 
-        symbol = station_symbols.get(icon_name, {}).get('symbol')
-        color = station_symbols.get(icon_name, {}).get('color')
+        symbol = station_symbols.get(category, {}).get('symbol', 'a')
+        color = station_symbols.get(category, {}).get('color', '#FF00FF')
 
         if symbol is not None:
             symbol += sym_size
-            used_symbols[icon_name] = station_symbols.get(icon_name)
+            used_symbols[category] = {'symbol': symbol,
+                                      'color': color, }
             fig.plot(x=[sta_x, ], y=[sta_y, ],
                      style=symbol, color=color,
                      pen = sym_outline)
-        else:
-            icon_path = os.path.join(main_dir, 'static/img', icon_name)
-            used_symbols[icon_name] = icon_path
+        # else:
+            # icon_path = os.path.join(main_dir, 'static/img', icon_name)
+            # used_symbols[icon_name] = icon_path
 
-            if not os.path.isfile(icon_path):
-                req = requests.get(icon_url)
-                if req.status_code != 200:
-                    continue  # Can't get an icon for this station, move on.
-                with open(icon_path, 'wb') as icon_file:
-                    icon_file.write(req.content)
+            # if not os.path.isfile(icon_path):
+            # req = requests.get(icon_url)
+            # if req.status_code != 200:
+            # continue  # Can't get an icon for this station, move on.
+            # with open(icon_path, 'wb') as icon_file:
+            # icon_file.write(req.content)
 
-            position = f"g{sta_x}/{sta_y}+w{sym_size}"
-            fig.image(icon_path, position=position)
+            # position = f"g{sta_x}/{sta_y}+w{sym_size}"
+            # fig.image(icon_path, position=position)
 
     return used_symbols
 
@@ -677,7 +681,7 @@ def generate(req_id):
             pos = f"J{legend}+j{legend}+o0.2c+l1.5"
             use_width = False
             for idx, (name, symbol) in enumerate(used_symbols.items()):
-                sym_label = name[:-4]
+                sym_label = name
 
                 # This section handles images rather than symbols. Hacky, and *hopefully*
                 # not needed, but left in for now just in case.
