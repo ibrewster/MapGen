@@ -18,7 +18,7 @@ from apiflask.validators import OneOf
 from werkzeug.utils import secure_filename
 
 from . import app, _global_session
-from .generate_map import generate
+from .mapgenerator import MapGenerator
 
 
 @app.get('/')
@@ -36,8 +36,10 @@ class JSON(String):
 
         return None
 
+
 class Bounds(String):
     """Returns a sw_lng, sw_lat, ne_lng, ne_lat tupple"""
+
     def _deserialize(self, value, attr, data, **kwargs):
         if value:
             try:
@@ -92,17 +94,26 @@ def _process_file(request, name, save_dir):
         return None
 
 
-@app.post('/getMap')
-@api_input(MapRequestSchema, location = 'form')
-def get_map(data):
-    req_id = uuid.uuid4().hex
+def _gen_fail_callback(req_id, error):
+    print("Map generation failed! Error:")
+    print(error)
+    print("-->{}<--".format(error.__cause__))
+    data = _global_session[req_id]
+    data['gen_status'] = "FAILED"
     _global_session[req_id] = data
 
-    script_dir = os.path.dirname(__file__)
-    upload_dir = os.path.join(script_dir, "cache")
-    os.makedirs(upload_dir, exist_ok = True)
+
+@app.post('/getMap')
+@api_input(MapRequestSchema, location = 'form')
+def request_map(data):
+    req_id = uuid.uuid4().hex
+    flask.session['REQ_ID'] = req_id
+    _global_session[req_id] = data
+    generator = MapGenerator(req_id)
+    upload_dir = generator.tempdir()
 
     filename = _process_file(flask.request, 'imgFile', upload_dir)
+
     if filename:
         # User is trying to upload *something*. Deal with it.
         img_type = data['imgType']
@@ -111,33 +122,24 @@ def get_map(data):
         data['hillshade_file'] = os.path.join(upload_dir, filename)
         _global_session[req_id] = data
 
-    req = {
-        'cmd': 'generate',
-        'data': req_id
-    }
+    def err_callback(error):
+        _gen_fail_callback(req_id, error)
 
     mp = multiprocessing.get_context('spawn')
-    mp.Process(target=generate, args=(req_id, )).start()
+    pool = mp.Pool(processes = 1)
+    pool.apply_async(generator.generate,
+                     error_callback = err_callback)
+    # mp.Process(target=generator.generate).start()
 
     return req_id
 
 
-@app.get('/checkstatus/<req_id>')
-def check_status(req_id):
-    try:
-        data_dict = _global_session[req_id]
-    except KeyError:
+@app.get('/getMap')
+def get_map_image():
+    req_id = flask.session.get('REQ_ID')
+    if req_id is None:
         abort(404)
 
-    stat = data_dict.get('gen_status', "Initalizing...")
-    if data_dict.get('map_file') is None:
-        return {'status': stat, 'done': False}
-    else:
-        return {'status': 'complete', 'done': True}
-
-
-@app.get('/getMap/<req_id>')
-def get_map_image(req_id):
     file_path = _global_session[req_id]['map_file']
     with open(file_path, 'rb') as file:
         file_data = file.read()
@@ -152,3 +154,21 @@ def get_map_image(req_id):
     response.set_cookie('DownloadComplete', b"1")
 
     return response
+
+
+@app.get('/checkstatus')
+def check_status():
+    req_id = flask.session.get('REQ_ID')
+    try:
+        data_dict = _global_session[req_id]
+    except KeyError:
+        abort(404)
+
+    stat = data_dict.get('gen_status', "Initalizing...")
+    if stat == "FAILED":
+        abort(500, 'Unable to generate map. An internal server error occured.')
+
+    if data_dict.get('map_file') is None:
+        return {'status': stat, 'done': False}
+    else:
+        return {'status': 'complete', 'done': True}

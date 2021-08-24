@@ -1,6 +1,9 @@
 from apiflask import APIFlask
+from flask_session import Session
 
 app = APIFlask(__name__)
+app.config['SESSION_TYPE'] = 'filesystem'
+session = Session(app)
 
 from .file_cache import FileCache
 _global_session = FileCache()

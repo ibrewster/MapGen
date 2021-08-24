@@ -419,10 +419,10 @@ function checkDownloadStatus() {
         return; //no request
     }
 
-    $.getJSON('checkstatus/' + req_id)
+    $.getJSON('checkstatus')
         .done(function(resp) {
             if (resp['done']) {
-                url = 'getMap/' + req_id;
+                url = 'getMap';
                 window.location.href = url;
                 $('#downloading').hide();
                 req_id = null;
@@ -442,6 +442,7 @@ function checkDownloadStatus() {
         })
         .fail(function(jqXHR, textStatus, errorThrown) {
             alert("Unable to check status of download request. Please try again later.");
+            $('#downloading').hide();
         });
 };
 
@@ -491,7 +492,8 @@ function runGetMap() {
             checkDownloadStatus();
         })
         .fail(function(jqXHR, textStatus, errorThrown) {
-            alert(`Unable to request map. Server returned code ${textStatus}, error ${errorThrown}`);
+            alert(`Unable to request map. Server returned code ${jqXHR.status}, error: ${errorThrown}`);
+            $('#downloading').hide();
         });
 
 }
