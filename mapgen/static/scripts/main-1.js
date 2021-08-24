@@ -1,6 +1,7 @@
 var map = null;
 var overviewRatio = 5;
 var staTimer = null;
+var monitorSocket=null;
 
 var staCategories={
     999:'User Defined',
@@ -413,6 +414,17 @@ function updateBounds() {
 
 var req_id = null;
 
+function updateStatus(payload){
+    if (typeof(payload) == 'object') {
+        var stat = payload['status'];
+        $('#progBar').val(payload['progress']);
+    } else {
+        var stat = payload;
+        $('#progBar').removeAttr('value');
+    }
+    $('#downloadStatus').html(stat);
+}
+
 function checkDownloadStatus() {
     if (req_id === null) {
         $('#downloading').hide();
@@ -425,24 +437,19 @@ function checkDownloadStatus() {
                 url = 'getMap';
                 window.location.href = url;
                 $('#downloading').hide();
+                monitorSocket.close();
                 req_id = null;
                 return
             }
             var payload = resp['status'];
-            if (typeof(payload) == 'object') {
-                var stat = payload['status'];
-                $('#progBar').val(payload['progress']);
-            } else {
-                var stat = payload;
-                $('#progBar').removeAttr('value');
-            }
-            $('#downloadStatus').html(stat);
+            updateStatus(payload);
 
             setTimeout(checkDownloadStatus, 2000); //Check again in 2 seconds.
         })
         .fail(function(jqXHR, textStatus, errorThrown) {
             alert("Unable to check status of download request. Please try again later.");
             $('#downloading').hide();
+            monitorSocket.close();
         });
 };
 
@@ -457,8 +464,7 @@ function getMap() {
         $('#downloadStatus').text("Requesting...");
     $('#downloading').css('display', 'grid');
 
-    //use a small timeout so the waiting dialog can be displayed immediately
-    setTimeout(runGetMap, 50);
+    init_socket();
 }
 
 function xhrFunc() {
@@ -468,6 +474,29 @@ function xhrFunc() {
         false
     );
     return xhr;
+}
+
+function init_socket(){
+    var socketURL='ws://';
+    var host=location.hostname;
+    var port=location.port;
+    socketURL+=`${host}:${port}/monitor`
+    monitorSocket=new WebSocket(socketURL)
+    .onmessage=function(msg){
+        var data=JSON.parse(msg.data);
+        console.log(data);
+        if(data.type=='socketID'){
+            var socketID=data.content;
+            console.log(socketID);
+
+            $('#socketID').val(socketID);
+            //use a small timeout so the waiting dialog can be displayed immediately
+            setTimeout(runGetMap, 50);
+        } else if(data.type=='status'){
+            var status=data.content;
+            updateStatus(status);
+        }
+    }
 }
 
 function runGetMap() {

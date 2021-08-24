@@ -1,10 +1,12 @@
 import json
 import multiprocessing
 import os
+import threading
 import uuid
 
 import flask
 
+from queue import Empty
 from urllib.parse import unquote
 
 from apiflask import abort, Schema, input as api_input
@@ -17,8 +19,8 @@ from apiflask.fields import (
 from apiflask.validators import OneOf
 from werkzeug.utils import secure_filename
 
-from . import app, _global_session
-from .mapgenerator import MapGenerator
+from . import app, sockets, _global_session
+from .mapgenerator import MapGenerator, init_generator_proc
 
 
 @app.get('/')
@@ -71,6 +73,7 @@ class MapRequestSchema(Schema):
     insetTop = List(Float, required=False, missing=[])
     insetWidth = List(Float, required=False, missing=[])
     insetHeight = List(Float, required=False, missing=[])
+    socketID = String()
 
 
 def allowed_file(filename):
@@ -107,6 +110,9 @@ def _gen_fail_callback(req_id, error):
 @api_input(MapRequestSchema, location = 'form')
 def request_map(data):
     req_id = uuid.uuid4().hex
+    socket_id = data['socketID']
+    socket_queue = socket_queues[socket_id]
+
     flask.session['REQ_ID'] = req_id
     _global_session[req_id] = data
     generator = MapGenerator(req_id)
@@ -126,7 +132,8 @@ def request_map(data):
         _gen_fail_callback(req_id, error)
 
     mp = multiprocessing.get_context('spawn')
-    pool = mp.Pool(processes = 1)
+    pool = mp.Pool(processes = 1, initializer = init_generator_proc,
+                   initargs = (socket_queue, ))
     pool.apply_async(generator.generate,
                      error_callback = err_callback)
     # mp.Process(target=generator.generate).start()
@@ -172,3 +179,32 @@ def check_status():
         return {'status': stat, 'done': False}
     else:
         return {'status': 'complete', 'done': True}
+
+
+socket_queues = {}
+
+
+@sockets.route('/monitor')
+def monitor_socket(ws):
+    print("Got web socket connection")
+    socket_id = uuid.uuid4().hex
+    socket_queue = multiprocessing.Queue()
+    socket_queues[socket_id] = socket_queue
+    msg = {'type': 'socketID', 'content': socket_id, }
+    ws.send(json.dumps(msg))
+    threading.Thread(target = _run_monitor_socket,
+                     args = (ws, socket_queue)).start()
+
+
+def _run_monitor_socket(ws, queue):
+    # Needs to be run in a seperate thread so it doesn't block other requests
+    print("Starting socket thread")
+    while not ws.closed:
+        try:
+            message = queue.get(timeout = .25)
+        except Empty:
+            continue
+
+        message = {'type': 'status',
+                   'content': message}
+        ws.send(json.dumps(message))

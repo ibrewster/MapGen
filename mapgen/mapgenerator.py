@@ -84,6 +84,11 @@ def run_process(queue):
         return
 
 
+def init_generator_proc(queue):
+    global _SOCKET_QUEUE
+    _SOCKET_QUEUE = queue
+
+
 class MapGenerator:
     station_symbols = {
         'GPS': {'symbol': 'a',
@@ -114,16 +119,17 @@ class MapGenerator:
         self._req_id = req_id
         self.data = _global_session[self._req_id]
         self._used_symbols = {}
+        self._socket_queue = None
 
     def tempdir(self):
         return self._tmp_dir
 
-    def _update_status(self, status, data = None):
-        if data is not None:
-            self.data = data
-
+    def _update_status(self, status):
         self.data['gen_status'] = status
         _global_session[self._req_id] = self.data
+
+        if self._socket_queue is not None:
+            self._socket_queue.put(status)
 
     def _download_elevation(self, bounds):
         if bounds[0] < -180 or bounds[2] > 180 or bounds[0] > bounds[2]:
@@ -227,7 +233,7 @@ class MapGenerator:
                                     zf2.extract(tiffile, path = tiff_dir)
         return tiff_dir
 
-    def _process_files(self, dest_dir, all_files, warp_bounds, proj = None):
+    def _process_files(self, all_files, warp_bounds, proj = None):
         osgeo.gdal.AllRegister()  # Why? WHY!?!? But needed...
         files = []
         num_files = len(all_files)
@@ -303,31 +309,6 @@ class MapGenerator:
 
         return files
 
-
-# def _clear_uploads(data):
-    # uploaded_file = data.get('hillshade_file')
-    # if not uploaded_file:
-        # return
-
-    # world_file = os.path.basename(uploaded_file)
-    # extension = world_file[world_file.index('.') + 1:]
-    # wf_ext = f'{extension[0]}{extension[-1]}w'
-    # wf_name = world_file[:world_file.index('.')]
-    # world_file = f'{wf_name}.{wf_ext}'
-    # try:
-        # os.remove(os.path.join(os.path.dirname(uploaded_file),
-        # world_file)
-        # )
-    # except FileNotFoundError:
-        # pass  # Nothing to remove
-
-    # # Done with the uploaded file (if any), delete it
-    # try:
-        # os.remove(uploaded_file)
-    # except FileNotFoundError:
-        # pass  # Nothing to remove
-
-
     def _set_hillshade(self, zoom, map_bounds):
         if zoom <= 7:
             hillshade_files = ["@earth_relief_15s"]
@@ -343,7 +324,7 @@ class MapGenerator:
             self._update_status("Processing hillshade data...")
 
             all_files = [os.path.join(tiff_dir, x) for x in os.listdir(tiff_dir)]
-            out_files = self._process_files(tiff_dir, all_files, map_bounds)
+            out_files = self._process_files(all_files, map_bounds)
 
             hillshade_files = out_files
 
@@ -355,7 +336,6 @@ class MapGenerator:
             self._update_status("Processing uploads...")
 
             img_type = self.data['imgType']
-            out_dir = os.path.dirname(uploaded_file)
             proj = None
 
             if img_type == 'j':
@@ -363,7 +343,7 @@ class MapGenerator:
                 proj = self.data['imgProj']
 
             # Either way, we need to convert to lat/lon and trim to map area
-            out_file = self._process_files(out_dir, [uploaded_file],
+            out_file = self._process_files([uploaded_file],
                                            map_bounds, proj=proj)
             if out_file:
                 hillshade_files.append(out_file[0])
@@ -439,6 +419,7 @@ class MapGenerator:
                 # fig.image(icon_path, position=position)
 
     def generate(self):
+        self._socket_queue = _SOCKET_QUEUE
         self.data = _global_session.get(self._req_id)
         width = self.data['width']
         bounds = self.data['bounds']
@@ -480,9 +461,9 @@ class MapGenerator:
     #         utm_char = UTMChars[math.floor((utm_lat + 80) / 8)]
     #     else:
     #         utm_char = UTMChars[-1]
+    #     proj = f"U{utm_zone}{utm_char}/{width}{unit}"
 
         proj = f"M{width}{unit}"
-        # proj = f"U{utm_zone}{utm_char}/{width}{unit}"
         self.fig = pygmt.Figure()
 
         basemap_args = {
@@ -532,11 +513,10 @@ class MapGenerator:
 
         self._add_stations(self.data.get('station', []), zoom)
 
-        print("Adding Overview")
-
-        self._update_status("Adding Overview Map...")
-
         if overview:
+            print("Adding Overview")
+            self._update_status("Adding Overview Map...")
+
             ak_bounds = [
                 -190.0, -147.68, 48.5, 69.5
             ]
