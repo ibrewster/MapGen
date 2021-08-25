@@ -131,6 +131,7 @@ def request_map(data):
         _global_session[req_id] = data
 
     def err_callback(error):
+        socket_queue.put_nowait('ERROR')
         _gen_fail_callback(req_id, error)
 
     mp = multiprocessing.get_context('spawn')

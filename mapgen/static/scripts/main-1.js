@@ -420,12 +420,35 @@ function updateStatus(payload) {
         $('#progBar').val(payload['progress']);
     } else {
         var stat = payload;
+        if (stat == "COMPLETE") {
+            url = 'getMap';
+            window.location.href = url;
+            closeStatus(5000);
+        } else if (stat == "ERROR") {
+            alert("Unable to generate map. A server error occured");
+            closeStatus();
+        }
         $('#progBar').removeAttr('value');
     }
     $('#downloadStatus').html(stat);
 }
 
+function closeStatus(delay) {
+    if (typeof(delay) === 'undefined') {
+        delay = 0;
+    }
+
+    monitorSocket.close();
+    if (delay > 0)
+        setTimeout($('#downloading').hide, delay);
+    else
+        $('#downloading').hide
+
+    req_id = null;
+}
+
 function checkDownloadStatus() {
+    return;
     if (req_id === null) {
         $('#downloading').hide();
         return; //no request

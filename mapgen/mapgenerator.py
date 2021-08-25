@@ -425,6 +425,7 @@ class MapGenerator:
     def generate(self):
         self._socket_queue = _SOCKET_QUEUE
         self.data = _global_session.get(self._req_id)
+        self._update_status("Initializing")
         width = self.data['width']
         bounds = self.data['bounds']
         unit = self.data['unit']
@@ -652,6 +653,7 @@ class MapGenerator:
         self.data['map_file'] = file_path
         self.data['gen_status'] = "Complete"
         _global_session[self._req_id] = self.data
+        self._update_status("COMPLETE")
 
         # Clean up the temporary directory
         logging.info(f"Cleaning up temporary directory {self.tempdir()}")
