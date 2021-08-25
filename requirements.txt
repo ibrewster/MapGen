@@ -7,3 +7,7 @@ shapely_geojson
 vincenty
 gunicorn
 gevent
+wsaccel
+ujson
+flask-session
+flask-sockets

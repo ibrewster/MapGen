@@ -1,17 +1,17 @@
 var map = null;
 var overviewRatio = 5;
 var staTimer = null;
-var monitorSocket=null;
+var monitorSocket = null;
 
-var staCategories={
-    999:'User Defined',
-    1:'Seismometer',
-    3:'Tiltmeter',
-    4:'GPS',
-    7:'Gas',
-    12:'Temperature',
-    22:'Camera',
-    23:'Infrasound'
+var staCategories = {
+    999: 'User Defined',
+    1: 'Seismometer',
+    3: 'Tiltmeter',
+    4: 'GPS',
+    7: 'Gas',
+    12: 'Temperature',
+    22: 'Camera',
+    23: 'Infrasound'
 }
 
 window.onbeforeunload = function() {
@@ -414,7 +414,7 @@ function updateBounds() {
 
 var req_id = null;
 
-function updateStatus(payload){
+function updateStatus(payload) {
     if (typeof(payload) == 'object') {
         var stat = payload['status'];
         $('#progBar').val(payload['progress']);
@@ -476,26 +476,28 @@ function xhrFunc() {
     return xhr;
 }
 
-function init_socket(){
-    var socketURL='ws://';
-    var host=location.hostname;
-    var port=location.port;
-    socketURL+=`${host}:${port}/monitor`
-    monitorSocket=new WebSocket(socketURL)
-    .onmessage=function(msg){
-        var data=JSON.parse(msg.data);
-        console.log(data);
-        if(data.type=='socketID'){
-            var socketID=data.content;
+function init_socket() {
+    var socketURL = 'ws://';
+    var host = location.hostname;
+    var port = location.port;
+    socketURL += `${host}:${port}/monitor`
+    monitorSocket = new WebSocket(socketURL)
+    monitorSocket.onmessage = function(msg) {
+        var data = JSON.parse(msg.data);
+        if (data.type == 'socketID') {
+            var socketID = data.content;
             console.log(socketID);
 
             $('#socketID').val(socketID);
             //use a small timeout so the waiting dialog can be displayed immediately
             setTimeout(runGetMap, 50);
-        } else if(data.type=='status'){
-            var status=data.content;
+        } else if (data.type == 'status') {
+            var status = data.content;
             updateStatus(status);
         }
+    }
+    monitorSocket.onclose = function() {
+        console.error("Web socket closed");
     }
 }
 
@@ -610,7 +612,7 @@ function addCSVStations() {
         var data = $.csv.toArrays(reader.result);
         for (var i = 1; i < data.length; i++) {
             var station = data[i];
-            
+
             var staDict = {
                 'station': station[2],
                 'catId': station[3],
@@ -618,8 +620,8 @@ function addCSVStations() {
                 'long': station[1],
             }
 
-            if(!(station[3] in staCategories)){
-                staDict['catId']=999; //user defined/unknown
+            if (!(station[3] in staCategories)) {
+                staDict['catId'] = 999; //user defined/unknown
             }
 
             all_stations.push(staDict);
@@ -632,7 +634,7 @@ function addCSVStations() {
 
 function displayStations() {
     var seenStations = []
-    var seenCategories=[]
+    var seenCategories = []
 
     $('#stationListTop').empty();
 
@@ -644,11 +646,11 @@ function displayStations() {
         }
         seenStations.push(staName);
 
-        var catID=sta['catId'];
+        var catID = sta['catId'];
         var cat = staCategories[catID];
 
-        if(seenCategories.indexOf(catID) ==-1 ){
-            createStationGroup(cat,catID);
+        if (seenCategories.indexOf(catID) == -1) {
+            createStationGroup(cat, catID);
             seenCategories.push(catID);
         }
 
@@ -668,7 +670,7 @@ function createStationDiv(sta, cat) {
         'lat': sta['lat'],
         'lon': sta['long'],
         'name': sta['staton'],
-        'category':cat
+        'category': cat
     }
 
     var div = $('<div class="sta">')
@@ -681,7 +683,7 @@ function createStationDiv(sta, cat) {
     $(`#${destID}`).append(div);
 }
 
-function createStationGroup(cat,id) {
+function createStationGroup(cat, id) {
     var staType = cat;
     var divID = `staCat${id}`
     var div = $(`<div class="stationType" id="${divID}">`);

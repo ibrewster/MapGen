@@ -1,3 +1,4 @@
+import logging
 import json
 import multiprocessing
 import os
@@ -5,6 +6,7 @@ import threading
 import uuid
 
 import flask
+import gevent
 
 from queue import Empty
 from urllib.parse import unquote
@@ -186,25 +188,34 @@ socket_queues = {}
 
 @sockets.route('/monitor')
 def monitor_socket(ws):
-    print("Got web socket connection")
+    logging.info("New web socket connection opened")
     socket_id = uuid.uuid4().hex
     socket_queue = multiprocessing.Queue()
     socket_queues[socket_id] = socket_queue
     msg = {'type': 'socketID', 'content': socket_id, }
     ws.send(json.dumps(msg))
-    threading.Thread(target = _run_monitor_socket,
-                     args = (ws, socket_queue)).start()
+
+    thread = threading.Thread(target = _run_monitor_socket,
+                              args = (ws, socket_queue))
+    thread.start()
+    while thread.is_alive():
+        socket_msg = ws.receive()
+        gevent.sleep(1)
 
 
 def _run_monitor_socket(ws, queue):
     # Needs to be run in a seperate thread so it doesn't block other requests
-    print("Starting socket thread")
+    logging.info("Web socket handler thread started")
     while not ws.closed:
         try:
             message = queue.get(timeout = .25)
         except Empty:
+            # nothing from the internal queue. Check for anything from the socket.
             continue
 
         message = {'type': 'status',
                    'content': message}
         ws.send(json.dumps(message))
+
+    logging.info("Exiting web socket handler thread")
+

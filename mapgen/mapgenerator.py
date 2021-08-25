@@ -88,6 +88,8 @@ def init_generator_proc(queue):
     global _SOCKET_QUEUE
     _SOCKET_QUEUE = queue
 
+    logging.basicConfig(level = logging.INFO)
+
 
 class MapGenerator:
     station_symbols = {
@@ -129,7 +131,7 @@ class MapGenerator:
         _global_session[self._req_id] = self.data
 
         if self._socket_queue is not None:
-            self._socket_queue.put(status)
+            self._socket_queue.put_nowait(status)
 
     def _download_elevation(self, bounds):
         if bounds[0] < -180 or bounds[2] > 180 or bounds[0] > bounds[2]:
@@ -159,7 +161,7 @@ class MapGenerator:
         list_url = f'{URL_BASE}/query.json'
         url = f'{URL_BASE}/download'
         est_size = 0
-        print("Downloading hillshade files")
+        logging.info("Downloading hillshade files")
         tempdir = self.tempdir()
         zf_path = os.path.join(tempdir, 'custom_download.zip')
         tiff_dir = os.path.join(tempdir, 'tiffs')
@@ -174,10 +176,11 @@ class MapGenerator:
             try:
                 req = requests.post(list_url, data = {'geojson': geojson, })
             except requests.exceptions.ConnectionError:
-                print("Connection error")
+                logging.warning("Connection error attempting to get file listings")
+                continue
 
             if req.status_code != 200:
-                print("Unable to get file listings")
+                logging.warning(f"Unable to get file listings. Server returned {req.status_code}")
             else:
                 files = req.json()
                 try:
@@ -185,9 +188,9 @@ class MapGenerator:
                                       in files
                                       if x['dataset_id'] == ids))
                 except StopIteration:
-                    pass
+                    logging.warning("Requested dataset info not found in server response")
                 else:
-                    print(file_info)
+                    logging.debug(str(file_info))
                     est_size += file_info.get('bytes', -1)
 
         for geojson in bounds_list:
@@ -196,6 +199,7 @@ class MapGenerator:
                                          'ids': ids},
                                stream = True)
             if req.status_code != 200:
+                logging.warning(f"Unable to fetch hillshade files for region. Server returned {req.status_code}")
                 print(req.status_code)
                 print(req.text)
                 continue
@@ -212,24 +216,24 @@ class MapGenerator:
                                 'progress': pc
                             })
 
-            print("Downloaded", loaded_bytes, "bytes")
+            logging.info(f"Downloaded {loaded_bytes} bytes of hillshade files")
 
             # Pull out the various tiff files needed
-            print("Extracting tiffs")
+            logging.info("Extracting tiffs")
 
             self._update_status("Decompressing hillshade data...")
 
             with zipfile.ZipFile(zf_path, 'r') as zf:
                 for file in zf.namelist():
                     if file.endswith('.zip'):
-                        print(f"Reading {file}")
+                        logging.info(f"Reading {file}")
                         zf_data = BytesIO(zf.read(file))
                         with zipfile.ZipFile(zf_data, 'r') as zf2:
                             for tiffile in zf2.namelist():
                                 if tiffile.endswith('.tif'):
                                     if os.path.isfile(os.path.join(tiff_dir, tiffile)):
                                         continue  # already extracted, move on
-                                    print(f"Extracting {tiffile}")
+                                    logging.info(f"Extracting {tiffile}")
                                     zf2.extract(tiffile, path = tiff_dir)
         return tiff_dir
 
@@ -238,7 +242,7 @@ class MapGenerator:
         files = []
         num_files = len(all_files)
         for idx, in_file in enumerate(all_files):
-            print("Processing image", idx, "of", len(all_files))
+            logging.info(f"Processing image {idx} of {len(all_files)}")
 
             in_path, in_ext = os.path.splitext(in_file)
             out_file = f"{in_path}-processed.tiff"
@@ -290,14 +294,14 @@ class MapGenerator:
 
             if use_bounds:
                 kwargs['outputBounds'] = file_bounds
-                print("Using bounds of", file_bounds)
+                logging.info(f"Using bounds of {file_bounds}")
                 if ((file_bounds[0] < 0) == (file_bounds[2] < 0)) and file_bounds[0] > file_bounds[2]:
-                    print("Skipping file due to negative bounds")
+                    logging.warning("Skipping file due to negative bounds")
                     continue
 
                 # this seems unlikely, but still would be wrong
                 if ((file_bounds[0] < 0) != (file_bounds[2] < 0)) and file_bounds[0] < file_bounds[2]:
-                    print("Skipping file due to really weird bounds")
+                    logging.warning("Skipping file due to really weird bounds")
                     continue
 
             osgeo.gdal.Warp(out_file, in_file, **kwargs)
@@ -319,7 +323,7 @@ class MapGenerator:
             self._update_status("Downloading hillshade files...")
 
             tiff_dir = self._download_elevation(map_bounds)
-            print("Generating composite hillshade file")
+            logging.info("Generating composite hillshade file")
 
             self._update_status("Processing hillshade data...")
 
@@ -370,14 +374,14 @@ class MapGenerator:
                     'progress': (idx / num_files) * 100
                 })
 
-            print("Adding image", idx, "of", len(hillshade_file), ":", file)
+            logging.info(f"Adding image {idx} of {len(hillshade_file)}: {file}")
             self.fig.grdimage(file, **kwargs)
 
     def _add_stations(self, stations, zoom):
         if zoom < 8:
             return {}  # Don't plot stations at low zoom levels
 
-        print("Plotting stations")
+        logging.info("Plotting stations")
         self._update_status("Plotting Stations...")
 
         main_dir = os.path.dirname(__file__)
@@ -514,7 +518,7 @@ class MapGenerator:
         self._add_stations(self.data.get('station', []), zoom)
 
         if overview:
-            print("Adding Overview")
+            logging.info("Adding Overview")
             self._update_status("Adding Overview Map...")
 
             ak_bounds = [
@@ -587,7 +591,7 @@ class MapGenerator:
 
         legend = self.data['legend']
         if legend != "False" and 'station' in self.data:
-            print("Adding legend")
+            logging.info("Adding legend")
             self._update_status("Adding Legend...")
 
             with tempfile.NamedTemporaryFile('w+') as file:
@@ -650,13 +654,13 @@ class MapGenerator:
         _global_session[self._req_id] = self.data
 
         # Clean up the temporary directory
-        print("Cleaning up temporary directory", self.tempdir())
+        logging.info(f"Cleaning up temporary directory {self.tempdir()}")
         try:
             shutil.rmtree(self.tempdir())
         except OSError as err:
             if err.errno != errno.ENOENT:
                 raise
-        print(file_path)
+        logging.debug(str(file_path))
 
 
 if __name__ == "__main__":
