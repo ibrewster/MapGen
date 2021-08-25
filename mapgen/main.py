@@ -199,8 +199,18 @@ def monitor_socket(ws):
                               args = (ws, socket_queue))
     thread.start()
     while thread.is_alive():
-        socket_msg = ws.receive()
+        gevent.spawn(_recieve_ws, ws)
         gevent.sleep(1)
+
+    logging.info("Web socket closed")
+
+
+def _recieve_ws(ws):
+    try:
+        with gevent.Timeout(.01):
+            ws.receive()
+    except:
+        pass
 
 
 def _run_monitor_socket(ws, queue):
