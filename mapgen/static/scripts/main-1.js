@@ -500,10 +500,11 @@ function xhrFunc() {
 }
 
 function init_socket() {
-    var socketURL = 'ws://';
+    var socketURL = 'wss://';
     var host = location.hostname;
     var port = location.port;
-    socketURL += `${host}:${port}/monitor`
+    var path = location.pathname;
+    socketURL += `${host}:${port}/${path}monitor`
     monitorSocket = new WebSocket(socketURL)
     monitorSocket.onmessage = function(msg) {
         var data = JSON.parse(msg.data);
