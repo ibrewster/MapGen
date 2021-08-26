@@ -131,7 +131,7 @@ class MapGenerator:
         _global_session[self._req_id] = self.data
 
         if self._socket_queue is not None:
-            self._socket_queue.put_nowait(status)
+            self._socket_queue.send(status)
 
     def _download_elevation(self, bounds):
         if bounds[0] < -180 or bounds[2] > 180 or bounds[0] > bounds[2]:
@@ -423,9 +423,11 @@ class MapGenerator:
                 # fig.image(icon_path, position=position)
 
     def generate(self):
+        logging.info("Starting generation process")
         self._socket_queue = _SOCKET_QUEUE
         self.data = _global_session.get(self._req_id)
         self._update_status("Initializing")
+        logging.info("Sent first status update")
         width = self.data['width']
         bounds = self.data['bounds']
         unit = self.data['unit']

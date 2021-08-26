@@ -504,7 +504,7 @@ function init_socket() {
     var host = location.hostname;
     var port = location.port;
     var path = location.pathname;
-    socketURL += `${host}:${port}/${path}monitor`
+    socketURL += `${host}:${port}/${path}monitor/`
     monitorSocket = new WebSocket(socketURL)
     monitorSocket.onmessage = function(msg) {
         var data = JSON.parse(msg.data);

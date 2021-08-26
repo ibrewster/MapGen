@@ -113,7 +113,7 @@ def _gen_fail_callback(req_id, error):
 def request_map(data):
     req_id = uuid.uuid4().hex
     socket_id = data['socketID']
-    socket_queue = socket_queues[socket_id]
+    read_queue, write_queue = socket_queues[socket_id]
 
     flask.session['REQ_ID'] = req_id
     _global_session[req_id] = data
@@ -131,12 +131,12 @@ def request_map(data):
         _global_session[req_id] = data
 
     def err_callback(error):
-        socket_queue.put_nowait('ERROR')
+        write_queue.send('ERROR')
         _gen_fail_callback(req_id, error)
 
     mp = multiprocessing.get_context('spawn')
     pool = mp.Pool(processes = 1, initializer = init_generator_proc,
-                   initargs = (socket_queue, ))
+                   initargs = (write_queue, ))
     pool.apply_async(generator.generate,
                      error_callback = err_callback)
     # mp.Process(target=generator.generate).start()
@@ -191,13 +191,13 @@ socket_queues = {}
 def monitor_socket(ws):
     logging.info("New web socket connection opened")
     socket_id = uuid.uuid4().hex
-    socket_queue = multiprocessing.Queue()
-    socket_queues[socket_id] = socket_queue
+    read_pipe, write_pipe = multiprocessing.Pipe()
+    socket_queues[socket_id] = (read_pipe, write_pipe)
     msg = {'type': 'socketID', 'content': socket_id, }
     ws.send(json.dumps(msg))
 
     thread = threading.Thread(target = _run_monitor_socket,
-                              args = (ws, socket_queue))
+                              args = (ws, read_pipe))
     thread.start()
     while thread.is_alive():
         gevent.spawn(_recieve_ws, ws)
@@ -214,16 +214,17 @@ def _recieve_ws(ws):
         pass
 
 
-def _run_monitor_socket(ws, queue):
+def _run_monitor_socket(ws, pipe):
     # Needs to be run in a seperate thread so it doesn't block other requests
     logging.info("Web socket handler thread started")
     while not ws.closed:
-        try:
-            message = queue.get(timeout = .25)
-        except Empty:
-            # nothing from the internal queue. Check for anything from the socket.
+        # Check and loop rather than blocking indefinitely
+        # so we can know if the socket has closed.
+        msg_waiting = pipe.poll(.25)
+        if not msg_waiting:
             continue
 
+        message = pipe.recv()
         message = {'type': 'status',
                    'content': message}
         ws.send(json.dumps(message))

@@ -10,4 +10,5 @@ gevent
 wsaccel
 ujson
 flask-session
-flask-sockets
+#flask-sockets
+gevent-websocket
