@@ -264,7 +264,6 @@ socket_queues = {}
 
 @sockets.route('/monitor')
 def monitor_socket(ws):
-    import wingdbstub
     logging.info("New web socket connection opened")
     socket_id = uuid.uuid4().hex
     read_pipe, write_pipe = multiprocessing.Pipe()
