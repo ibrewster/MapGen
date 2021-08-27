@@ -8,74 +8,74 @@ import uuid
 import flask
 import gevent
 
-from queue import Empty
-from urllib.parse import unquote
+from apiflask import abort
+# from apiflask.fields import (
+#     Float,
+#     String,
+#     Raw,
+#     List,
+# )
 
-from apiflask import abort, Schema, input as api_input
-from apiflask.fields import (
-    Float,
-    String,
-    Raw,
-    List,
-)
+from streaming_form_data import StreamingFormDataParser
+
 from apiflask.validators import OneOf
 from werkzeug.utils import secure_filename
 
 from . import app, sockets, _global_session
 from .mapgenerator import MapGenerator, init_generator_proc
-
+from .targets import ListTarget, TypedTarget, FileTarget, Bounds, JSON
 
 @app.get('/')
 def index():
     return flask.render_template("index.html")
 
 
-class JSON(String):
-    def _deserialize(self, value, attr, data, **kwargs):
-        if value:
-            try:
-                return json.loads(value)
-            except ValueError:
-                return None
-
-        return None
-
-
-class Bounds(String):
-    """Returns a sw_lng, sw_lat, ne_lng, ne_lat tupple"""
-
-    def _deserialize(self, value, attr, data, **kwargs):
-        if value:
-            try:
-                return tuple(map(float, unquote(value).split(',')))
-            except ValueError:
-                return None
-
-        return None
+# class JSON(String):
+#     def _deserialize(self, value, attr, data, **kwargs):
+#         if value:
+#             try:
+#                 return json.loads(value)
+#             except ValueError:
+#                 return None
+# 
+#         return None
 
 
-class MapRequestSchema(Schema):
-    width = Float(required = True)
-    height = Float(required = False)
-    bounds = String(required=True)
-    mapZoom = Float(required=True)
-    unit = String(required = True, validate = OneOf(['p', 'i', 'c']))
-    overview = String()
-    overviewWidth = Float()
-    imgType = String()
-    imgProj = String(required = False, missing = None)
-    imgFile = Raw(type = "file", required = False, missing = None)
-    station = List(JSON)
-    legend = String()
-    scale = String()
-    overviewBounds = Bounds(required=False, missing=None)
-    insetBounds = List(Bounds, required=False, missing=[])
-    insetZoom = List(Float, required=False, missing=[])
-    insetLeft = List(Float, required=False, missing=[])
-    insetTop = List(Float, required=False, missing=[])
-    insetWidth = List(Float, required=False, missing=[])
-    insetHeight = List(Float, required=False, missing=[])
-    socketID = String()
+# class Bounds(String):
+#     """Returns a sw_lng, sw_lat, ne_lng, ne_lat tupple"""
+# 
+#     def _deserialize(self, value, attr, data, **kwargs):
+#         if value:
+#             try:
+#                 return tuple(map(float, unquote(value).split(',')))
+#             except ValueError:
+#                 return None
+# 
+#         return None
+
+
+# class MapRequestSchema(Schema):
+#     width = Float(required = True)
+#     height = Float(required = False)
+#     bounds = String(required=True)
+#     mapZoom = Float(required=True)
+#     unit = String(required = True, validate = OneOf(['p', 'i', 'c']))
+#     overview = String()
+#     overviewWidth = Float()
+#     imgType = String()
+#     imgProj = String(required = False, missing = None)
+#     imgFile = Raw(type = "file", required = False, missing = None)
+#     station = List(JSON)
+#     legend = String()
+#     scale = String()
+#     overviewBounds = Bounds(required=False, missing=None)
+#     insetBounds = List(Bounds, required=False, missing=[])
+#     insetZoom = List(Float, required=False, missing=[])
+#     insetLeft = List(Float, required=False, missing=[])
+#     insetTop = List(Float, required=False, missing=[])
+#     insetWidth = List(Float, required=False, missing=[])
+#     insetHeight = List(Float, required=False, missing=[])
+#     socketID = String()
 
 
 def allowed_file(filename):
@@ -107,26 +107,100 @@ def _gen_fail_callback(req_id, error):
     data['gen_status'] = "FAILED"
     _global_session[req_id] = data
 
+        
+def parseFormData(request, file_dir):
+    headers = dict(request.headers)
+    parser = StreamingFormDataParser(headers = headers)
+    # TODO: define Bounds, JSON types
+    fields = {
+        'width':{'target':TypedTarget(float)},
+        'height':{'target':TypedTarget(float)},
+        'bounds':{'target':TypedTarget(str)},
+        'mapZoom':{'target':TypedTarget(float)},
+        'unit':{'target':TypedTarget(str)},
+        'overview':{'target':TypedTarget(str)},
+        'overviewWidth':{'target':TypedTarget(float)},
+        'imgType':{'target':TypedTarget(str)},
+        'imgProj':{'target':TypedTarget(str),
+                   'default': None,},
+        'station':{'target':ListTarget(JSON)},
+        'legend':{'target':TypedTarget(str)},
+        'scale':{'target':TypedTarget(str)},
+        'overviewBounds':{'target':TypedTarget(Bounds),
+                          'default': None,},
+        'insetBounds':{'target':ListTarget(Bounds),
+                       'default':[]},
+        'insetZoom':{'target':ListTarget(float),
+                     'default':[]},
+        'insetLeft':{'target':ListTarget(float),
+                     'default':[]},
+        'insetTop':{'target':ListTarget(float),
+                    'default':[]},
+        'insetWidth':{'target':ListTarget(float),
+                      'default':[]},
+        'insetHeight':{'target':ListTarget(float),
+                       'default':[]},
+        'socketID':{'target':TypedTarget(str)},
+        
+        'imgFile': {'target': FileTarget(file_dir),
+                    'default': None},
+        'worldFile': {'target': FileTarget(file_dir),
+                    'default': None},        
+    }
+    
+    for field, target_def in fields.items():
+        target = target_def['target']
+        parser.register(field, target)
+    
+    chunk_size = 4096
+    while True:
+        chunk = request.stream.read(chunk_size)
+        if len(chunk) == 0:
+            break
+        parser.data_received(chunk)
+        gevent.sleep(0)
+        
+    values = {}
+    for field, target_def in fields.items():
+        target = target_def['target']
+        if not target.finished:
+            # See if we have a default value
+            try:
+                value = target_def['default']
+            except KeyError:
+                raise ValueError("No value provided, and no default")
+        else:
+            value = target.value
+        
+        values[field] = value
+        
+    return values
 
 @app.post('/getMap')
-@api_input(MapRequestSchema, location = 'form')
-def request_map(data):
-    req_id = uuid.uuid4().hex
+# @api_input(MapRequestSchema, location = 'form')
+def request_map():
+    logging.info("Map request received")    
+    req_id = uuid.uuid4().hex    
+    flask.session['REQ_ID'] = req_id
+    generator = MapGenerator()
+    upload_dir = generator.tempdir()
+    
+    try:
+        data = parseFormData(flask.request, upload_dir)
+    except ValueError:
+        abort(400, "Missing parameter")
+    
+    _global_session[req_id] = data
+    generator.setReqId(req_id)
+    
     socket_id = data['socketID']
     read_queue, write_queue = socket_queues[socket_id]
 
-    flask.session['REQ_ID'] = req_id
-    _global_session[req_id] = data
-    generator = MapGenerator(req_id)
-    upload_dir = generator.tempdir()
-
-    filename = _process_file(flask.request, 'imgFile', upload_dir)
-
+    logging.info("Processing upload(s)")
+    filename = data['imgFile'][0]
+    logging.info("File upload processed")
     if filename:
         # User is trying to upload *something*. Deal with it.
-        img_type = data['imgType']
-        if img_type == 'j':
-            _process_file(flask.request, 'worldFile', upload_dir)
         data['hillshade_file'] = os.path.join(upload_dir, filename)
         _global_session[req_id] = data
 
@@ -135,12 +209,13 @@ def request_map(data):
         _gen_fail_callback(req_id, error)
 
     mp = multiprocessing.get_context('spawn')
+    logging.info("Initalizing generator process")
     pool = mp.Pool(processes = 1, initializer = init_generator_proc,
                    initargs = (write_queue, ))
     pool.apply_async(generator.generate,
                      error_callback = err_callback)
     # mp.Process(target=generator.generate).start()
-
+    logging.info("Generator started")
     return req_id
 
 
@@ -189,6 +264,7 @@ socket_queues = {}
 
 @sockets.route('/monitor')
 def monitor_socket(ws):
+    import wingdbstub
     logging.info("New web socket connection opened")
     socket_id = uuid.uuid4().hex
     read_pipe, write_pipe = multiprocessing.Pipe()
@@ -196,9 +272,11 @@ def monitor_socket(ws):
     msg = {'type': 'socketID', 'content': socket_id, }
     ws.send(json.dumps(msg))
 
+    logging.info("Creating webSocket monitor thread")
     thread = threading.Thread(target = _run_monitor_socket,
                               args = (ws, read_pipe))
     thread.start()
+    logging.info("Web socket monitor thread started")
     while thread.is_alive():
         gevent.spawn(_recieve_ws, ws)
         gevent.sleep(1)
@@ -207,11 +285,15 @@ def monitor_socket(ws):
 
 
 def _recieve_ws(ws):
+    msg = None
     try:
         with gevent.Timeout(.01):
-            ws.receive()
+            msg = ws.receive()
     except:
         pass
+
+    if msg == "PING":
+        ws.send('PONG')
 
 
 def _run_monitor_socket(ws, pipe):

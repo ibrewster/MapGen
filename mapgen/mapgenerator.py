@@ -88,7 +88,9 @@ def init_generator_proc(queue):
     global _SOCKET_QUEUE
     _SOCKET_QUEUE = queue
 
-    logging.basicConfig(level = logging.INFO)
+    logging.basicConfig(level = logging.INFO,
+                        format = "%(asctime)-15s %(message)s",
+                        datefmt='%Y-%m-%d %H:%M:%S')
 
 
 class MapGenerator:
@@ -116,13 +118,21 @@ class MapGenerator:
         }
     }
 
-    def __init__(self, req_id):
+    def __init__(self, req_id = None):
         self._tmp_dir = tempfile.mkdtemp()
         self._req_id = req_id
-        self.data = _global_session[self._req_id]
+        if req_id is not None:
+            self.data = _global_session[self._req_id]
+        else:
+            self.data = None
+            
         self._used_symbols = {}
         self._socket_queue = None
 
+    def setReqId(self, req_id):
+        self._req_id = req_id
+        self.data = _global_session[self._req_id]
+        
     def tempdir(self):
         return self._tmp_dir
 

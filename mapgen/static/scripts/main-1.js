@@ -2,6 +2,7 @@ var map = null;
 var overviewRatio = 5;
 var staTimer = null;
 var monitorSocket = null;
+var pingTimer=null;
 
 var staCategories = {
     999: 'User Defined',
@@ -507,6 +508,10 @@ function init_socket() {
     socketURL += `${host}:${port}/${path}monitor/`
     monitorSocket = new WebSocket(socketURL)
     monitorSocket.onmessage = function(msg) {
+        if(msg.data=='PONG'){
+            return;
+        }
+        
         var data = JSON.parse(msg.data);
         if (data.type == 'socketID') {
             var socketID = data.content;
@@ -520,8 +525,17 @@ function init_socket() {
             updateStatus(status);
         }
     }
+    monitorSocket.onopen=function(){
+        pingTimer=setInterval(function(){
+            monitorSocket.send('PING') //kepalive. Send ping every 5 seconds.
+        }, 5000)
+    }
     monitorSocket.onclose = function() {
         console.error("Web socket closed");
+        if(pingTimer!==null){
+            clearInterval(pingTimer);
+            pingTimer=null;
+        }
     }
 }
 
