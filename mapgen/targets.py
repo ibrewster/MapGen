@@ -1,3 +1,4 @@
+from pathlib import Path
 from urllib.parse import unquote
 
 import ujson
@@ -5,9 +6,19 @@ import ujson
 from streaming_form_data.targets import BaseTarget, DirectoryTarget
 
 class FileTarget(DirectoryTarget):
+    def on_start(self):
+        if not self.multipart_filename:
+            return # No file to save
+
+        # Path().resolve().name only keeps file name to prevent path traversal
+        self.multipart_filename = Path(self.multipart_filename).resolve().name
+        self._fd = open(
+            Path(self.directory_path) / self.multipart_filename, self._mode
+        )
+    
     @property
     def value(self):
-        return self.multipart_filenames
+        return self.multipart_filename
     
     @property
     def finished(self):

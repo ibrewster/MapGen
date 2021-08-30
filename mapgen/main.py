@@ -197,7 +197,7 @@ def request_map():
     read_queue, write_queue = socket_queues[socket_id]
 
     logging.info("Processing upload(s)")
-    filename = data['imgFile'][0]
+    filename = data['imgFile']
     logging.info("File upload processed")
     if filename:
         # User is trying to upload *something*. Deal with it.
