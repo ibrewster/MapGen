@@ -88,6 +88,8 @@ class TypedTarget(BaseTarget):
 def Bounds(value):
     """Returns a sw_lng, sw_lat, ne_lng, ne_lat tupple"""
     if value:
+        if isinstance(value, bytes):
+            value = value.decode('UTF-8')
         try:
             return tuple(map(float, unquote(value).split(',')))
         except ValueError:
