@@ -291,6 +291,8 @@ function addNewMap() {
         zoomSnap: 0,
         layers: [mapTiles]
     })
+    
+    $(insetMap).data('MapID',insetId);
 
     insetMaps[insetId] = insetMap;
 
@@ -306,9 +308,10 @@ function addNewMap() {
     insetSettings.append(`<input type="hidden" id="insetHeight${insetId}" name="insetHeight">`);
     insetSettings.append
     $('#insetMaps').append(insetSettings);
-
+    
     insetMap.on("moveend zoomend", function() {
-        updateInsetBounds(insetId);
+        const insetID=$(this).data('MapID');
+        updateInsetBounds(insetID);
     });
 
     insetMap.fitBounds(map.getBounds());
