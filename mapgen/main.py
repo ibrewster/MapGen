@@ -152,7 +152,6 @@ def parseFormData(request, file_dir):
         target = target_def['target']
         parser.register(field, target)
     
-    parser.register('imgFile', SingleFileTarget("/tmp/someFile.txt"))
     chunk_size = 4096
     while True:
         chunk = request.stream.read(chunk_size)
