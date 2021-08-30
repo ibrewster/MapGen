@@ -18,7 +18,6 @@ from apiflask import abort
 
 from streaming_form_data import StreamingFormDataParser
 
-from apiflask.validators import OneOf
 from werkzeug.utils import secure_filename
 
 from . import app, sockets, _global_session
@@ -123,7 +122,8 @@ def parseFormData(request, file_dir):
         'imgType':{'target':TypedTarget(str)},
         'imgProj':{'target':TypedTarget(str),
                    'default': None,},
-        'station':{'target':ListTarget(JSON)},
+        'station':{'target':ListTarget(JSON),
+                   'default': []},
         'legend':{'target':TypedTarget(str)},
         'scale':{'target':TypedTarget(str)},
         'overviewBounds':{'target':TypedTarget(Bounds),
@@ -152,6 +152,7 @@ def parseFormData(request, file_dir):
         target = target_def['target']
         parser.register(field, target)
     
+    parser.register('imgFile', SingleFileTarget("/tmp/someFile.txt"))
     chunk_size = 4096
     while True:
         chunk = request.stream.read(chunk_size)
