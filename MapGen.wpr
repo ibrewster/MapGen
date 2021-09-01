@@ -4,4 +4,14 @@
 # Wing project file                                              #
 ##################################################################
 [project attributes]
+proj.directory-list = [{'dirloc': loc('.'),
+                        'excludes': ['include',
+                                     'bin',
+                                     'share',
+                                     'lib'],
+                        'filter': '*',
+                        'include_hidden': False,
+                        'recursive': True,
+                        'watch_for_changes': True}]
 proj.file-type = 'shared'
+proj.main-file = loc('run_mapgen.py')
