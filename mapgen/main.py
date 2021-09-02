@@ -5,23 +5,22 @@ import os
 import threading
 import uuid
 
+from urllib.parse import unquote
+
 import flask
 import gevent
+import ujson
 
 from apiflask import abort
-
-from streaming_form_data import StreamingFormDataParser
-
 from werkzeug.utils import secure_filename
 
 from . import app, sockets, _global_session
 from .mapgenerator import MapGenerator, init_generator_proc
 from .targets import (
-    ListTarget,
-    TypedTarget,
-    FileTarget,
-    Bounds,
-    JSON,
+    List,
+    Value,
+    File,
+    BaseSchema,
     api_input
 )
 
@@ -61,89 +60,62 @@ def _gen_fail_callback(req_id, error):
     _global_session[req_id] = data
 
 
-def parseFormData(request, file_dir):
-    headers = dict(request.headers)
-    parser = StreamingFormDataParser(headers = headers)
-    fields = {
-        'width': {'target': TypedTarget(float)},
-        'height': {'target': TypedTarget(float)},
-        'bounds': {'target': TypedTarget(str)},
-        'mapZoom': {'target': TypedTarget(float)},
-        'unit': {'target': TypedTarget(str)},
-        'overview': {'target': TypedTarget(str)},
-        'overviewWidth': {'target': TypedTarget(float)},
-        'imgType': {'target': TypedTarget(str)},
-        'imgProj': {'target': TypedTarget(str),
-                    'default': None, },
-        'station': {'target': ListTarget(JSON),
-                    'default': []},
-        'legend': {'target': TypedTarget(str)},
-        'scale': {'target': TypedTarget(str)},
-        'overviewBounds': {'target': TypedTarget(Bounds),
-                           'default': None, },
-        'insetBounds': {'target': ListTarget(Bounds),
-                        'default': []},
-        'insetZoom': {'target': ListTarget(float),
-                      'default': []},
-        'insetLeft': {'target': ListTarget(float),
-                      'default': []},
-        'insetTop': {'target': ListTarget(float),
-                     'default': []},
-        'insetWidth': {'target': ListTarget(float),
-                       'default': []},
-        'insetHeight': {'target': ListTarget(float),
-                        'default': []},
-        'socketID': {'target': TypedTarget(str)},
+def Bounds(value):
+    """Returns a sw_lng, sw_lat, ne_lng, ne_lat tupple"""
+    if value:
+        if isinstance(value, bytes):
+            value = value.decode('UTF-8')
+        try:
+            return tuple(map(float, unquote(value).split(',')))
+        except ValueError:
+            return None
 
-        'imgFile': {'target': FileTarget(file_dir),
-                    'default': None},
-        'worldFile': {'target': FileTarget(file_dir),
-                      'default': None},
-    }
+    return None
 
-    for field, target_def in fields.items():
-        target = target_def['target']
-        parser.register(field, target)
 
-    chunk_size = 4096
-    while True:
-        chunk = request.stream.read(chunk_size)
-        if len(chunk) == 0:
-            break
-        parser.data_received(chunk)
-        gevent.sleep(0)
+def JSON(value):
+    if value:
+        try:
+            return ujson.loads(value)
+        except ValueError:
+            return None
 
-    values = {}
-    for field, target_def in fields.items():
-        target = target_def['target']
-        if not target.finished:
-            # See if we have a default value
-            try:
-                value = target_def['default']
-            except KeyError:
-                raise ValueError("No value provided, and no default")
-        else:
-            value = target.value
+    return None
 
-        values[field] = value
 
-    return values
+class MapSchema(BaseSchema):
+    width = Value(float)
+    height = Value(float)
+    bounds = Value(str)
+    mapZoom = Value(float)
+    unit = Value(str)
+    overview = Value(str)
+    overviewWidth = Value(float)
+    imgType = Value(str)
+    imgProj = Value(str, default = None)
+    station = List(JSON, default = [])
+    legend = Value(str)
+    scale = Value(str)
+    overviewBounds = Value(Bounds, default = None)
+    insetBounds = List(Bounds, default = [])
+    insetZoom = List(float, default = [])
+    insetLeft = List(float, default = [])
+    insetTop = List(float, default = [])
+    insetWidth = List(float, default = [])
+    insetHeight = List(float, default = [])
+    socketID = Value(str)
+    imgFile = File(default = None)
+    worldFile = File(default = None)
 
 
 @app.post('/getMap')
-@api_input("FakeSchema")
-def request_map(test):
-    print("!!!Got test value", test, "!!!")
+@api_input(MapSchema)
+def request_map(data):
     logging.info("Map request received")
     req_id = uuid.uuid4().hex
     flask.session['REQ_ID'] = req_id
     generator = MapGenerator()
     upload_dir = generator.tempdir()
-
-    try:
-        data = parseFormData(flask.request, upload_dir)
-    except ValueError:
-        abort(400, "Missing parameter")
 
     _global_session[req_id] = data
     generator.setReqId(req_id)
@@ -152,9 +124,13 @@ def request_map(test):
     read_queue, write_queue = socket_queues[socket_id]
 
     logging.info("Processing upload(s)")
-    filename = data['imgFile']
+    filename = data.get('imgFile').name if data.get('imgFile') else None
     logging.info("File upload processed")
     if filename:
+        data['imgFile'].save(upload_dir)
+        if data.get('worldFile') and data['worldFile'].name:
+            data['worldFile'].save(upload_dir)
+
         # User is trying to upload *something*. Deal with it.
         data['hillshade_file'] = os.path.join(upload_dir, filename)
         _global_session[req_id] = data
