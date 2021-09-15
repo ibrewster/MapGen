@@ -2,7 +2,18 @@ var map = null;
 var overviewRatio = 5;
 var staTimer = null;
 var monitorSocket = null;
-var pingTimer=null;
+var pingTimer = null;
+var units = "i"
+
+
+var conversions = {
+    'pi': (1 / 300), //pixels -->inches, 300 DPI
+    'ip': 300, //inches --> pixels, 300 DPI
+    'ic': 2.54, //inches --> cm
+    'ci': 1 / 2.54, //cm --> inches
+    'cp': 300 / 2.54, //cm  --> pixels
+    'pc': 2.54 / 300 //pixels --> cm
+}
 
 var staCategories = {
     999: 'User Defined',
@@ -89,14 +100,49 @@ $(document).ready(function() {
     $('#overviewWidth').change(overviewWidthChanged);
     $('#addStationCSV').change(addCSVStations);
     $('#overviewUnits').text($('#sizeUnits option:selected').text());
-    $('#sizeUnits').change(function() {
-        $('#overviewUnits').text($('#sizeUnits option:selected').text());
-    });
+    $('#sizeUnits').change(changeUnits);
     $('#overlayFormat').change(changeFileType);
     $(document).on('change', '#overview, #overviewWidth', setOverviewDiv);
     changeFileType();
     setOverviewDiv();
 });
+
+function changeUnits() {
+    $('#overviewUnits').text($('#sizeUnits option:selected').text());
+    var new_units = $(this).val();
+    var conversion = conversions[units + new_units];
+    units = new_units;
+    var width = $('#mapWidth').val();
+    var height = $('#mapHeight').val();
+    var overview_width = $('#overviewWidth').val();
+
+    width = width * conversion;
+    height = height * conversion;
+
+    if ($('#lockWidth').is(':checked')) {
+        overview_width = width / overviewRatio;
+    } else {
+        overview_width = overview_width * conversion;
+    }
+
+    if (units == 'p') {
+        //round to integer for pixels
+        width = Math.round(width);
+        height = Math.round(height);
+        overview_width = Math.round(overview_width);
+    } else {
+        //round to two decimals
+        width = Math.round(width * 100) / 100;
+        height = Math.round(height * 100) / 100;
+        overview_width = Math.round(overview_width * 100) / 100;
+    }
+
+    $('#overviewWidth').val(overview_width);
+    $('#mapWidth').val(width);
+    $('#mapHeight').val(height);
+
+    setTimeout(setOverviewDiv, 250);
+}
 
 var overviewMap = null;
 
@@ -291,8 +337,8 @@ function addNewMap() {
         zoomSnap: 0,
         layers: [mapTiles]
     })
-    
-    $(insetMap).data('MapID',insetId);
+
+    $(insetMap).data('MapID', insetId);
 
     insetMaps[insetId] = insetMap;
 
@@ -308,9 +354,9 @@ function addNewMap() {
     insetSettings.append(`<input type="hidden" id="insetHeight${insetId}" name="insetHeight">`);
     insetSettings.append
     $('#insetMaps').append(insetSettings);
-    
+
     insetMap.on("moveend zoomend", function() {
-        const insetID=$(this).data('MapID');
+        const insetID = $(this).data('MapID');
         updateInsetBounds(insetID);
     });
 
@@ -511,10 +557,10 @@ function init_socket() {
     socketURL += `${host}:${port}/${path}monitor/`
     monitorSocket = new WebSocket(socketURL)
     monitorSocket.onmessage = function(msg) {
-        if(msg.data=='PONG'){
+        if (msg.data == 'PONG') {
             return;
         }
-        
+
         var data = JSON.parse(msg.data);
         if (data.type == 'socketID') {
             var socketID = data.content;
@@ -528,16 +574,16 @@ function init_socket() {
             updateStatus(status);
         }
     }
-    monitorSocket.onopen=function(){
-        pingTimer=setInterval(function(){
+    monitorSocket.onopen = function() {
+        pingTimer = setInterval(function() {
             monitorSocket.send('PING') //kepalive. Send ping every 5 seconds.
         }, 5000)
     }
     monitorSocket.onclose = function() {
         console.error("Web socket closed");
-        if(pingTimer!==null){
+        if (pingTimer !== null) {
             clearInterval(pingTimer);
-            pingTimer=null;
+            pingTimer = null;
         }
     }
 }
