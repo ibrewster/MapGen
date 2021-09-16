@@ -1,3 +1,6 @@
+import os
+os.environ['DYLD_LIBRARY_PATH'] = '/usr/local/opt/gcc/lib/gcc/11:'
+
 import logging
 
 from mapgen import app

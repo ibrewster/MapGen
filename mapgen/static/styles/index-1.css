@@ -242,3 +242,7 @@ div.insetSettings button.deleteInset {
     justify-self: end;
     align-self: center;
 }
+
+#colormapRange input {
+    width: 10ch;
+}

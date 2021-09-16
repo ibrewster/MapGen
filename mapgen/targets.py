@@ -197,6 +197,16 @@ class _TypedTarget(BaseTarget):
 
     @property
     def finished(self):
+        try:
+            self.value
+        except ValueError:
+            # If we can't convert the value to the requested type,
+            # see if it is because we have nothing. If so, do the
+            # same as not being finished, i.e. either default or error
+            # if no default provided.
+            if not b''.join(self._values):
+                return False
+
         return self._finished
 
     @property

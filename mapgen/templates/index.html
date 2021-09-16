@@ -38,7 +38,7 @@
         <div id="setup">
             <div id="setupInner">
                 <form id="setupForm" enctype="multipart/form-data" action="getMap" method="POST">
-                    <input type=hidden name="socketID" id="socketID"/>
+                    <input type=hidden name="socketID" id="socketID" />
                     <div class="setupHeader">Map Location</div>
                     <div class="setupContent">
                         <select id="mapLocation">
@@ -170,7 +170,7 @@
                         <span class="leftEdge"><input type="checkbox" id="stationSelAll">All</span> Stations
                     </div>
                     <div class="setupContent blockDisplay">
-                        <div id="Legend Setup">
+                        <div id="LegendSetup">
                             Show Legend:
                             <select id=legendShow name="legend">
                                 <option value="False">None</option>
@@ -190,6 +190,30 @@
 
                         </div>
                     </div>
+
+                    <div class="setupHeader">
+                        Data Plot
+                    </div>
+                    <div class="setupContent blockDisplay">
+                        <div id="DataSetup">
+                            Color Map:
+                            <input type="text" name="colorMap" value="jet">
+                            <br> (<a target="_blank" href="https://docs.generic-mapping-tools.org/6.2/cookbook/cpts.html#cpt-files-a">Click here</a> for options)
+                            <br> Colormap Range (blank=auto)
+                            <div id="colormapRange">
+                                <input type="number" class="numsonly" name="cmMin"> -
+                                <input type="number" class="numsonly" name="cmMax">
+                            </div>
+                        </div>
+                        <div id="dataCSV">
+                            Upload CSV:<br>
+                            <input type=file id="plotDataCSV" name="plotData">
+                        </div>
+                    </div>
+
+
+
+
                 </form>
             </div>
             <div id="endButtons">

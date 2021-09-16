@@ -17,6 +17,7 @@ import zipfile
 from io import BytesIO
 
 import osgeo.gdal
+import pandas
 import requests
 import vincenty
 
@@ -125,14 +126,14 @@ class MapGenerator:
             self.data = _global_session[self._req_id]
         else:
             self.data = None
-            
+
         self._used_symbols = {}
         self._socket_queue = None
 
     def setReqId(self, req_id):
         self._req_id = req_id
         self.data = _global_session[self._req_id]
-        
+
     def tempdir(self):
         return self._tmp_dir
 
@@ -432,6 +433,37 @@ class MapGenerator:
                 # position = f"g{sta_x}/{sta_y}+w{sym_size}"
                 # fig.image(icon_path, position=position)
 
+    def _plot_data(self, zoom):
+        plotdata_file = self.data.get('plotDataFile')
+        if plotdata_file is None:
+            return  # No data to plot
+
+        self._update_status("Adding plot data")
+
+        sym_size = (8 / 4) * zoom - (13 + (1 / 3))
+        symbol = f"c{sym_size}p"
+
+        plot_data = pandas.read_csv(plotdata_file)
+        latitudes = plot_data['latitude'].to_numpy()
+        longitudes = plot_data['longitude'].to_numpy()
+        values = plot_data['value'].to_numpy()
+        cm = self.data.get('colorMap')
+        cm_min = self.data.get('cmMin')
+        if cm_min is None:
+            cm_min = values.min()
+        cm_max = self.data.get('cmMax')
+        if cm_max is None:
+            cm_max = values.max()
+
+        try:
+            import pygmt
+        except Exception:
+            os.environ['GMT_LIBRARY_PATH'] = '/usr/local/lib'
+            import pygmt
+
+        pygmt.makecpt(cmap = cm, series = (cm_min, cm_max))
+        self.fig.plot(x = longitudes, y = latitudes, style = symbol, color = values, cmap = True)
+
     def generate(self):
         logging.info("Starting generation process")
         self._socket_queue = _SOCKET_QUEUE
@@ -505,6 +537,8 @@ class MapGenerator:
         self._update_status("Drawing coastlines...")
 
         self.fig.coast(rivers='r/2p,#CBE7FF', water="#CBE7FF", resolution="f")
+
+        self._plot_data(zoom)
 
         if self.data['scale'] != 'False':
             self._update_status("Adding Scale Bar...")

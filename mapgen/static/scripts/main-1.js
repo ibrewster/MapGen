@@ -551,6 +551,9 @@ function xhrFunc() {
 
 function init_socket() {
     var socketURL = 'wss://';
+    if (location.protocol !== 'https:')
+        socketURL = 'ws://';
+
     var host = location.hostname;
     var port = location.port;
     var path = location.pathname;

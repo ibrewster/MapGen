@@ -106,6 +106,10 @@ class MapSchema(BaseSchema):
     socketID = Value(str)
     imgFile = File(default = None)
     worldFile = File(default = None)
+    colorMap = Value(str, default = None)
+    cmMin = Value(float, default = None)
+    cmMax = Value(float, default = None)
+    plotData = File(default = None)
 
 
 @app.post('/getMap')
@@ -133,7 +137,12 @@ def request_map(data):
 
         # User is trying to upload *something*. Deal with it.
         data['hillshade_file'] = os.path.join(upload_dir, filename)
-        _global_session[req_id] = data
+
+    if data.get('plotData') and data['plotData'].name:
+        data['plotData'].save(upload_dir)
+        data['plotDataFile'] = os.path.join(upload_dir, data['plotData'].name)
+
+    _global_session[req_id] = data
 
     def err_callback(error):
         write_queue.send('ERROR')
@@ -152,6 +161,7 @@ def request_map(data):
 
 @app.get('/getMap')
 def get_map_image():
+    logging.info("Final image requested")
     req_id = flask.session.get('REQ_ID')
     if req_id is None:
         abort(404)
@@ -160,6 +170,7 @@ def get_map_image():
     with open(file_path, 'rb') as file:
         file_data = file.read()
 
+    logging.info(f"Loaded file with length {len(file_data)}")
     os.remove(file_path)
     del _global_session[req_id]
 
