@@ -244,5 +244,17 @@ div.insetSettings button.deleteInset {
 }
 
 #colormapRange input {
-    width: 10ch;
+    width: 9ch;
+}
+
+.helpText.small {
+    font-size: 75%;
+}
+
+#colormap {
+    width: 9ch;
+}
+
+#plotDataCSV {
+    width: 200px;
 }

@@ -166,6 +166,35 @@
                         </div>
                     </div>
 
+                    <!--Data plot CSV upload-->
+                    <div class="setupHeader">
+                        Data Plot
+                    </div>
+                    <div class="setupContent blockDisplay">
+                        <div id="DataSetup">
+                            Colormap:
+                            <input type="text" name="colorMap" id="colormap" value="jet"> (
+                            <a target="_blank" href="https://docs.generic-mapping-tools.org/6.2/cookbook/cpts.html#cpt-files-a">Options</a>)
+                            <br> Show Colorbar: <select id=showColorbar name="colorbar">
+                                <option value="False">None</option>
+                                <option value="MR">Right Center</option>
+                                <option value="BC" selected>Bottom Center</option>
+                                <option value="TC">Top Center</option>
+                            </select>
+                            <br> Colorbar Units: <input type="text" maxlength=4 size=4 name="scaleunits">
+                            <div id="colormapRange">
+                            Range:
+                                <input type="number" class="numsonly" name="cmMin" placeholder="auto"> -
+                                <input type="number" class="numsonly" name="cmMax" placeholder="auto">
+                            </div>
+                        </div>
+                        <div id="dataCSV">
+                            CSV: <input type=file id="plotDataCSV" name="plotData">
+                        </div>
+                    </div>
+                    <!--End data plot CSV upload-->
+
+                    <!--Station Selector Sidebar-->
                     <div class="setupHeader">
                         <span class="leftEdge"><input type="checkbox" id="stationSelAll">All</span> Stations
                     </div>
@@ -190,29 +219,6 @@
 
                         </div>
                     </div>
-
-                    <div class="setupHeader">
-                        Data Plot
-                    </div>
-                    <div class="setupContent blockDisplay">
-                        <div id="DataSetup">
-                            Color Map:
-                            <input type="text" name="colorMap" value="jet">
-                            <br> (<a target="_blank" href="https://docs.generic-mapping-tools.org/6.2/cookbook/cpts.html#cpt-files-a">Click here</a> for options)
-                            <br> Colormap Range (blank=auto)
-                            <div id="colormapRange">
-                                <input type="number" class="numsonly" name="cmMin"> -
-                                <input type="number" class="numsonly" name="cmMax">
-                            </div>
-                        </div>
-                        <div id="dataCSV">
-                            Upload CSV:<br>
-                            <input type=file id="plotDataCSV" name="plotData">
-                        </div>
-                    </div>
-
-
-
 
                 </form>
             </div>

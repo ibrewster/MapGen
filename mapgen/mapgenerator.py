@@ -10,12 +10,15 @@ import pickle
 import socket
 import shutil
 import signal
+import sys
 import tempfile
 import uuid
 import zipfile
 
 from io import BytesIO
+from tempfile import NamedTemporaryFile
 
+import numpy
 import osgeo.gdal
 import pandas
 import requests
@@ -86,6 +89,10 @@ def run_process(queue):
 
 
 def init_generator_proc(queue):
+    logging.info(f"-->Environ in init proc: {os.getenv('DYLD_LIBRARY_PATH')}")
+    if not os.getenv('DYLD_LIBRARY_PATH') and os.path.isdir('/usr/local/opt/gcc/lib/gcc/11'):
+        os.environ['DYLD_LIBRARY_PATH'] = '/usr/local/opt/gcc/lib/gcc/11'
+
     global _SOCKET_QUEUE
     _SOCKET_QUEUE = queue
 
@@ -447,6 +454,7 @@ class MapGenerator:
         latitudes = plot_data['latitude'].to_numpy()
         longitudes = plot_data['longitude'].to_numpy()
         values = plot_data['value'].to_numpy()
+
         cm = self.data.get('colorMap')
         cm_min = self.data.get('cmMin')
         if cm_min is None:
@@ -463,6 +471,43 @@ class MapGenerator:
 
         pygmt.makecpt(cmap = cm, series = (cm_min, cm_max))
         self.fig.plot(x = longitudes, y = latitudes, style = symbol, color = values, cmap = True)
+
+        cb_position = self.data.get('colorbar')
+        if cb_position.lower() != 'false':
+            labels = numpy.linspace(cm_min, cm_max, 5)
+            roundLevel = 0
+            rounded_labels = labels.round(roundLevel)
+            while (len(numpy.unique(rounded_labels)) != len(rounded_labels)):
+                roundLevel += 1
+                rounded_labels = labels.round(roundLevel)
+
+            if roundLevel == 0:
+                rounded_labels = rounded_labels.astype(int)
+
+            # Shift the first label to the right a small amount so it actually shows up.
+            labels[0] += 10000 * labels[0] * sys.float_info.epsilon
+
+            # Create an annotation file to pass to the colorbar function
+            with NamedTemporaryFile('w') as file:
+                for pos, label in zip(labels, rounded_labels):
+                    file.write(f"{pos} a {label}\n")
+
+                file.flush()
+                file.seek(0)  # Not sure if this is neccesary
+
+                file_path = os.path.dirname(file.name)
+                file_name = os.path.basename(file.name)
+                cur_dir = os.getcwd()
+                os.chdir(file_path)
+
+                pos = f"J{cb_position}"
+                frame = [f"pxc{file_name}"]
+                scale_units = self.data.get('scaleunits')
+                if scale_units is not None and scale_units:
+                    frame.append(f"py+L{scale_units}")
+
+                self.fig.colorbar(position = pos, frame = frame)
+                os.chdir(cur_dir)
 
     def generate(self):
         logging.info("Starting generation process")

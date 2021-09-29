@@ -110,6 +110,8 @@ class MapSchema(BaseSchema):
     cmMin = Value(float, default = None)
     cmMax = Value(float, default = None)
     plotData = File(default = None)
+    colorbar = Value(str)
+    scaleunits = Value(str, default = None)
 
 
 @app.post('/getMap')
