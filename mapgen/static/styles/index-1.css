@@ -258,3 +258,13 @@ div.insetSettings button.deleteInset {
 #plotDataCSV {
     width: 200px;
 }
+
+#dataHeaders {
+    display: grid;
+    grid-template-columns: auto auto auto;
+    justify-items: center;
+}
+
+#dataHeaders select {
+    width: 9ch;
+}

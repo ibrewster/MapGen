@@ -5,7 +5,14 @@ var monitorSocket = null;
 var pingTimer = null;
 var units = "i"
 
-
+/* 
+multiplication factor to go from one unit of measure to another
+Key is two characters: source unit and destination unit.
+p=pixels
+i=inches
+c=centimeters
+Unit characters come from GMT 
+*/
 var conversions = {
     'pi': (1 / 300), //pixels -->inches, 300 DPI
     'ip': 300, //inches --> pixels, 300 DPI
@@ -53,14 +60,35 @@ $(document).ready(function() {
     $(document).on('click', 'input.staCatAll', toggleAll);
     $(document).on('click', '#stationSelAll', toggleStations);
     $(document).on('click', 'button.deleteInset', removeInsetMap);
-    $(window).resize(sizeMap);
+    $(document).on('change', '#overview, #overviewWidth', setOverviewDiv);
+
     $('#overviewWidth').change(function() { overviewChanged = true; })
     $('#getMap').click(getMap);
 
+    initMap();
+
+    $(window).resize(sizeMap);
+    $('.latLon').change(setBounds);
+    $('.reload').click(updateBounds);
+    $('#addNewMap').click(addNewMap);
+    $('#resetOverview').click(resetOverview);
+    $('#mapLocation').change(locSelectChanged);
+    $('#overviewWidth').change(overviewWidthChanged);
+    $('#addStationCSV').change(addCSVStations);
+    $('#overviewUnits').text($('#sizeUnits option:selected').text());
+    $('#sizeUnits').change(changeUnits);
+    $('#overlayFormat').change(changeFileType);
+    $('#plotDataCSV').change(parseDataHeaders);
+
+    changeFileType();
+    setOverviewDiv();
+});
+
+function initMap() {
+    //size the map div
     sizeMap();
 
-    var tiles = L.tileLayer('https://basemap.nationalmap.gov/ArcGIS/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}')
-
+    const tiles = L.tileLayer('https://basemap.nationalmap.gov/ArcGIS/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}')
 
     map = L.map('topMap', {
         zoomSnap: 0,
@@ -79,8 +107,6 @@ $(document).ready(function() {
         ]
     }).addTo(map);
 
-
-
     map.on('load', function() {
         updateBounds();
         setTimeout(sizeMap, 10);
@@ -91,21 +117,7 @@ $(document).ready(function() {
     map.on("moveend", updateBounds);
     map.on("zoomend", updateBounds);
     map.on("moveend zoomend", getStationsDebounce);
-
-    $('.latLon').change(setBounds);
-    $('.reload').click(updateBounds);
-    $('#addNewMap').click(addNewMap);
-    $('#resetOverview').click(resetOverview);
-    $('#mapLocation').change(locSelectChanged);
-    $('#overviewWidth').change(overviewWidthChanged);
-    $('#addStationCSV').change(addCSVStations);
-    $('#overviewUnits').text($('#sizeUnits option:selected').text());
-    $('#sizeUnits').change(changeUnits);
-    $('#overlayFormat').change(changeFileType);
-    $(document).on('change', '#overview, #overviewWidth', setOverviewDiv);
-    changeFileType();
-    setOverviewDiv();
-});
+}
 
 function changeUnits() {
     $('#overviewUnits').text($('#sizeUnits option:selected').text());
@@ -823,4 +835,34 @@ function checkForAll() {
     } else {
         $('#stationSelAll')[0].checked = false;
     }
+}
+
+function parseDataHeaders() {
+    let file = $('#plotDataCSV')[0].files;
+    if (file.length == 0) {
+        return;
+    }
+
+    file = file[0];
+    if (file.size > 1024) {
+        //only read in the first 1KB of data at most to keep this fast
+        file = file.slice(0, 1024);
+    }
+
+    var reader = new FileReader();
+    reader.onload = function() {
+        const data = $.csv.toArrays(reader.result);
+        const header = data[0]
+
+        const latSel = $('#latCol').empty();
+        const lonSel = $('#lonCol').empty();
+        const valSel = $('#valCol').empty();
+        for (var i = 0; i < header.length; i++) {
+            let option = `<option>${header[i]}</option>`;
+            latSel.append(option);
+            lonSel.append(option);
+            valSel.append(option);
+        }
+    }
+    reader.readAsBinaryString(file);
 }

@@ -450,10 +450,15 @@ class MapGenerator:
         sym_size = (8 / 4) * zoom - (13 + (1 / 3))
         symbol = f"c{sym_size}p"
 
+        latcol = self.data.get('latcol', 'latitude')
+        loncol = self.data.get('loncol', 'longitude')
+        valcol = self.data.get('valcol', 'value')
+
         plot_data = pandas.read_csv(plotdata_file)
-        latitudes = plot_data['latitude'].to_numpy()
-        longitudes = plot_data['longitude'].to_numpy()
-        values = plot_data['value'].to_numpy()
+
+        latitudes = plot_data[latcol].to_numpy()
+        longitudes = plot_data[loncol].to_numpy()
+        values = plot_data[valcol].to_numpy()
 
         cm = self.data.get('colorMap')
         cm_min = self.data.get('cmMin')
