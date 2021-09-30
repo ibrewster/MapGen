@@ -268,3 +268,7 @@ div.insetSettings button.deleteInset {
 #dataHeaders select {
     width: 9ch;
 }
+
+a.cmOpts {
+    font-size: 75%;
+}

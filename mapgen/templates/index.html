@@ -145,6 +145,7 @@
                         </div>
                     </div>
 
+                    <!--General map options-->
                     <div class="setupHeader">Options</div>
                     <div class="setupContent">
                         Show Scale:
@@ -157,14 +158,19 @@
                             <option value="TC">Top Center</option>
                             <option value="TL">Top Left</option>
                         </select>
+                        <br> Map Colormap: <input type=text size=9 name="mapColormap" placeholder="auto" value="etopo1"> 
+                        (<a class="cmOpts" target="_blank" href="https://docs.generic-mapping-tools.org/6.2/cookbook/cpts.html#cpt-files-a">Options</a>)
                     </div>
+                    <!--End general map options-->
 
+                    <!--Inset Maps-->
                     <div class="setupHeader">Inset Map(s)</div>
                     <div class="setupContent blockDisplay">
                         <button type="button" id="addNewMap">Add New</button>
                         <div id="insetMaps" class="insetMapList">
                         </div>
                     </div>
+                    <!--End inset maps-->
 
                     <!--Data plot CSV upload-->
                     <div class="setupHeader">
@@ -173,8 +179,8 @@
                     <div class="setupContent blockDisplay">
                         <div id="DataSetup">
                             Colormap:
-                            <input type="text" name="colorMap" id="colormap" value="jet"> (
-                            <a target="_blank" href="https://docs.generic-mapping-tools.org/6.2/cookbook/cpts.html#cpt-files-a">Options</a>)
+                            <input type="text" name="colorMap" id="colormap" value="jet"> 
+                            (<a target="_blank" class="cmOpts" href="https://docs.generic-mapping-tools.org/6.2/cookbook/cpts.html#cpt-files-a">Options</a>)
                             <br> Show Colorbar: <select id=showColorbar name="colorbar">
                                 <option value="False">None</option>
                                 <option value="MR">Right Center</option>

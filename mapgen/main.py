@@ -115,6 +115,7 @@ class MapSchema(BaseSchema):
     latcol = Value(str, default = None)
     loncol = Value(str, default = None)
     valcol = Value(str, default = None)
+    mapColormap = Value(str, default = None)
 
 
 @app.post('/getMap')

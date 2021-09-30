@@ -136,6 +136,7 @@ class MapGenerator:
 
         self._used_symbols = {}
         self._socket_queue = None
+        self.gmt_bounds = []
 
     def setReqId(self, req_id):
         self._req_id = req_id
@@ -393,6 +394,15 @@ class MapGenerator:
                 })
 
             logging.info(f"Adding image {idx} of {len(hillshade_file)}: {file}")
+            cm = self.data.get('mapColormap')
+            if cm:
+                try:
+                    import pygmt
+                except Exception:
+                    os.environ['GMT_LIBRARY_PATH'] = '/usr/local/lib'
+                    import pygmt
+
+                pygmt.makecpt(cmap = cm, series = (-11000, 8500))
             self.fig.grdimage(file, **kwargs)
 
     def _add_stations(self, stations, zoom):
@@ -514,6 +524,29 @@ class MapGenerator:
                 self.fig.colorbar(position = pos, frame = frame)
                 os.chdir(cur_dir)
 
+    def _add_scalebar(self):
+        if self.data['scale'] == 'False':
+            return
+
+        self._update_status("Adding Scale Bar...")
+
+        # figure out middle latitude for map
+        mid_lat = self.gmt_bounds[2] + ((self.gmt_bounds[3] - self.gmt_bounds[2]) / 2)
+        map_width = vincenty.vincenty((mid_lat, self.gmt_bounds[0]),
+                                      (mid_lat, self.gmt_bounds[1]))
+        scale_length = math.ceil((map_width / 8))  # Make an even number
+        offset = .65
+        if self.data['scale'][0] == 'T':
+            offset += .3
+
+        offset = str(offset) + "c"
+
+        if self.data['scale'][1] in ['L', 'R']:
+            offset = '.375c/' + offset
+
+        map_scale = f'j{self.data["scale"]}+w{scale_length}k+f+o{offset}+c{mid_lat}N+l'
+        self.fig.basemap(map_scale = map_scale, F = '+gwhite+p')
+
     def generate(self):
         logging.info("Starting generation process")
         self._socket_queue = _SOCKET_QUEUE
@@ -534,7 +567,7 @@ class MapGenerator:
             import pygmt
 
         sw_lng, sw_lat, ne_lng, ne_lat = unquote(bounds).split(',')
-        gmt_bounds = [
+        self.gmt_bounds = [
             float(sw_lng),
             float(ne_lng),
             float(sw_lat),
@@ -542,20 +575,20 @@ class MapGenerator:
         ]
 
         warp_bounds = [
-            gmt_bounds[0],  # min x
-            gmt_bounds[2],  # min y
-            gmt_bounds[1],  # max x
-            gmt_bounds[3]  # max y
+            self.gmt_bounds[0],  # min x
+            self.gmt_bounds[2],  # min y
+            self.gmt_bounds[1],  # max x
+            self.gmt_bounds[3]  # max y
         ]
 
-    #     utm_left = gmt_bounds[0]
+    #     utm_left = self.gmt_bounds[0]
     #     if utm_left < -180:
     #         utm_left += 360
 
     #     utm_zone = math.ceil((utm_left + 180) / 6)
     #
     #     UTMChars = "CDEFGHJKLMNPQRSTUVWXX"
-    #     utm_lat = gmt_bounds[2]
+    #     utm_lat = self.gmt_bounds[2]
     #     if -80 <= utm_lat <= 84:
     #         utm_char = UTMChars[math.floor((utm_lat + 80) / 8)]
     #     else:
@@ -567,7 +600,7 @@ class MapGenerator:
 
         basemap_args = {
             'projection': proj,
-            'region': gmt_bounds,
+            'region': self.gmt_bounds,
             'frame': ('WeSn', 'afg'),
         }
 
@@ -590,29 +623,12 @@ class MapGenerator:
 
         self._plot_data(zoom)
 
-        if self.data['scale'] != 'False':
-            self._update_status("Adding Scale Bar...")
-
-            # figure out middle latitude for map
-            mid_lat = gmt_bounds[2] + ((gmt_bounds[3] - gmt_bounds[2]) / 2)
-            map_width = vincenty.vincenty((mid_lat, gmt_bounds[0]),
-                                          (mid_lat, gmt_bounds[1]))
-            scale_length = math.ceil((map_width / 8))  # Make an even number
-            offset = .65
-            if self.data['scale'][0] == 'T':
-                offset += .3
-
-            offset = str(offset) + "c"
-
-            if self.data['scale'][1] in ['L', 'R']:
-                offset = '.375c/' + offset
-
-            map_scale = f'j{self.data["scale"]}+w{scale_length}k+f+o{offset}+c{mid_lat}N+l'
-            self.fig.basemap(map_scale = map_scale, F = '+gwhite+p')
+        self._add_scalebar()
 
         cur_dir = os.getcwd()
 
-        self._add_stations(self.data.get('station', []), zoom)
+        stations = self.data.get('station', [])
+        self._add_stations(stations, zoom)
 
         if overview:
             logging.info("Adding Overview")
@@ -648,8 +664,8 @@ class MapGenerator:
                     shorelines=True,
                     # area_thresh = 10000
                 )
-                x_loc = gmt_bounds[0] + (gmt_bounds[1] - gmt_bounds[0]) / 2
-                y_loc = gmt_bounds[2] + (gmt_bounds[3] - gmt_bounds[2]) / 2
+                x_loc = self.gmt_bounds[0] + (self.gmt_bounds[1] - self.gmt_bounds[0]) / 2
+                y_loc = self.gmt_bounds[2] + (self.gmt_bounds[3] - self.gmt_bounds[2]) / 2
                 self.fig.plot(x=[x_loc, ], y=[y_loc, ],
                               style=f"a{star_size}", color="blue")
 
@@ -684,10 +700,11 @@ class MapGenerator:
                 self.fig.coast(water='#CBE7FF',
                                resolution='f')
 
-                self._add_stations(self.data.get('station', []), zoom)
+                self._add_stations(stations, zoom)
 
         legend = self.data['legend']
-        if legend != "False" and 'station' in self.data:
+
+        if legend != "False" and len(stations) > 0:
             logging.info("Adding legend")
             self._update_status("Adding Legend...")
 
