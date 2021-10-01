@@ -517,6 +517,9 @@ class MapGenerator:
 
                 pos = f"J{cb_position}"
                 frame = [f"pxc{file_name}"]
+                if self.data.get('showCMTitle'):
+                    frame.append(f"x+l{valcol}")
+
                 scale_units = self.data.get('scaleunits')
                 if scale_units is not None and scale_units:
                     frame.append(f"py+L{scale_units}")
