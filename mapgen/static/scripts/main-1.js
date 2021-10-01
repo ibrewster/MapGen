@@ -79,6 +79,11 @@ $(document).ready(function() {
     $('#sizeUnits').change(changeUnits);
     $('#overlayFormat').change(changeFileType);
     $('#plotDataCSV').change(parseDataHeaders);
+    $('.setCM').click(openCMSelector);
+    $('area.cmArea').click(selectColormap);
+    $('#cmCancel').click(function(){
+        $('#cmSelector').hide();
+    });
 
     changeFileType();
     setOverviewDiv();
@@ -117,6 +122,18 @@ function initMap() {
     map.on("moveend", updateBounds);
     map.on("zoomend", updateBounds);
     map.on("moveend zoomend", getStationsDebounce);
+}
+
+function openCMSelector(){
+    const target=$(this).data('target');
+    $('#cmSelector').data('target',target).css('display','grid');
+}
+
+function selectColormap(){
+    const cm=$(this).data('cm');
+    const target=$(`#${$('#cmSelector').data('target')}`);
+    target.val(cm);
+    $('#cmSelector').hide();
 }
 
 function changeUnits() {

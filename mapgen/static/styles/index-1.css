@@ -272,3 +272,44 @@ div.insetSettings button.deleteInset {
 a.cmOpts {
     font-size: 75%;
 }
+
+#cmSelector{
+    position:absolute;
+    display:none;
+    width: calc(100vw - 20px);
+    max-width:917px;
+    max-height:1997px;
+    height: calc( 100vh - 20px);
+    z-index:1100;
+    box-shadow: 5px 5px 5px rgba(0,0,0, .35);
+    left:50%;
+    top:10px;
+    transform:translatex(-50%);
+    border:1px solid black;
+    grid-template-columns: auto;
+    grid-template-rows: auto 1fr auto;
+    background-color: white;
+}
+
+#cmTitle{
+    text-align:center;
+    font-weight: bold;
+    font-size: 125%;
+}
+
+#cmImage{
+    overflow:auto;
+    width:100%;
+    height:100%;
+    border-top:1px solid black;
+    border-bottom:1px solid black;
+}
+
+#cmFooter{
+    padding:3px 8px;
+}
+
+area {
+    display:block;
+    cursor:pointer;
+}

@@ -18,6 +18,54 @@
 </head>
 
 <body>
+    <!--Click map for colormap selector-->
+    <map name="cmMap">
+        <area shape="rect" coords="2,29,457,112" class=cmArea data-cm="abyss" alt="abyss">
+        <area shape="rect" coords="2,118,457,201" class=cmArea data-cm="cool" alt="cool">
+        <area shape="rect" coords="2,207,457,290" class=cmArea data-cm="cubhelix" alt="cubhelix">
+        <area shape="rect" coords="2,296,457,379" class=cmArea data-cm="dem1" alt="dem1">
+        <area shape="rect" coords="2,385,457,468" class=cmArea data-cm="dem3" alt="dem3">
+        <area shape="rect" coords="2,474,457,557" class=cmArea data-cm="drywet" alt="drywet">
+        <area shape="rect" coords="2,563,457,646" class=cmArea data-cm="elevation" alt="elevation">
+        <area shape="rect" coords="2,652,457,735" class=cmArea data-cm="gebco" alt="gebco">
+        <area shape="rect" coords="2,741,457,824" class=cmArea data-cm="globe" alt="globe">
+        <area shape="rect" coords="2,830,457,913" class=cmArea data-cm="haxby" alt="haxby">
+        <area shape="rect" coords="2,919,457,1002" class=cmArea data-cm="ibcso" alt="ibcso">
+        <area shape="rect" coords="2,1008,457,1091" class=cmArea data-cm="jet" alt="jet">
+        <area shape="rect" coords="2,1097,457,1180" class=cmArea data-cm="magma" alt="magma">
+        <area shape="rect" coords="2,1186,457,1269" class=cmArea data-cm="no_green" alt="no_green">
+        <area shape="rect" coords="2,1275,457,1358" class=cmArea data-cm="panoply" alt="panoply">
+        <area shape="rect" coords="2,1364,457,1447" class=cmArea data-cm="polar" alt="polar">
+        <area shape="rect" coords="2,1453,457,1536" class=cmArea data-cm="red2green" alt="red2green">
+        <area shape="rect" coords="2,1542,457,1625" class=cmArea data-cm="seafloor" alt="seafloor">
+        <area shape="rect" coords="2,1631,457,1714" class=cmArea data-cm="seis" alt="seis">
+        <area shape="rect" coords="2,1720,457,1803" class=cmArea data-cm="terra" alt="terra">
+        <area shape="rect" coords="2,1809,457,1892" class=cmArea data-cm="turbo" alt="turbo">
+        <area shape="rect" coords="2,1898,457,1981" class=cmArea data-cm="world" alt="world">
+        <area shape="rect" coords="460,29,915,112" class=cmArea data-cm="bathy" alt="bathy">
+        <area shape="rect" coords="460,118,915,201" class=cmArea data-cm="copper" alt="copper">
+        <area shape="rect" coords="460,207,915,290" class=cmArea data-cm="cyclic" alt="cyclic">
+        <area shape="rect" coords="460,296,915,379" class=cmArea data-cm="dem2" alt="dem2">
+        <area shape="rect" coords="460,385,915,468" class=cmArea data-cm="dem4" alt="dem4">
+        <area shape="rect" coords="460,474,915,557" class=cmArea data-cm="earth" alt="earth">
+        <area shape="rect" coords="460,563,915,646" class=cmArea data-cm="etopo1" alt="etopo1">
+        <area shape="rect" coords="460,652,915,735" class=cmArea data-cm="geo" alt="geo">
+        <area shape="rect" coords="460,741,915,824" class=cmArea data-cm="gray" alt="gray">
+        <area shape="rect" coords="460,830,915,913" class=cmArea data-cm="hot" alt="hot">
+        <area shape="rect" coords="460,919,915,1002" class=cmArea data-cm="inferno" alt="inferno">
+        <area shape="rect" coords="460,1008,915,1091" class=cmArea data-cm="mag" alt="mag">
+        <area shape="rect" coords="460,1097,915,1180" class=cmArea data-cm="nighttime" alt="nighttime">
+        <area shape="rect" coords="460,1186,915,1269" class=cmArea data-cm="ocean" alt="ocean">
+        <area shape="rect" coords="460,1275,915,1358" class=cmArea data-cm="plasma" alt="plasma">
+        <area shape="rect" coords="460,1364,915,1447" class=cmArea data-cm="rainbow" alt="rainbow">
+        <area shape="rect" coords="460,1453,915,1536" class=cmArea data-cm="relief" alt="relief">
+        <area shape="rect" coords="460,1542,915,1625" class=cmArea data-cm="sealand" alt="sealand">
+        <area shape="rect" coords="460,1631,915,1714" class=cmArea data-cm="split" alt="split">
+        <area shape="rect" coords="460,1720,915,1803" class=cmArea data-cm="topo" alt="topo">
+        <area shape="rect" coords="460,1809,915,1892" class=cmArea data-cm="viridis" alt="viridis">
+        <area shape="rect" coords="460,1898,915,1981" class=cmArea data-cm="wysiwyg" alt="wysiwyg">
+    </map>
+
     <div id="downloading" style="display:none">
         <div id="downloadContent">
             Generating map image.
@@ -158,8 +206,8 @@
                             <option value="TC">Top Center</option>
                             <option value="TL">Top Left</option>
                         </select>
-                        <br> Map Colormap: <input type=text size=9 name="mapColormap" placeholder="auto" value="etopo1"> 
-                        (<a class="cmOpts" target="_blank" href="https://docs.generic-mapping-tools.org/6.2/cookbook/cpts.html#cpt-files-a">Options</a>)
+                        <br> Map Colormap: <input id="mapColormap" type=text size=9 name="mapColormap" placeholder="auto" value="etopo1"> 
+                        <button type="button" class="setCM" data-target="mapColormap">Select</button>
                     </div>
                     <!--End general map options-->
 
@@ -180,7 +228,7 @@
                         <div id="DataSetup">
                             Colormap:
                             <input type="text" name="colorMap" id="colormap" value="jet"> 
-                            (<a target="_blank" class="cmOpts" href="https://docs.generic-mapping-tools.org/6.2/cookbook/cpts.html#cpt-files-a">Options</a>)
+                            <button type="button" class="setCM" data-target="colormap">Select</button>
                             <br> Show Colorbar: <select id=showColorbar name="colorbar">
                                 <option value="False">None</option>
                                 <option value="MR">Right Center</option>
@@ -241,7 +289,17 @@
             </div>
         </div>
 
-
+        <div id="cmSelector">
+            <div id="cmTitle">
+                Click a colormap
+            </div>
+            <div id="cmImage">
+                <img src='static/img/GMT_App_M_1a.png' alt="colormaps" usemap="#cmMap">
+            </div>
+            <div id="cmFooter">
+                <button id="cmCancel">Cancel</button>
+            </div>
+        </div>
 
         <div id="mapContainer">
             <div id="maps">
