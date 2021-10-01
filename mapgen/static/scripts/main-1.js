@@ -85,9 +85,29 @@ $(document).ready(function() {
         $('#cmSelector').hide();
     });
 
+    $('div.help').hover(showHelp,hideHelp);
+
     changeFileType();
     setOverviewDiv();
 });
+
+function showHelp(){
+    //help text has to be fixed position
+    const helpText=$(this).find('div.helpText');
+    helpText.show();
+    const rect=helpText[0].getBoundingClientRect();
+    console.log(rect);
+
+    const winBottom=window.innerHeight || document.documentElement.clientHeight;
+    if(rect.bottom>winBottom){
+        helpText.css('bottom','5px');
+    }
+}
+
+function hideHelp(){
+    const helpText=$(this).find('div.helpText').hide();
+    helpText.css('bottom','');
+}
 
 function initMap() {
     //size the map div
@@ -223,6 +243,7 @@ function setOverviewDiv() {
     var desiredWidth = Number($('#mapWidth').val());
     var ratio = mapWidth / desiredWidth;
     var disp_size = ratio * Number($('#overviewWidth').val());
+    console.log(disp_size);
     $('#overviewMap')
         .css('width', disp_size + "px")
         .css('height', disp_size + "px");
@@ -332,8 +353,8 @@ function sizeMap() {
 
     if ($('#lockWidth').is(':checked')) {
         $('#overviewWidth').val(Math.round(width / overviewRatio));
-        setTimeout(setOverviewDiv, 250);
     }
+    setTimeout(setOverviewDiv, 250);
 }
 
 var insetId = 0;

@@ -87,7 +87,23 @@
             <div id="setupInner">
                 <form id="setupForm" enctype="multipart/form-data" action="getMap" method="POST">
                     <input type=hidden name="socketID" id="socketID" />
-                    <div class="setupHeader">Map Location</div>
+                    <div class="setupHeader">
+                        Map Location
+                        <div class="help">
+                            <div class="helpText">
+                                <p>Set the position and bounds of the map</p>
+                                <p>When entering latitude/longitude bounds, the map will adjust
+                                    to display the <i>full</i> range entered. Actual bounds displayed
+                                    may vary somewhat due to map shape.
+                                </p>
+
+                                    <p>
+                                    Click the refresh button here to reset the entered values to those
+                                    actually displayed on the map.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                     <div class="setupContent">
                         <select id="mapLocation">
                             <option value="Alaska" data-loc=[55.5,-164,5]>Alaska</option>
@@ -145,7 +161,20 @@
                         </div>
                     </div>
 
-                    <div class="setupHeader">Map Size</div>
+                    <div class="setupHeader">
+                        Map Size
+                        <div class="help">
+                            <div class="helpText">
+                                <p>
+                                    The size of the <i>generated</i> map, in the selected units (inches, centimeters, or pixels)
+                                </p>
+                                <p><b>NOTE:</b>The size entered applies to the <i>map area</i> ONLY. 
+                                    The final size of the image generated will be somewhat larger to allow room for axis labels,
+                                    colorbar (if applicable), etc.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                     <div class="setupContent">
                         <div id="size">
                             <span class="sizeLabel">Width:</span>
@@ -223,6 +252,49 @@
                     <!--Data plot CSV upload-->
                     <div class="setupHeader">
                         Data Plot
+                        <div class=help>
+                            <div class="helpText">
+                                <p>Plot data from a CSV on map</p>
+                                <ul>
+                                    <li>
+                                        Colormap: The colormap to use to plot the value column<br>
+                                        All <a target="_blank" href="https://docs.generic-mapping-tools.org/6.2/cookbook/cpts.html#built-in-color-palette-tables-cpt">Built-in colormaps</a> supported by GMT are valid.
+                                    </li>
+                                    <li>
+                                        Show Colorbar: Which side of the map to display the colorbar on, or None to not display it
+                                    </li>
+                                    <li>
+                                        Units: Value units to display to the right or top of the colorbar.
+                                        <ul>
+                                            <li>
+                                                Will not be displayed if "Show Colorbar" is set to "None"
+                                            </li>
+                                        </ul>
+                                    </li>
+                                    <li>
+                                        Show Title: If checked, display the column header for the "Value" column above the colorbar
+                                        <ul>
+                                            <li>
+                                                Will not be displayed if "Show Colorbar" is set to "None"
+                                            </li>
+                                        </ul>
+                                    </li>
+                                    <li>
+                                        Range: The range of values to scale the colorbar to.
+                                        <ul>
+                                            <li>Auto-scaled to data min/max values if blank</li>
+                                            <li>The color of values outside this range is undefined</li>
+                                        </ul>
+                                    </li>
+                                    <li>
+                                        CSV: The CSV file containing the data to be plotted
+                                    </li>
+                                    <li>
+                                        Latitude, Longitude, Value: The columns from the CSV to use for latitude, longitude, and value
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                     <div class="setupContent blockDisplay">
                         <div id="DataSetup">
@@ -231,9 +303,9 @@
                             <button type="button" class="setCM" data-target="colormap">Select</button>
                             <br> Show Colorbar: <select id=showColorbar name="colorbar">
                                 <option value="False">None</option>
-                                <option value="MR">Right Center</option>
-                                <option value="BC" selected>Bottom Center</option>
-                                <option value="TC">Top Center</option>
+                                <option value="MR">Right</option>
+                                <option value="BC" selected>Bottom</option>
+                                <option value="TC">Top</option>
                             </select>
                             <br>
                             Units: <input type="text" maxlength=4 size=4 name="scaleunits">
