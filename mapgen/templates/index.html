@@ -168,7 +168,7 @@
                                 <p>
                                     The size of the <i>generated</i> map, in the selected units (inches, centimeters, or pixels)
                                 </p>
-                                <p><b>NOTE:</b>The size entered applies to the <i>map area</i> ONLY. 
+                                <p><b>NOTE:</b> The size entered applies to the <i>map area</i> ONLY. 
                                     The final size of the image generated will be somewhat larger to allow room for axis labels,
                                     colorbar (if applicable), etc.
                                 </p>
@@ -192,7 +192,26 @@
                         </div>
                     </div>
 
-                    <div class="setupHeader">Overview Map</div>
+
+                    <div class="setupHeader">
+                        Overview Map
+                        <div class="help">
+                            <div class="helpText">
+                                <p>Set the size and position of the overview map, or remove it.</p>
+                                <p>Units are always the same as the main map units</p>
+                                <p>
+                                    If "Lock to map width" is checked (default), then the overview map width
+                                    will adjust as you change the main map width to maintain the 
+                                    same relative size.
+                                </p>
+                                <p>
+                                    The area displayed in the overview map can be changed by dragging or zooming 
+                                    (using your scroll wheel or the +/- buttons) the map displayed in the inset preview.
+                                    The overview can be reset to the default view by clicking the "Reset View" button.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                     <div class="setupContent">
                         Show Map:
                         <select id=overview name="overview">
@@ -210,7 +229,23 @@
                         <input type="hidden" id="overviewBounds" name="overviewBounds">
                     </div>
 
-                    <div class="setupHeader">Overlay Image</div>
+                    <div class="setupHeader">
+                        Overlay Image
+                        <div class="help">
+                            <div class="helpText">
+                                <p>Upload an image to use instead of the default hillshade files</p>
+                                <p>Supports single GeoTIFF files, or image/world file pairs (.jpg/.jpw or .tif/.tiw)</p>
+                                <p>
+                                    If using paired image/world files, the projection used must be specified. 
+                                    Currently only Alaska Albers is supported.
+                                </p>
+                                <p>
+                                    Any areas not covered by the uploaded image will be 
+                                    filled with the standard hillshade product.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                     <div class="setupContent leftJustify">
                         Type:
                         <select id="overlayFormat" name="imgType">
@@ -223,7 +258,30 @@
                     </div>
 
                     <!--General map options-->
-                    <div class="setupHeader">Options</div>
+                    <div class="setupHeader">
+                        Options
+                        <div class="help">
+                            <div class="helpText">
+                                <ul>
+                                    <li>
+                                        Show Scale: Display a map scale in the requested location, 
+                                        or none to not display a scale
+                                    </li>
+                                    <li>
+                                        Map Colormap: The colormap to use for hillshade effect on the main map.
+                                        <ul>
+                                            <li>
+                                                Click select to choose one of the standard GMT colormaps.
+                                            </li>
+                                            <li>
+                                                Supports all <a href=target="_blank" href="https://docs.generic-mapping-tools.org/6.2/cookbook/cpts.html#built-in-color-palette-tables-cpt">GMT Built-in colormaps.</a>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                     <div class="setupContent">
                         Show Scale:
                         <select id=showScale name="scale">
@@ -241,7 +299,26 @@
                     <!--End general map options-->
 
                     <!--Inset Maps-->
-                    <div class="setupHeader">Inset Map(s)</div>
+                    <div class="setupHeader">
+                        Inset Map(s)
+                        <div class="help">
+                            <div class="helpText">
+                                <p>
+                                    Add one or more inset maps that will be displayed 
+                                    overlaying the main map, for example to show a zoomed-in region
+                                </p>
+                                <p>Once you have added an inset map, you can move or resize 
+                                    said inset just like you would a normal window - that is, you can move 
+                                    the inset to a different location on the main map by dragging the inset's
+                                    title bar, or resize it by dragging the corner/side. 
+                                </p>
+                                <p>
+                                    Remove an inset by clicking the delete button 
+                                    next to the inset title in this box.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                     <div class="setupContent blockDisplay">
                         <button type="button" id="addNewMap">Add New</button>
                         <div id="insetMaps" class="insetMapList">
@@ -333,6 +410,56 @@
                     <!--Station Selector Sidebar-->
                     <div class="setupHeader">
                         <span class="leftEdge"><input type="checkbox" id="stationSelAll">All</span> Stations
+                        <div class="help">
+                            <div class="helpText">
+                                <p>Station(s) to be ploted on the map.</p>
+                                <p>
+                                    Station list is retrieved automatically from 
+                                    https://volcanoes.usgs.gov/vsc/api/instrumentApi for the area displayed in 
+                                    the <i>main</i> map (inset maps are assumed to be a subset of the main map,
+                                    and therfore covered by the same area). 
+                                </p>
+                                <p>
+                                    You can add aditional stations to be plotted by uploading a CSV file
+                                    with the following columns:
+                                    <table>
+                                        <tr>
+                                            <td>Latitude</td>
+                                            <td>Longitude</td>
+                                            <td>Station</td>
+                                            <td>Category ID</td>
+                                        </tr>
+                                    </table><br>
+                                    Where "Category ID" is one of the following:
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Type</th>
+                                                <th>ID</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Seismometer</td><td>1</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Tiltmeter</td><td>3</td>
+                                            </tr>
+                                            <tr>
+                                                <td>GPS</td><td>4</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Gas</td><td>7</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Camera</td><td>22</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    The first row of the CSV is assumed to be a header row and is ignored.
+                                </p>
+                            </div>
+                        </div>
                     </div>
                     <div class="setupContent blockDisplay">
                         <div id="LegendSetup">

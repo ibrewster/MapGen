@@ -369,3 +369,12 @@ div.help::before{
     top:3px;
     right:3px;
 }
+
+table{
+    border:1px solid black;
+    border-collapse: collapse;
+}
+
+td,th{
+    border:1px solid black;
+}
