@@ -25,12 +25,15 @@ var conversions = {
 var staCategories = {
     999: 'User Defined',
     1: 'Seismometer',
+    101740:'Seismometer',
     3: 'Tiltmeter',
     4: 'GPS',
+    101743:'GPS',
     7: 'Gas',
     12: 'Temperature',
     22: 'Camera',
-    23: 'Infrasound'
+    23: 'Infrasound',
+    130195:'Infrasound'
 }
 
 window.onbeforeunload = function() {
