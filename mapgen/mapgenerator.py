@@ -261,7 +261,7 @@ class MapGenerator:
         files = []
         num_files = len(all_files)
         for idx, in_file in enumerate(all_files):
-            logging.info(f"Processing image {idx} of {len(all_files)}")
+            logging.info(f"Processing image {idx+1} of {len(all_files)}")
 
             in_path, in_ext = os.path.splitext(in_file)
             out_file = f"{in_path}-processed.tiff"
@@ -327,7 +327,7 @@ class MapGenerator:
             files.append(out_file)
             self._update_status({
                 'status': "Processing hillshade data...",
-                'progress': (idx / num_files) * 100
+                'progress': ((idx + 1) / num_files) * 100
             })
 
         return files
@@ -390,10 +390,10 @@ class MapGenerator:
             if multi_status:
                 self._update_status({
                     'status': "Drawing map image...",
-                    'progress': (idx / num_files) * 100
+                    'progress': ((idx + 1) / num_files) * 100
                 })
 
-            logging.info(f"Adding image {idx} of {len(hillshade_file)}: {file}")
+            logging.info(f"Adding image {idx+1} of {len(hillshade_file)}: {file}")
             cm = self.data.get('mapColormap')
             if cm:
                 try:
