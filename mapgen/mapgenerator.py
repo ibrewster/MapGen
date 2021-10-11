@@ -470,6 +470,7 @@ class MapGenerator:
         longitudes = plot_data[loncol].to_numpy()
         values = plot_data[valcol].to_numpy()
 
+        trans_level = self.data.get('dataTrans', 0)
         cm = self.data.get('colorMap')
         cm_min = self.data.get('cmMin')
         if cm_min is None:
@@ -485,7 +486,8 @@ class MapGenerator:
             import pygmt
 
         pygmt.makecpt(cmap = cm, series = (cm_min, cm_max))
-        self.fig.plot(x = longitudes, y = latitudes, style = symbol, color = values, cmap = True)
+        self.fig.plot(x = longitudes, y = latitudes, style = symbol,
+                      color = values, cmap = True, transparency = trans_level)
 
         cb_position = self.data.get('colorbar')
         if cb_position.lower() != 'false':

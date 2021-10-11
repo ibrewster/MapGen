@@ -378,3 +378,8 @@ table{
 td,th{
     border:1px solid black;
 }
+
+#transDiv{
+    display:grid;
+    grid-template-columns: 1fr 5ch;
+}

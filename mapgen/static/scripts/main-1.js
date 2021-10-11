@@ -87,6 +87,9 @@ $(document).ready(function() {
     $('#cmCancel').click(function(){
         $('#cmSelector').hide();
     });
+    $('#dataTrans').change(function(){
+        $('#transLevel').text($(this).val());
+    })
 
     $('div.help').hover(showHelp,hideHelp);
 

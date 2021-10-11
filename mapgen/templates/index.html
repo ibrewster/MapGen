@@ -378,7 +378,14 @@
                             Colormap:
                             <input type="text" name="colorMap" id="colormap" value="jet"> 
                             <button type="button" class="setCM" data-target="colormap">Select</button>
-                            <br> Show Colorbar: <select id=showColorbar name="colorbar">
+                            <br>Transparency:
+                            <div id="transDiv">
+                                <input type="range" min="0" max="100" value="0" class="slider" id="dataTrans" name="dataTrans">
+                                <div>
+                                    <span id="transLevel">0</span>%
+                                </div>
+                            </div>
+                            Show Colorbar: <select id=showColorbar name="colorbar">
                                 <option value="False">None</option>
                                 <option value="MR">Right</option>
                                 <option value="BC" selected>Bottom</option>
