@@ -485,7 +485,8 @@ class MapGenerator:
             os.environ['GMT_LIBRARY_PATH'] = '/usr/local/lib'
             import pygmt
 
-        pygmt.makecpt(cmap = cm, series = (cm_min, cm_max))
+        pygmt.makecpt(cmap = cm, series = ("{:f}". format(cm_min),
+                                           "{:f}". format(cm_max)))
         self.fig.plot(x = longitudes, y = latitudes, style = symbol,
                       color = values, cmap = True, transparency = trans_level)
 
