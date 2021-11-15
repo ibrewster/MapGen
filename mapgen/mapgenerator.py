@@ -552,7 +552,6 @@ class MapGenerator:
                     frame.append(f"py+L{scale_units}")
 
                 logging.info("Adding colorbar")
-                from . import wingdbstub
                 logging.info(pos)
                 logging.info(frame)
                 self.fig.colorbar(position = pos, frame = frame)
