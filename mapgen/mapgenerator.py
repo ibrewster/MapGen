@@ -465,6 +465,8 @@ class MapGenerator:
         valcol = self.data.get('valcol', 'value')
 
         plot_data = pandas.read_csv(plotdata_file)
+        logging.info("Plot data file:")
+        logging.info(str(plot_data))
 
         latitudes = plot_data[latcol].to_numpy()
         longitudes = plot_data[loncol].to_numpy()
@@ -473,11 +475,24 @@ class MapGenerator:
         trans_level = self.data.get('dataTrans', 0)
         cm = self.data.get('colorMap')
         cm_min = self.data.get('cmMin')
+        cm_max = self.data.get('cmMax')
+
         if cm_min is None:
             cm_min = values.min()
-        cm_max = self.data.get('cmMax')
         if cm_max is None:
             cm_max = values.max()
+
+        if (cm_max - cm_min) > 1e6:
+            scaled_values = 2000.0 * (values - cm_min) / numpy.ptp(values) - 1000
+            cm_min_scaled = scaled_values.min()
+            cm_max_scaled = scaled_values.max()
+        else:
+            scaled_values = values
+            cm_min_scaled = cm_min
+            cm_max_scaled = cm_max
+
+        logging.info(f"Min value: {cm_min_scaled} Max Value: {cm_max_scaled}")
+        logging.info(f"Avg. Value: {scaled_values.mean()}")
 
         try:
             import pygmt
@@ -485,29 +500,38 @@ class MapGenerator:
             os.environ['GMT_LIBRARY_PATH'] = '/usr/local/lib'
             import pygmt
 
-        pygmt.makecpt(cmap = cm, series = ("{:f}". format(cm_min),
-                                           "{:f}". format(cm_max)))
+        pygmt.makecpt(cmap = cm, series = ("{:f}". format(cm_min_scaled),
+                                           "{:f}". format(cm_max_scaled)),
+                      background = "i")
         self.fig.plot(x = longitudes, y = latitudes, style = symbol,
-                      color = values, cmap = True, transparency = trans_level)
+                      color = scaled_values, cmap = True, transparency = trans_level)
+        logging.info("data plotted!")
 
         cb_position = self.data.get('colorbar')
         if cb_position.lower() != 'false':
+            logging.info("Creating colorbar labels")
             labels = numpy.linspace(cm_min, cm_max, 5)
+            scaled_labels = numpy.linspace(cm_min_scaled, cm_max_scaled, 5)
+
             roundLevel = 0
             rounded_labels = labels.round(roundLevel)
-            while (len(numpy.unique(rounded_labels)) != len(rounded_labels)):
+            logging.info("Rounding labels")
+            while len(numpy.unique(rounded_labels)) != len(rounded_labels):
                 roundLevel += 1
                 rounded_labels = labels.round(roundLevel)
 
-            if roundLevel == 0:
+            logging.info(f"Rounded labels to: {roundLevel}")
+            if roundLevel == 0 and numpy.abs(rounded_labels).max() < 1e16:
                 rounded_labels = rounded_labels.astype(int)
 
             # Shift the first label to the right a small amount so it actually shows up.
-            labels[0] += 10000 * labels[0] * sys.float_info.epsilon
+            # Try 1%
+            scaled_labels[0] += (scaled_labels.max() - scaled_labels.min()) / 1600
 
             # Create an annotation file to pass to the colorbar function
+            logging.info("Creating colorbar file")
             with NamedTemporaryFile('w') as file:
-                for pos, label in zip(labels, rounded_labels):
+                for pos, label in zip(scaled_labels, rounded_labels):
                     file.write(f"{pos} a {label}\n")
 
                 file.flush()
@@ -527,8 +551,14 @@ class MapGenerator:
                 if scale_units is not None and scale_units:
                     frame.append(f"py+L{scale_units}")
 
+                logging.info("Adding colorbar")
+                from . import wingdbstub
+                logging.info(pos)
+                logging.info(frame)
                 self.fig.colorbar(position = pos, frame = frame)
+                logging.info("Colorbar added")
                 os.chdir(cur_dir)
+            logging.info("Data plotted.")
 
     def _add_scalebar(self):
         if self.data['scale'] == 'False':
@@ -629,13 +659,16 @@ class MapGenerator:
 
         self._plot_data(zoom)
 
+        logging.info("Adding scalebar")
         self._add_scalebar()
 
+        logging.info("Getting ready to add stations")
         cur_dir = os.getcwd()
 
         stations = self.data.get('station', [])
         self._add_stations(stations, zoom)
 
+        logging.info("Adding overview")
         if overview:
             logging.info("Adding Overview")
             self._update_status("Adding Overview Map...")
