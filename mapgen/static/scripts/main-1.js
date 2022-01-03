@@ -27,11 +27,13 @@ var staCategories = {
     1: 'Seismometer',
     101740:'Seismometer',
     3: 'Tiltmeter',
+    101742:'Tiltmeter'
     4: 'GPS',
     101743:'GPS',
     7: 'Gas',
     12: 'Temperature',
     22: 'Camera',
+    101761: 'Camera',
     23: 'Infrasound',
     130195:'Infrasound'
 }
