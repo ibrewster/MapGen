@@ -27,7 +27,7 @@ var staCategories = {
     1: 'Seismometer',
     101740:'Seismometer',
     3: 'Tiltmeter',
-    101742:'Tiltmeter'
+    101742:'Tiltmeter',
     4: 'GPS',
     101743:'GPS',
     7: 'Gas',
