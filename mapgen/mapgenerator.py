@@ -10,7 +10,7 @@ import pickle
 import socket
 import shutil
 import signal
-import sys
+import time
 import tempfile
 import uuid
 import zipfile
@@ -188,7 +188,7 @@ class MapGenerator:
 
         loaded_bytes = 0
         pc = 0
-        chunk_size = 1024 * 1024 * 10  # 10 MB
+        chunk_size = 1024 * 1024 * 1000  # 10 MB
 
         for geojson in bounds_list:
             # get file listings
@@ -212,6 +212,7 @@ class MapGenerator:
                     logging.debug(str(file_info))
                     est_size += file_info.get('bytes', -1)
 
+        _t_start = time.time()
         for geojson in bounds_list:
             req = requests.get(url,
                                params = {'geojson': geojson,
@@ -224,9 +225,10 @@ class MapGenerator:
                 continue
 
             with open(zf_path, 'wb') as zf:
-                for chunk in req.iter_content(chunk_size = chunk_size):
+                for chunk in req.iter_content(chunk_size = None):
                     if chunk:
-                        loaded_bytes += zf.write(chunk)
+                        bytes_written = zf.write(chunk)
+                        loaded_bytes += bytes_written
                         if est_size > 0:
                             pc = round((loaded_bytes / est_size) * 100, 1)
 
@@ -254,6 +256,7 @@ class MapGenerator:
                                         continue  # already extracted, move on
                                     logging.info(f"Extracting {tiffile}")
                                     zf2.extract(tiffile, path = tiff_dir)
+        logging.info("Downloaded files in %f", time.time() - _t_start)
         return tiff_dir
 
     def _process_files(self, all_files, warp_bounds, proj = None):
@@ -422,7 +425,7 @@ class MapGenerator:
 
         sym_size = f"{sym_size}p"
         for station in self.data.get('station', []):
-            category = station['category']
+            category = station.get('category', 'Unknown')
             sta_x = float(station['lon'])
             sta_y = float(station['lat'])
 

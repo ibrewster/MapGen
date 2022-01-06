@@ -31,7 +31,9 @@ var staCategories = {
     4: 'GPS',
     101743:'GPS',
     7: 'Gas',
+    101746: 'Gas',
     12: 'Temperature',
+   // 101751:'Temperature',
     22: 'Camera',
     101761: 'Camera',
     23: 'Infrasound',
@@ -700,7 +702,8 @@ function getStationsDebounce() {
 var urlBase = 'https://volcanoes.usgs.gov';
 var instrumentUrl = `${urlBase}/vsc/api/instrumentApi/data`;
 
-var all_stations = [];
+let all_stations = [];
+let usgs_cats = {};
 
 function getStations() {
     if (staTimer !== null) {
@@ -739,6 +742,17 @@ function query_stations(minLat, maxLat, eastLon, westLon, eastLon2, westLon2) {
     $.getJSON(url)
         .done(function(data) {
             all_stations = all_stations.concat(data['instruments']);
+            const categories=data['categories'];
+            for(let i=0;i<categories.length;i++){
+                const cat=categories[i];
+                const catName=cat['category'];
+                const catID=cat['catId'];
+                const iconURL=cat['iconFullUrl'];
+                usgs_cats[catID]={
+                    'type':catName,
+                    'iconURL':iconURL
+                }
+            }
             if (westLon2 !== null && eastLon2 !== null) {
                 query_stations(minLat, maxLat, eastLon2, westLon2, null, null);
             } else {
@@ -795,7 +809,7 @@ function displayStations() {
         seenStations.push(staName);
 
         var catID = sta['catId'];
-        var cat = staCategories[catID];
+        var cat = staCategories[catID] || usgs_cats[catID];
 
         if (seenCategories.indexOf(catID) == -1) {
             createStationGroup(cat, catID);
@@ -833,6 +847,9 @@ function createStationDiv(sta, cat) {
 
 function createStationGroup(cat, id) {
     var staType = cat;
+    if (typeof staType ==='object'){
+        staType=staType['type'];
+    }
     var divID = `staCat${id}`
     var div = $(`<div class="stationType" id="${divID}">`);
     var typeTitle = $('<div class=stationTypeHead>')
