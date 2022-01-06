@@ -426,6 +426,9 @@ class MapGenerator:
         sym_size = f"{sym_size}p"
         for station in self.data.get('station', []):
             category = station.get('category', 'Unknown')
+            if isinstance(category, dict):
+                category = category['type']
+
             sta_x = float(station['lon'])
             sta_y = float(station['lat'])
 
