@@ -104,20 +104,25 @@ $(document).ready(function() {
 });
 
 function setupAccordion(){
+    // fix the width of the settings bar so it doesn't change as we open/close segments
     const width=$('#setupInner').width();
     $('#setupInner').css('width',width);
-    $('#setupInner div.setupContent:first').siblings('div.setupContent').hide();
-    $('#setupInner div.setupContent:first').addClass('accordion-open');
 
+    //close all but the first section
+    $('#setupInner div.setupContent:first').siblings('div.setupContent').hide();
+    $('#setupInner div.setupHeader:first').addClass('accordion-open')
+
+    //function to actually implement accordion behavior
     $('.setupHeader').click(function(){
         const header=$(this);
         const content=header.next();
-        if( content.hasClass('accordion-open')){
+        if( header.hasClass('accordion-open')){
             return;
         }
         $('#setupInner div.setupContent').slideUp();
         $('div.accordion-open').removeClass('accordion-open');
-        $(this).next().slideDown().addClass('accordion-open');
+        content.slideDown()
+        header.addClass('accordion-open');
     })
 }
 

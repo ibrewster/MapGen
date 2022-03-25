@@ -104,11 +104,19 @@ body {
     text-align: center;
     position: relative;
     cursor: pointer;
+    margin-top:3px;
+    border-radius: 5px;
+}
+
+.setupHeader.accordion-open{
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius:0px;
 }
 
 .setupHeader:first-of-type {
     border-top-left-radius: 5px;
     border-top-right-radius: 5px;
+    margin-top:0px;
 }
 
 .setupContent {
