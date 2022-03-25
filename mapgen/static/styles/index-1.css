@@ -103,6 +103,7 @@ body {
     padding: 2px 0px;
     text-align: center;
     position: relative;
+    cursor: pointer;
 }
 
 .setupHeader:first-of-type {

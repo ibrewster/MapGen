@@ -100,7 +100,26 @@ $(document).ready(function() {
     changeFileType();
     setOverviewDiv();
     getStationsDebounce();
+    setupAccordion();
 });
+
+function setupAccordion(){
+    const width=$('#setupInner').width();
+    $('#setupInner').css('width',width);
+    $('#setupInner div.setupContent:first').siblings('div.setupContent').hide();
+    $('#setupInner div.setupContent:first').addClass('accordion-open');
+
+    $('.setupHeader').click(function(){
+        const header=$(this);
+        const content=header.next();
+        if( content.hasClass('accordion-open')){
+            return;
+        }
+        $('#setupInner div.setupContent').slideUp();
+        $('div.accordion-open').removeClass('accordion-open');
+        $(this).next().slideDown().addClass('accordion-open');
+    })
+}
 
 function showHelp(){
     //help text has to be fixed position
