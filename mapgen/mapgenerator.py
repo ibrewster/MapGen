@@ -588,7 +588,14 @@ class MapGenerator:
         mid_lat = self.gmt_bounds[2] + ((self.gmt_bounds[3] - self.gmt_bounds[2]) / 2)
         map_width = vincenty.vincenty((mid_lat, self.gmt_bounds[0]),
                                       (mid_lat, self.gmt_bounds[1]))
-        scale_length = math.ceil((map_width / 8))  # Make an even number
+        scale_length = int(math.ceil((map_width / 8)))  # Make an whole number
+        if scale_length > 10 and scale_length < 75:
+            # round to the nearest 10
+            scale_length = int(round(scale_length / 10) * 10)
+        elif scale_length >= 75:
+            # round to the nearest 100
+            scale_length = int(round(scale_length / 100) * 100)
+
         offset = .65
         if self.data['scale'][0] == 'T':
             offset += .3
