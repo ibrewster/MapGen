@@ -596,7 +596,7 @@ class MapGenerator:
         offset = str(offset) + "c"
 
         if self.data['scale'][1] in ['L', 'R']:
-            offset = '.375c/' + offset
+            offset = '.575c/' + offset
 
         map_scale = f'j{self.data["scale"]}+w{scale_length}k+f+o{offset}+c{mid_lat}N+l'
         self.fig.basemap(map_scale = map_scale, F = '+gwhite+p')
