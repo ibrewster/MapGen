@@ -123,7 +123,10 @@ class MapGenerator:
         "User Defined": {
             'symbol': 'a',
             'color': 'yellow',
-        }
+        },
+        "volcano": {
+            'symbol': 'kvolcano/',
+        },
     }
 
     def __init__(self, req_id = None):
@@ -429,11 +432,21 @@ class MapGenerator:
             if isinstance(category, dict):
                 category = category['type']
 
+            if category.startswith('volcano'):
+                volc_color = category.replace('volcano', '').lower()
+                if volc_color == "unassigned":
+                    volc_color = 'gray'
+                category = 'volcano'
+
             sta_x = float(station['lon'])
             sta_y = float(station['lat'])
 
             symbol = self.station_symbols.get(category, {}).get('symbol', 'a')
-            color = self.station_symbols.get(category, {}).get('color', '#FF00FF')
+
+            if category == 'volcano':
+                color = volc_color
+            else:
+                color = self.station_symbols.get(category, {}).get('color', '#FF00FF')
 
             if symbol is not None:
                 symbol += sym_size

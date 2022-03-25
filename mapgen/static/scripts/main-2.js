@@ -65,7 +65,7 @@ $(document).ready(function() {
     $(document).on('change', '.mapSize', sizeMap);
     $(document).on('click', 'input.staCheck', checkForAll);
     $(document).on('click', 'input.staCatAll', toggleAll);
-    $(document).on('click', '#stationSelAll', toggleStations);
+    $(document).on('click', '.sectionSelectAll', toggleStations);
     $(document).on('click', 'button.deleteInset', removeInsetMap);
     $(document).on('change', '#overview, #overviewWidth', setOverviewDiv);
 
@@ -99,6 +99,7 @@ $(document).ready(function() {
 
     changeFileType();
     setOverviewDiv();
+    getStationsDebounce();
 });
 
 function showHelp(){
@@ -701,8 +702,10 @@ function getStationsDebounce() {
 
 var urlBase = 'https://volcanoes.usgs.gov';
 var instrumentUrl = `${urlBase}/vsc/api/instrumentApi/data`;
+const volcUrl=`${urlBase}/vsc/api/volcanoApi/regionstatus`;
 
 let all_stations = [];
+let all_volcs=[];
 let usgs_cats = {};
 
 function getStations() {
@@ -725,6 +728,7 @@ function getStations() {
     }
 
     all_stations = [];
+    all_volcs=[];
 
     var westLon2 = null;
     var eastLon2 = null;
@@ -734,7 +738,19 @@ function getStations() {
         westLon = -180
     }
 
+    query_volcs(minLat,maxLat,eastLon,westLon,eastLon2,westLon2);
     query_stations(minLat, maxLat, eastLon, westLon, eastLon2, westLon2);
+}
+
+function query_volcs(minLat, maxLat, eastLon, westLon, eastLon2, westLon2){
+    var url=`${volcUrl}?lat1=${minLat}&long1=${westLon}&lat2=${maxLat}&long2=${eastLon}`;
+    $.getJSON(url)
+    .done(function(data){
+        all_volcs=all_volcs.concat(data);
+        if (westLon2 !== null && eastLon2 !== null) {
+            query_volcs(minLat, maxLat, eastLon2, westLon2, null, null);
+        }
+    })
 }
 
 function query_stations(minLat, maxLat, eastLon, westLon, eastLon2, westLon2) {
@@ -794,7 +810,28 @@ function addCSVStations() {
     reader.readAsBinaryString(file);
 }
 
+function displayVolcs(){
+    const dest=$('#volcanoListTop').empty();
+    let seenCodes=[];
+    for(let i=0;i<all_volcs.length;i++){
+        let volc=all_volcs[i];
+        if(!volc['obs']=='avo'){
+            continue;
+        }
+
+        let volcName=volc['vName'];
+        let code=volc['colorCode'];
+        if(seenCodes.indexOf(code)==-1){
+            createGroupDiv(code,code,dest,'volc');
+            seenCodes.push(code);
+        }
+
+        createVolcDiv(volc);
+    }
+}
+
 function displayStations() {
+    displayVolcs();
     var seenStations = []
     var seenCategories = []
 
@@ -812,7 +849,7 @@ function displayStations() {
         var cat = staCategories[catID] || usgs_cats[catID];
 
         if (seenCategories.indexOf(catID) == -1) {
-            createStationGroup(cat, catID);
+            createGroupDiv(cat, catID, $('#stationListTop'),'sta');
             seenCategories.push(catID);
         }
 
@@ -820,11 +857,31 @@ function displayStations() {
     }
 
     //check all by default
-    $('#stationSelAll')[0].checked = true;
-    toggleStations.call($('#stationSelAll')[0]);
-
+    $('.sectionSelectAll').each(function(){
+        this.checked=true;
+        toggleStations.call(this);
+    });
+    
     //make sure the map size is correct
     sizeMap();
+}
+
+function createVolcDiv(volc) {
+    var info = {
+        'lat': volc['lat'],
+        'lon': volc['long'],
+        'name': volc['vName'],
+        'category': `volcano${volc['colorCode']}`
+    }
+
+    var div = $('<div class="volc">')
+    var value = JSON.stringify(info);
+    var checkbox = $('<input type="checkbox" class="staCheck" name="station">');
+    checkbox.val(value);
+    div.append(checkbox);
+    div.append(volc['vName']);
+    var destID = `volcCat${volc['colorCode']}`;
+    $(`#${destID}`).append(div);
 }
 
 function createStationDiv(sta, cat) {
@@ -845,21 +902,21 @@ function createStationDiv(sta, cat) {
     $(`#${destID}`).append(div);
 }
 
-function createStationGroup(cat, id) {
-    var staType = cat;
-    if (typeof staType ==='object'){
-        staType=staType['type'];
+function createGroupDiv(group, id, dest,type) {
+    var title = group;
+    if (typeof title ==='object'){
+        title=title['type'];
     }
-    var divID = `staCat${id}`
+    var divID = `${type}Cat${id}`
     var div = $(`<div class="stationType" id="${divID}">`);
     var typeTitle = $('<div class=stationTypeHead>')
     var allCheck = $("<span class='leftEdge'>");
     allCheck.append("<input type=checkbox class='staCatAll'>");
     allCheck.append("All");
     typeTitle.append(allCheck);
-    typeTitle.append(staType);
+    typeTitle.append(title);
     div.append(typeTitle);
-    $('#stationListTop').append(div);
+    dest.append(div);
 }
 
 function toggleStations() {
@@ -893,10 +950,12 @@ function checkForAll() {
     }
 
     var top = $(this).closest('div.setupContent');
+    const header=top.prev('div.setupHeader');
+    const selAll=header.find('input.sectionSelectAll');
     if (top.find('input.staCheck').length == top.find('input.staCheck:checked').length) {
-        $('#stationSelAll')[0].checked = true;
+       selAll[0].checked = true;
     } else {
-        $('#stationSelAll')[0].checked = false;
+        selAll[0].checked = false;
     }
 }
 
