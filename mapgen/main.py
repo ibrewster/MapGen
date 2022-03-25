@@ -118,6 +118,7 @@ class MapSchema(BaseSchema):
     mapColormap = Value(str, default = None)
     showCMTitle = Value(bool, default = False)
     dataTrans = Value(int, default = 0)
+    fillOcean = Value(bool, default = False)
 
 
 @app.post('/getMap')
@@ -152,17 +153,11 @@ def request_map(data):
 
     _global_session[req_id] = data
 
-    def err_callback(error):
-        write_queue.send('ERROR')
-        _gen_fail_callback(req_id, error)
-
     mp = multiprocessing.get_context('spawn')
     logging.info("Initalizing generator process")
-    pool = mp.Pool(processes = 1, initializer = init_generator_proc,
-                   initargs = (write_queue, ))
-    pool.apply_async(generator.generate,
-                     error_callback = err_callback)
-    # mp.Process(target=generator.generate).start()
+    mp.Process(target = generator.generate,
+               args = (write_queue, req_id),
+               daemon = True).start()
     logging.info("Generator started")
     return req_id
 

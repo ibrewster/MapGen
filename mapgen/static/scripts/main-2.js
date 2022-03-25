@@ -836,14 +836,23 @@ function addCSVStations() {
 
 function displayVolcs(){
     const dest=$('#volcanoListTop').empty();
+
+    //we don't really need the seenCodes list at this point, but I'm 
+    // leaving it in just in case we get an unexpected code.
     let seenCodes=[];
+
+    //create divs for the expected codes, in the proper order.
+    ['RED','ORANGE','YELLOW','GREEN','UNASSIGNED'].forEach(function(code,idx,codes){
+        createGroupDiv(code,code,dest,'volc');
+        seenCodes.push(code);
+    })
+
     for(let i=0;i<all_volcs.length;i++){
         let volc=all_volcs[i];
         if(!volc['obs']=='avo'){
             continue;
         }
 
-        let volcName=volc['vName'];
         let code=volc['colorCode'];
         if(seenCodes.indexOf(code)==-1){
             createGroupDiv(code,code,dest,'volc');

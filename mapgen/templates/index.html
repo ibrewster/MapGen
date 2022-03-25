@@ -87,6 +87,8 @@
             <div id="setupInner">
                 <form id="setupForm" enctype="multipart/form-data" action="getMap" method="POST">
                     <input type=hidden name="socketID" id="socketID" />
+                    
+                    
                     <div class="setupHeader">
                         Map Location
                         <div class="help">
@@ -259,7 +261,7 @@
 
                     <!--General map options-->
                     <div class="setupHeader">
-                        Options
+                        Map Options
                         <div class="help">
                             <div class="helpText">
                                 <ul>
@@ -275,6 +277,15 @@
                                             </li>
                                             <li>
                                                 Supports all <a href=target="_blank" href="https://docs.generic-mapping-tools.org/6.2/cookbook/cpts.html#built-in-color-palette-tables-cpt">GMT Built-in colormaps.</a>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                    <li>
+                                        Fill Ocean Area: Fill the oceanic areas with a solid-color.
+                                        <ul>
+                                            <li>
+                                                NOTE: deselecting this option at high zoom levels
+                                                may not produce acceptable results 
                                             </li>
                                         </ul>
                                     </li>
@@ -295,6 +306,7 @@
                         </select>
                         <br> Map Colormap: <input id="mapColormap" type=text size=9 name="mapColormap" placeholder="auto" value="etopo1"> 
                         <button type="button" class="setCM" data-target="mapColormap">Select</button>
+                        <br><input type="checkbox" name="fillOcean" checked> Fill Ocean Area
                     </div>
                     <!--End general map options-->
 

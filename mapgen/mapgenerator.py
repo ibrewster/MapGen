@@ -342,7 +342,7 @@ class MapGenerator:
         if zoom <= 7:
             hillshade_files = ["@earth_relief_15s"]
         elif zoom < 10:
-            hillshade_files = ["@srtm_relief_01s"]
+            hillshade_files = ["@earth_relief_01s"]
         else:
             # For higher zooms, use elevation.alaska.gov data
             self._update_status("Downloading hillshade files...")
@@ -601,238 +601,250 @@ class MapGenerator:
         map_scale = f'j{self.data["scale"]}+w{scale_length}k+f+o{offset}+c{mid_lat}N+l'
         self.fig.basemap(map_scale = map_scale, F = '+gwhite+p')
 
-    def generate(self):
+    def _gen_fail_callback(self, req_id, error):
+        print("Map generation failed! Error:")
+        print(error)
+        print("-->{}<--".format(error.__cause__))
+        data = _global_session[req_id]
+        data['gen_status'] = "FAILED"
+        _global_session[req_id] = data
+
+    def generate(self, queue, req_id):
         logging.info("Starting generation process")
-        self._socket_queue = _SOCKET_QUEUE
-        self.data = _global_session.get(self._req_id)
-        self._update_status("Initializing")
-        logging.info("Sent first status update")
-        width = self.data['width']
-        bounds = self.data['bounds']
-        unit = self.data['unit']
-        overview = self.data['overview']
-        if overview == "False":
-            overview = False
-
+        self._socket_queue = queue
         try:
-            import pygmt
-        except Exception:
-            os.environ['GMT_LIBRARY_PATH'] = '/usr/local/lib'
-            import pygmt
+            self.data = _global_session.get(self._req_id)
+            self._update_status("Initializing")
+            logging.info("Sent first status update")
+            width = self.data['width']
+            bounds = self.data['bounds']
+            unit = self.data['unit']
+            overview = self.data['overview']
+            if overview == "False":
+                overview = False
 
-        sw_lng, sw_lat, ne_lng, ne_lat = unquote(bounds).split(',')
-        self.gmt_bounds = [
-            float(sw_lng),
-            float(ne_lng),
-            float(sw_lat),
-            float(ne_lat)
-        ]
+            try:
+                import pygmt
+            except Exception:
+                os.environ['GMT_LIBRARY_PATH'] = '/usr/local/lib'
+                import pygmt
 
-        warp_bounds = [
-            self.gmt_bounds[0],  # min x
-            self.gmt_bounds[2],  # min y
-            self.gmt_bounds[1],  # max x
-            self.gmt_bounds[3]  # max y
-        ]
-
-    #     utm_left = self.gmt_bounds[0]
-    #     if utm_left < -180:
-    #         utm_left += 360
-
-    #     utm_zone = math.ceil((utm_left + 180) / 6)
-    #
-    #     UTMChars = "CDEFGHJKLMNPQRSTUVWXX"
-    #     utm_lat = self.gmt_bounds[2]
-    #     if -80 <= utm_lat <= 84:
-    #         utm_char = UTMChars[math.floor((utm_lat + 80) / 8)]
-    #     else:
-    #         utm_char = UTMChars[-1]
-    #     proj = f"U{utm_zone}{utm_char}/{width}{unit}"
-
-        proj = f"M{width}{unit}"
-        self.fig = pygmt.Figure()
-
-        basemap_args = {
-            'projection': proj,
-            'region': self.gmt_bounds,
-            'frame': ('WeSn', 'afg'),
-        }
-
-        self.fig.basemap(**basemap_args)
-
-        zoom = self.data['mapZoom']
-        hillshade_file = self._set_hillshade(zoom, warp_bounds)
-
-        hillshade_args = {
-            "nan_transparent": True,
-            "dpi": 300,
-            "shading": True
-        }
-
-        self._draw_hillshades(hillshade_file, **hillshade_args)
-
-        self._update_status("Drawing coastlines...")
-
-        self.fig.coast(rivers='r/2p,#CBE7FF', water="#CBE7FF", resolution="f")
-
-        self._plot_data(zoom)
-
-        logging.info("Adding scalebar")
-        self._add_scalebar()
-
-        logging.info("Getting ready to add stations")
-        cur_dir = os.getcwd()
-
-        stations = self.data.get('station', [])
-        self._add_stations(stations, zoom)
-
-        logging.info("Adding overview")
-        if overview:
-            logging.info("Adding Overview")
-            self._update_status("Adding Overview Map...")
-
-            ak_bounds = [
-                -190.0, -147.68, 48.5, 69.5
+            sw_lng, sw_lat, ne_lng, ne_lat = unquote(bounds).split(',')
+            self.gmt_bounds = [
+                float(sw_lng),
+                float(ne_lng),
+                float(sw_lat),
+                float(ne_lat)
             ]
 
-            if self.data['overviewBounds']:
-                (sw_lng,
-                 sw_lat,
-                 ne_lng,
-                 ne_lat) = self.data['overviewBounds']
+            warp_bounds = [
+                self.gmt_bounds[0],  # min x
+                self.gmt_bounds[2],  # min y
+                self.gmt_bounds[1],  # max x
+                self.gmt_bounds[3]  # max y
+            ]
+
+        #     utm_left = self.gmt_bounds[0]
+        #     if utm_left < -180:
+        #         utm_left += 360
+
+        #     utm_zone = math.ceil((utm_left + 180) / 6)
+        #
+        #     UTMChars = "CDEFGHJKLMNPQRSTUVWXX"
+        #     utm_lat = self.gmt_bounds[2]
+        #     if -80 <= utm_lat <= 84:
+        #         utm_char = UTMChars[math.floor((utm_lat + 80) / 8)]
+        #     else:
+        #         utm_char = UTMChars[-1]
+        #     proj = f"U{utm_zone}{utm_char}/{width}{unit}"
+
+            proj = f"M{width}{unit}"
+            self.fig = pygmt.Figure()
+
+            basemap_args = {
+                'projection': proj,
+                'region': self.gmt_bounds,
+                'frame': ('WeSn', 'afg'),
+            }
+
+            self.fig.basemap(**basemap_args)
+
+            zoom = self.data['mapZoom']
+            hillshade_file = self._set_hillshade(zoom, warp_bounds)
+
+            hillshade_args = {
+                "nan_transparent": True,
+                "dpi": 300,
+                "shading": True
+            }
+
+            self._draw_hillshades(hillshade_file, **hillshade_args)
+
+            if self.data['fillOcean']:
+                self._update_status("Drawing coastlines...")
+                self.fig.coast(rivers='r/2p,#CBE7FF', water="#CBE7FF", resolution="f")
+
+            self._plot_data(zoom)
+
+            logging.info("Adding scalebar")
+            self._add_scalebar()
+
+            logging.info("Getting ready to add stations")
+            cur_dir = os.getcwd()
+
+            stations = self.data.get('station', [])
+            self._add_stations(stations, zoom)
+
+            logging.info("Adding overview")
+            if overview:
+                logging.info("Adding Overview")
+                self._update_status("Adding Overview Map...")
 
                 ak_bounds = [
-                    float(sw_lng),
-                    float(ne_lng),
-                    float(sw_lat),
-                    float(ne_lat)
+                    -190.0, -147.68, 48.5, 69.5
                 ]
 
-            inset_width = self.data['overviewWidth']
-            pos = f"j{overview}+w{inset_width}{unit}+o0.1c"
-            star_size = "16p"
-            with self.fig.inset(position=pos, box="+gwhite+p1p"):
-                self.fig.coast(
-                    region=ak_bounds,
-                    projection="M?",
-                    water="#CBE7FF",
-                    land="lightgreen",
-                    resolution="l",
-                    shorelines=True,
-                    # area_thresh = 10000
-                )
-                x_loc = self.gmt_bounds[0] + (self.gmt_bounds[1] - self.gmt_bounds[0]) / 2
-                y_loc = self.gmt_bounds[2] + (self.gmt_bounds[3] - self.gmt_bounds[2]) / 2
-                self.fig.plot(x=[x_loc, ], y=[y_loc, ],
-                              style=f"a{star_size}", color="blue")
+                if self.data['overviewBounds']:
+                    (sw_lng,
+                     sw_lat,
+                     ne_lng,
+                     ne_lat) = self.data['overviewBounds']
 
-        inset_maps = zip(self.data['insetBounds'],
-                         self.data['insetZoom'],
-                         self.data['insetLeft'],
-                         self.data['insetTop'],
-                         self.data['insetWidth'],
-                         self.data['insetHeight'])
+                    ak_bounds = [
+                        float(sw_lng),
+                        float(ne_lng),
+                        float(sw_lat),
+                        float(ne_lat)
+                    ]
 
-        for bounds, zoom, left, top, width, height in inset_maps:
-            inset_bounds = [
-                bounds[0],
-                bounds[2],
-                bounds[1],
-                bounds[3]
-            ]
+                inset_width = self.data['overviewWidth']
+                pos = f"j{overview}+w{inset_width}{unit}+o0.1c"
+                star_size = "16p"
+                with self.fig.inset(position=pos, box="+gwhite+p1p"):
+                    self.fig.coast(
+                        region=ak_bounds,
+                        projection="M?",
+                        water="#CBE7FF",
+                        land="lightgreen",
+                        resolution="l",
+                        shorelines=True,
+                        # area_thresh = 10000
+                    )
+                    x_loc = self.gmt_bounds[0] + (self.gmt_bounds[1] - self.gmt_bounds[0]) / 2
+                    y_loc = self.gmt_bounds[2] + (self.gmt_bounds[3] - self.gmt_bounds[2]) / 2
+                    self.fig.plot(x=[x_loc, ], y=[y_loc, ],
+                                  style=f"a{star_size}", color="blue")
 
-            hillshade_file = self._set_hillshade(zoom, bounds)
-            pos = f"x{left}{unit}/{top}{unit}+w{width}{unit}/{height}{unit}+jTL"
+            inset_maps = zip(self.data['insetBounds'],
+                             self.data['insetZoom'],
+                             self.data['insetLeft'],
+                             self.data['insetTop'],
+                             self.data['insetWidth'],
+                             self.data['insetHeight'])
 
-            with self.fig.inset(position=pos, box="+gwhite+p1p"):
-                hillshade_args = {
-                    "region": inset_bounds,
-                    "projection": "M?",
-                    "nan_transparent": True,
-                    "shading": True,
-                    "dpi": 300,
-                }
-                self._draw_hillshades(hillshade_file, **hillshade_args)
+            for bounds, zoom, left, top, width, height in inset_maps:
+                inset_bounds = [
+                    bounds[0],
+                    bounds[2],
+                    bounds[1],
+                    bounds[3]
+                ]
 
-                self.fig.coast(water='#CBE7FF',
-                               resolution='f')
+                hillshade_file = self._set_hillshade(zoom, bounds)
+                pos = f"x{left}{unit}/{top}{unit}+w{width}{unit}/{height}{unit}+jTL"
 
-                self._add_stations(stations, zoom)
+                with self.fig.inset(position=pos, box="+gwhite+p1p"):
+                    hillshade_args = {
+                        "region": inset_bounds,
+                        "projection": "M?",
+                        "nan_transparent": True,
+                        "shading": True,
+                        "dpi": 300,
+                    }
+                    self._draw_hillshades(hillshade_file, **hillshade_args)
 
-        legend = self.data['legend']
+                    self.fig.coast(water='#CBE7FF',
+                                   resolution='f')
 
-        if legend != "False" and len(stations) > 0:
-            logging.info("Adding legend")
-            self._update_status("Adding Legend...")
+                    self._add_stations(stations, zoom)
 
-            with tempfile.NamedTemporaryFile('w+') as file:
-                pos = f"J{legend}+j{legend}+o0.2c+l1.5"
-                use_width = False
-                for idx, (name, symbol) in enumerate(self._used_symbols.items()):
-                    sym_label = name
+            legend = self.data['legend']
 
-                    # This section handles images rather than symbols. Hacky, and *hopefully*
-                    # not needed, but left in for now just in case.
-                    if isinstance(symbol, str):
-                        use_width = True
-                        file.write('G 8p\n')
-                        file.write(f'I {symbol} 16p LM\n')
-                        file.write('G -1l\n')
-                        # file.write('G -4p\n')
-                        file.write('P .38 - - - - - - -\n')
-                        file.write(f'T {sym_label}\n')
-                        file.write('G 1l\n')
-                        file.write('G -5p\n')
-                        continue
+            if legend != "False" and len(stations) > 0:
+                logging.info("Adding legend")
+                self._update_status("Adding Legend...")
 
-                    sym_char = symbol['symbol'][0]  # First character
-                    if sym_char == 'k':
-                        try:
-                            end_idx = symbol['symbol'].index('/')
-                            sym_char = symbol['symbol'][:end_idx]
-                        except ValueError:
-                            pass
+                with tempfile.NamedTemporaryFile('w+') as file:
+                    pos = f"J{legend}+j{legend}+o0.2c+l1.5"
+                    use_width = False
+                    for idx, (name, symbol) in enumerate(self._used_symbols.items()):
+                        sym_label = name
 
-                    sym_color = symbol['color']
-                    file.write(f'S 11p {sym_char} 16p {sym_color} - 23p {sym_label}')
-                    file.write('\n')
+                        # This section handles images rather than symbols. Hacky, and *hopefully*
+                        # not needed, but left in for now just in case.
+                        if isinstance(symbol, str):
+                            use_width = True
+                            file.write('G 8p\n')
+                            file.write(f'I {symbol} 16p LM\n')
+                            file.write('G -1l\n')
+                            # file.write('G -4p\n')
+                            file.write('P .38 - - - - - - -\n')
+                            file.write(f'T {sym_label}\n')
+                            file.write('G 1l\n')
+                            file.write('G -5p\n')
+                            continue
 
-                file.seek(0)
-                file_name = file.name
+                        sym_char = symbol['symbol'][0]  # First character
+                        if sym_char == 'k':
+                            try:
+                                end_idx = symbol['symbol'].index('/')
+                                sym_char = symbol['symbol'][:end_idx]
+                            except ValueError:
+                                pass
 
-                if use_width:
-                    pos += "+w1.5i"
+                        sym_color = symbol['color']
+                        file.write(f'S 11p {sym_char} 16p {sym_color} - 23p {sym_label}')
+                        file.write('\n')
 
-                self.fig.legend(
-                    file_name,
-                    position = pos,
-                    box="+gwhite+p1p"
-                )
+                    file.seek(0)
+                    file_name = file.name
 
-        os.chdir(cur_dir)
-        self._update_status("Saving final image...")
-        save_file = f'{uuid.uuid4().hex}.pdf'
+                    if use_width:
+                        pos += "+w1.5i"
 
-        # Save to a more perminant location so the results
-        # don't get deleted until they are retrieved.
-        script_dir = os.path.dirname(__file__)
-        cache_dir = os.path.join(script_dir, "cache")
-        os.makedirs(cache_dir, exist_ok = True)
-        file_path = os.path.join(cache_dir, save_file)
-        self.fig.savefig(file_path, anti_alias = True)
-        self.data['map_file'] = file_path
-        self.data['gen_status'] = "Complete"
-        _global_session[self._req_id] = self.data
-        self._update_status("COMPLETE")
+                    self.fig.legend(
+                        file_name,
+                        position = pos,
+                        box="+gwhite+p1p"
+                    )
 
-        # Clean up the temporary directory
-        logging.info(f"Cleaning up temporary directory {self.tempdir()}")
-        try:
-            shutil.rmtree(self.tempdir())
-        except OSError as err:
-            if err.errno != errno.ENOENT:
-                raise
-        logging.debug(str(file_path))
+            os.chdir(cur_dir)
+            self._update_status("Saving final image...")
+            save_file = f'{uuid.uuid4().hex}.pdf'
+
+            # Save to a more perminant location so the results
+            # don't get deleted until they are retrieved.
+            script_dir = os.path.dirname(__file__)
+            cache_dir = os.path.join(script_dir, "cache")
+            os.makedirs(cache_dir, exist_ok = True)
+            file_path = os.path.join(cache_dir, save_file)
+            self.fig.savefig(file_path, anti_alias = True)
+            self.data['map_file'] = file_path
+            self.data['gen_status'] = "Complete"
+            _global_session[self._req_id] = self.data
+            self._update_status("COMPLETE")
+
+            # Clean up the temporary directory
+            logging.info(f"Cleaning up temporary directory {self.tempdir()}")
+            try:
+                shutil.rmtree(self.tempdir())
+            except OSError as err:
+                if err.errno != errno.ENOENT:
+                    raise
+            logging.debug(str(file_path))
+        except Exception as e:
+            self._socket_queue.send('ERROR')
+            self._gen_fail_callback(req_id, e)
 
 
 if __name__ == "__main__":
