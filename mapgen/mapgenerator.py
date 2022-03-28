@@ -105,7 +105,7 @@ class MapGenerator:
     station_symbols = {
         'GPS': {'symbol': 'a',
                 'color': 'red', },
-        'Seismometer': {'symbol': 't',
+        'Seismometer': {'symbol': 'i',
                         'color': 'green', },
         'Tiltmeter': {'symbol': 'ktiltmeter.eps/',
                       'color': 'blue', },
