@@ -412,9 +412,6 @@ class MapGenerator:
             self.fig.grdimage(file, **kwargs)
 
     def _add_stations(self, stations, zoom):
-        if zoom < 8:
-            return {}  # Don't plot stations at low zoom levels
-
         logging.info("Plotting stations")
         self._update_status("Plotting Stations...")
 
@@ -425,6 +422,8 @@ class MapGenerator:
         sym_outline = "faint,128" if zoom < 10 else 'thin,128'
 
         sym_size = (8 / 3) * zoom - (13 + (1 / 3))
+        if sym_size < 8:
+            sym_size = 8
 
         sym_size = f"{sym_size}p"
         for station in self.data.get('station', []):
@@ -777,7 +776,7 @@ class MapGenerator:
 
             legend = self.data['legend']
 
-            if legend != "False" and len(stations) > 0:
+            if legend != "False" and len(self._used_symbols) > 0:
                 logging.info("Adding legend")
                 self._update_status("Adding Legend...")
 
