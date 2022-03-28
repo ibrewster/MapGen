@@ -449,11 +449,15 @@ class MapGenerator:
 
             if symbol is not None:
                 symbol += sym_size
-                self._used_symbols[category] = {'symbol': symbol,
-                                                'color': color, }
                 self.fig.plot(x=[sta_x, ], y=[sta_y, ],
                               style=symbol, color=color,
                               pen = sym_outline)
+
+                if category == 'volcano':
+                    color = "black"
+
+                self._used_symbols[category.capitalize()] = {'symbol': symbol,
+                                                             'color': color, }
             # else:
                 # icon_path = os.path.join(main_dir, 'static/img', icon_name)
                 # used_symbols[icon_name] = icon_path

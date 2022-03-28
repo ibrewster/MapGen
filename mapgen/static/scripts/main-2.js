@@ -116,13 +116,15 @@ function setupAccordion(){
     $('.setupHeader').click(function(){
         const header=$(this);
         const content=header.next();
-        if( header.hasClass('accordion-open')){
-            return;
-        }
+        const isOpen=header.hasClass('accordion-open');
+
         $('#setupInner div.setupContent').slideUp();
         $('div.accordion-open').removeClass('accordion-open');
-        content.slideDown()
-        header.addClass('accordion-open');
+
+        if(!isOpen){
+            content.slideDown()
+            header.addClass('accordion-open');
+        }
     })
 }
 
