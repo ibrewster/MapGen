@@ -671,11 +671,18 @@ class MapGenerator:
             proj = f"M{width}{unit}"
             self.fig = pygmt.Figure()
 
+            frame_ticks = ['n', 's', 'e', 'w']
+            for idx in self.data['tickLabels']:
+                frame_ticks[idx] = frame_ticks[idx].upper()
+
             basemap_args = {
                 'projection': proj,
                 'region': self.gmt_bounds,
-                'frame': ('WeSn', 'afg'),
+                'frame': (''.join(frame_ticks), 'af')
             }
+
+            frame_type = self.data['mapFrame']
+            pygmt.config(MAP_FRAME_TYPE = frame_type)
 
             self.fig.basemap(**basemap_args)
 
@@ -695,6 +702,10 @@ class MapGenerator:
                 self.fig.coast(rivers='r/2p,#CBE7FF', water="#CBE7FF", resolution="f")
 
             self._plot_data(zoom)
+
+            if self.data['showGrid']:
+                logging.info("Adding Gridlines")
+                self.fig.basemap(frame = 'g')
 
             logging.info("Adding scalebar")
             self._add_scalebar()

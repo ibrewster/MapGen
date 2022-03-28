@@ -124,6 +124,9 @@ class MapSchema(BaseSchema):
     showCMTitle = Value(bool, default = False)
     dataTrans = Value(int, default = 0)
     fillOcean = Value(bool, default = False)
+    mapFrame = Value(str, default = "fancy")
+    tickLabels = List(int, default = [])
+    showGrid = Value(bool, default = False)
 
 
 @app.post('/getMap')

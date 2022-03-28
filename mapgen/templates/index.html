@@ -297,19 +297,54 @@
                         </div>
                     </div>
                     <div class="setupContent">
-                        Show Scale:
-                        <select id=showScale name="scale">
-                            <option value="False">None</option>
-                            <option value="BR">Bottom Right</option>
-                            <option value="BC">Bottom Center</option>
-                            <option value="BL" selected>Bottom Left</option>
-                            <option value="TR">Top Right</option>
-                            <option value="TC">Top Center</option>
-                            <option value="TL">Top Left</option>
-                        </select>
-                        <br> Map Colormap: <input id="mapColormap" type=text size=9 name="mapColormap" placeholder="auto" value="etopo1">
-                        <button type="button" class="setCM" data-target="mapColormap">Select</button>
-                        <br><input type="checkbox" name="fillOcean" checked> Fill Ocean Area
+                        <div class="leftAlign">
+                            Show Scale:
+                            <select id=showScale name="scale">
+                                <option value="False">None</option>
+                                <option value="BR">Bottom Right</option>
+                                <option value="BC">Bottom Center</option>
+                                <option value="BL" selected>Bottom Left</option>
+                                <option value="TR">Top Right</option>
+                                <option value="TC">Top Center</option>
+                                <option value="TL">Top Left</option>
+                            </select>
+                        </div>
+                        <div id="LegendSetup" class="leftAlign">
+                            Show Legend:
+                            <select id=legendShow name="legend">
+                                <option value="False">None</option>
+                                <option value="BR">Bottom Right</option>
+                                <option value="BC">Bottom Center</option>
+                                <option value="BL">Bottom Left</option>
+                                <option value="TR" selected>Top Right</option>
+                                <option value="TC">Top Center</option>
+                                <option value="TL">Top Left</option>
+                            </select>
+                        </div>
+                        <div class="leftAlign">
+                            Frame Type:
+                            <select id="frameType" name="mapFrame">
+                                <option value="fancy" selected>Fancy</option>
+                                <option value="plain">Plain</option>
+                                <option value="inside">Inside</option>
+                            </select>
+                        </div>
+                        <div>
+                            Map Colormap: <input id="mapColormap" type=text size=9 name="mapColormap" placeholder="auto" value="etopo1">
+                            <button type="button" class="setCM" data-target="mapColormap">Select</button>
+                        </div>
+
+                        <div class="leftAlign">
+                            <input type="checkbox" name="fillOcean" checked> Fill Ocean Area
+                            <br><input type="checkbox" name="showGrid" checked> Show Gridlines
+                        </div>
+                        <div>
+                            <div class="centerText">Show Tick Labels:</div>
+                            <input type="checkbox" name="tickLabels" value="0"> North
+                            <input type="checkbox" name="tickLabels" value="1" checked> South
+                            <input type="checkbox" name="tickLabels" value="2"> East
+                            <input type="checkbox" name="tickLabels" value="3" checked> West
+                        </div>
                     </div>
                     <!--End general map options-->
 
@@ -484,18 +519,6 @@
                         </div>
                     </div>
                     <div class="setupContent blockDisplay">
-                        <div id="LegendSetup">
-                            Show Legend:
-                            <select id=legendShow name="legend">
-                                <option value="False">None</option>
-                                <option value="BR">Bottom Right</option>
-                                <option value="BC">Bottom Center</option>
-                                <option value="BL">Bottom Left</option>
-                                <option value="TR" selected>Top Right</option>
-                                <option value="TC">Top Center</option>
-                                <option value="TL">Top Left</option>
-                            </select>
-                        </div>
                         <div id="stationCSV">
                             Upload CSV:<br>
                             <input type=file id="addStationCSV">

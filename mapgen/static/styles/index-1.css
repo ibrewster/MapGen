@@ -321,6 +321,10 @@ area {
     cursor:pointer;
 }
 
+.leftAlign{
+    text-align: left;
+}
+
 div.helpText::before{
     content:"";
     position:absolute;
