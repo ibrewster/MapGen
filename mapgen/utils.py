@@ -1,4 +1,36 @@
+import pymysql
+
 from osgeo import osr
+from . import config
+
+
+class MySQLCursor:
+    """Context manager to connect to a MySQL database and get a cursor,
+    opionally using a cursor factory specified."""
+
+    def __init__(self, database=config.DB_NAME, host = config.DB_HOST,
+                 user = config.DB_USER, password = config.DB_PASSWORD, cursor_factory=None):
+        self._database = database
+        self._host = host
+        self._user = user
+        self._password = password
+        self._factory = cursor_factory
+        self._connection = None
+
+    def __enter__(self):
+        self._connection = pymysql.connect(host=self._host, user=self._user,
+                                           password=self._password, database=self._database)
+
+        if self._factory:
+            cursor = self._connection.cursor(self._factory)
+        else:
+            cursor = self._connection.cursor()
+
+        return cursor
+
+    def __exit__(self, exit_type, value, traceback):
+        self._connection.rollback()
+        self._connection.close()
 
 
 def get_extents(src, proj=None):

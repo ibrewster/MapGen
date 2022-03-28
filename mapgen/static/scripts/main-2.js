@@ -775,6 +775,10 @@ function query_volcs(minLat, maxLat, eastLon, westLon, eastLon2, westLon2){
     var url=`${volcUrl}?lat1=${minLat}&long1=${westLon}&lat2=${maxLat}&long2=${eastLon}`;
     $.getJSON(url)
     .done(function(data){
+        //filter volcanoes to only show historically active
+        if (typeof(ACTIVE_VOLCS) !== 'undefined'){
+            data=data.filter(volc=>ACTIVE_VOLCS.has(volc.vName))
+        }
         all_volcs=all_volcs.concat(data);
         if (westLon2 !== null && eastLon2 !== null) {
             query_volcs(minLat, maxLat, eastLon2, westLon2, null, null);
@@ -866,6 +870,10 @@ function displayVolcs(){
 
         createVolcDiv(volc);
     }
+
+    //remove any empty color divs
+    const GROUP_DIVS=$('div.stationType.volcStation')
+    GROUP_DIVS.filter(x=>$(GROUP_DIVS[x]).find('div.volc').length==0).remove();
 }
 
 function displayStations() {
@@ -947,6 +955,9 @@ function createGroupDiv(group, id, dest,type) {
     }
     var divID = `${type}Cat${id}`
     var div = $(`<div class="stationType" id="${divID}">`);
+    if(type=='volc'){
+        div.addClass('volcStation')
+    }
     var typeTitle = $('<div class=stationTypeHead>')
     var allCheck = $("<span class='leftEdge'>");
     allCheck.append("<input type=checkbox class='staCatAll'>");

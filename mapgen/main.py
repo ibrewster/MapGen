@@ -14,7 +14,7 @@ import ujson
 from apiflask import abort
 from werkzeug.utils import secure_filename
 
-from . import app, sockets, _global_session
+from . import app, sockets, _global_session, utils
 from .mapgenerator import MapGenerator, init_generator_proc
 from .targets import (
     List,
@@ -27,7 +27,12 @@ from .targets import (
 
 @app.get('/')
 def index():
-    return flask.render_template("index.html")
+    with utils.MySQLCursor() as cursor:
+        cursor.execute('SELECT volcano FROM tbllistvolc WHERE HistoricalCat=1')
+        volcs = cursor.fetchall()
+    volcs = ujson.dumps([x[0] for x in volcs])
+
+    return flask.render_template("index.html", activevolcs = volcs)
 
 
 def allowed_file(filename):
