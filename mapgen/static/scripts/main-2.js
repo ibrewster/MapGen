@@ -642,7 +642,12 @@ function init_socket() {
     var host = location.hostname;
     var port = location.port;
     var path = location.pathname;
-    socketURL += `${host}:${port}/${path}monitor/`
+    socketURL+=host
+    if(port!==''){
+        socketURL+=`:${port}`
+    }
+    socketURL+=`${path}monitor/`
+
     monitorSocket = new WebSocket(socketURL)
     monitorSocket.onmessage = function(msg) {
         if (msg.data == 'PONG') {
