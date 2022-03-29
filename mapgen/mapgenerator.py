@@ -119,7 +119,7 @@ class MapGenerator:
     station_symbols = {
         'GPS': {'symbol': 'a',
                 'color': 'red', },
-        'Seismometer': {'symbol': 't',
+        'Seismometer': {'symbol': 'i',
                         'color': 'black', },
         'Tiltmeter': {'symbol': 'ktiltmeter.eps/',
                       'color': 'blue', },
@@ -754,14 +754,14 @@ class MapGenerator:
                 logging.info("Adding Gridlines")
                 self.fig.basemap(frame = 'g')
 
-            logging.info("Adding scalebar")
-            self._add_scalebar()
-
             logging.info("Getting ready to add stations")
             cur_dir = os.getcwd()
 
             stations = self.data.get('station', [])
             self._add_stations(stations, zoom)
+
+            logging.info("Adding scalebar")
+            self._add_scalebar()
 
             logging.info("Adding overview")
             if overview:
@@ -896,7 +896,7 @@ class MapGenerator:
             cache_dir = os.path.join(script_dir, "cache")
             os.makedirs(cache_dir, exist_ok = True)
             file_path = os.path.join(cache_dir, save_file)
-            self.fig.savefig(file_path, anti_alias = True)
+            self.fig.savefig(file_path, resize = "+m.25i", anti_alias = True)
             self.data['map_file'] = file_path
             self.data['gen_status'] = "Complete"
             _global_session[self._req_id] = self.data
