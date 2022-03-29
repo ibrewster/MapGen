@@ -446,7 +446,7 @@ class MapGenerator:
 
         plot_defs = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         volcNamePos = self.data['showVolcNames']
-
+        volc_names = []
         for station in stations:
             category = station.get('category', 'Unknown')
             if isinstance(category, dict):
@@ -479,10 +479,7 @@ class MapGenerator:
             symbol += point_size_str
 
             if symbol.startswith('tV') and volcNamePos != '':
-                if not 'names' in plot_defs[symbol]:
-                    plot_defs[symbol]['names'] = []
-
-                plot_defs[symbol]['names'].append((station['name'], sta_x, sta_y))
+                volc_names.append((station['name'], sta_x, sta_y))
 
             plot_defs[symbol][color]['x'].append(sta_x)
             plot_defs[symbol][color]['y'].append(sta_y)
@@ -493,7 +490,6 @@ class MapGenerator:
 
         complete = 0
         for symbol, sym_dict in plot_defs.items():
-            names = sym_dict.pop('names', [])
             for color, col_dict in sym_dict.items():
                 x = col_dict['x']
                 y = col_dict['y']
@@ -502,12 +498,6 @@ class MapGenerator:
                 if symbol.startswith('tV'):  # this is a volcano marker
                     plot_symbol = symbol.replace('V', '')
                     outline = "thin,0"
-                    if names:
-                        vnames, vx, vy = zip(*names)
-                        self.fig.text(x = vx, y = vy, text = vnames,
-                                      justify = volcNamePos,
-                                      offset = f"j{point_size}p+v")
-                        names = None  # Don't plot *again* for other colors
 
                 self.fig.plot(x=x, y=y, style=plot_symbol,
                               color=color, pen = outline)
@@ -518,6 +508,12 @@ class MapGenerator:
                     'status': "Plotting Stations...",
                     'progress': prog
                 })
+
+        if volc_names:
+            vnames, vx, vy = zip(*volc_names)
+            self.fig.text(x = vx, y = vy, text = vnames,
+                          justify = volcNamePos,
+                          offset = f"j{point_size}p+v")
 
     def _plot_data(self, zoom):
         plotdata_file = self.data.get('plotDataFile')
