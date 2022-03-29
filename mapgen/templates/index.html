@@ -197,71 +197,6 @@
                         </div>
                     </div>
 
-
-                    <div class="setupHeader">
-                        Overview Map
-                        <div class="help">
-                            <div class="helpText">
-                                <p>Set the size and position of the overview map, or remove it.</p>
-                                <p>Units are always the same as the main map units</p>
-                                <p>
-                                    If "Lock to map width" is checked (default), then the overview map width
-                                    will adjust as you change the main map width to maintain the
-                                    same relative size.
-                                </p>
-                                <p>
-                                    The area displayed in the overview map can be changed by dragging or zooming
-                                    (using your scroll wheel or the +/- buttons) the map displayed in the inset preview.
-                                    The overview can be reset to the default view by clicking the "Reset View" button.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="setupContent">
-                        Show Map:
-                        <select id=overview name="overview">
-                            <option value="False">None</option>
-                            <option value="BR" selected>Bottom Right</option>
-                            <option value="BL">Bottom Left</option>
-                            <option value="TR">Top Right</option>
-                            <option value="TL">Top Left</option>
-                        </select>
-                        <br>Width:
-                        <input type="number" min=0 max=9999 name="overviewWidth" id="overviewWidth" value="2.5">
-                        <span id="overviewUnits"></span>
-                        <div><input type="checkbox" id="lockWidth" checked>Lock to map width</div>
-                        <button type="button" id="resetOverview">Reset View</button>
-                        <input type="hidden" id="overviewBounds" name="overviewBounds">
-                    </div>
-
-                    <div class="setupHeader">
-                        Overlay Image
-                        <div class="help">
-                            <div class="helpText">
-                                <p>Upload an image to use instead of the default hillshade files</p>
-                                <p>Supports single GeoTIFF files, or image/world file pairs (.jpg/.jgw or .tif/.tfw)</p>
-                                <p>
-                                    If using paired image/world files, the projection used must be specified.
-                                    Currently only Alaska Albers is supported.
-                                </p>
-                                <p>
-                                    Any areas not covered by the uploaded image will be
-                                    filled with the standard hillshade product.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="setupContent leftJustify">
-                        Type:
-                        <select id="overlayFormat" name="imgType">
-                            <option value="t">GeoTIFF</option>
-                            <option value="j">Image & World</option>
-                        </select>
-                        <div id="overlayFiles">
-
-                        </div>
-                    </div>
-
                     <!--General map options-->
                     <div class="setupHeader">
                         Map Options
@@ -270,7 +205,15 @@
                                 <ul>
                                     <li>
                                         Show Scale: Display a map scale in the requested location,
-                                        or none to not display a scale
+                                        or "none" to not display a scale
+                                    </li>
+                                    <li>
+                                        Show Legend: Display a legend with station and volcano symbols 
+                                        in the requested location, or "none" to not display a legend.
+                                    </li>
+                                    <li>
+                                        Frame type: one of plain, fancy, or inside. Sets the style 
+                                        of frame to use around the map: fancy (alternating black/white bars) or plain (single black line)
                                     </li>
                                     <li>
                                         Map Colormap: The colormap to use for hillshade effect on the main map.
@@ -291,6 +234,13 @@
                                                 may not produce acceptable results
                                             </li>
                                         </ul>
+                                    </li>
+                                    <li>
+                                        Show gridlines: Select if you want to daw the latitude/longitude gridlines on the map.
+                                    </li>
+                                    <li>
+                                        Show tick labels: Select which edges (if any) you want to be 
+                                        labeled with latitude/longitude markers.
                                     </li>
                                 </ul>
                             </div>
@@ -347,6 +297,73 @@
                         </div>
                     </div>
                     <!--End general map options-->
+
+                    <!--Overview map options-->
+                    <div class="setupHeader">
+                        Overview Map
+                        <div class="help">
+                            <div class="helpText">
+                                <p>Set the size and position of the overview map, or remove it.</p>
+                                <p>Units are always the same as the main map units</p>
+                                <p>
+                                    If "Lock to map width" is checked (default), then the overview map width
+                                    will adjust as you change the main map width to maintain the
+                                    same relative size.
+                                </p>
+                                <p>
+                                    The area displayed in the overview map can be changed by dragging or zooming
+                                    (using your scroll wheel or the +/- buttons) the map displayed in the inset preview.
+                                    The overview can be reset to the default view by clicking the "Reset View" button.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="setupContent">
+                        Show Map:
+                        <select id=overview name="overview">
+                            <option value="False">None</option>
+                            <option value="BR" selected>Bottom Right</option>
+                            <option value="BL">Bottom Left</option>
+                            <option value="TR">Top Right</option>
+                            <option value="TL">Top Left</option>
+                        </select>
+                        <br>Width:
+                        <input type="number" min=0 max=9999 name="overviewWidth" id="overviewWidth" value="2.5">
+                        <span id="overviewUnits"></span>
+                        <div><input type="checkbox" id="lockWidth" checked>Lock to map width</div>
+                        <button type="button" id="resetOverview">Reset View</button>
+                        <input type="hidden" id="overviewBounds" name="overviewBounds">
+                    </div>
+                    <!--End Overview map options-->
+                    <!--Basemap image options-->
+                    <div class="setupHeader">
+                        Basemap Image
+                        <div class="help">
+                            <div class="helpText">
+                                <p>Upload an image to use instead of the default hillshade files</p>
+                                <p>Supports single GeoTIFF files, or image/world file pairs (.jpg/.jgw or .tif/.tfw)</p>
+                                <p>
+                                    If using paired image/world files, the projection used must be specified.
+                                    Currently only Alaska Albers is supported.
+                                </p>
+                                <p>
+                                    Any areas not covered by the uploaded image will be
+                                    filled with the standard hillshade product.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="setupContent leftJustify">
+                        Type:
+                        <select id="overlayFormat" name="imgType">
+                            <option value="t">GeoTIFF</option>
+                            <option value="j">Image & World</option>
+                        </select>
+                        <div id="overlayFiles">
+
+                        </div>
+                    </div>
+                    <!--End basemap image options-->
 
                     <!--Inset Maps-->
                     <div class="setupHeader">
@@ -534,11 +551,33 @@
                         <span class="leftEdge"><input type="checkbox" class="sectionSelectAll" id="volcanoSelAll">All</span> Volcanoes
                         <div class="help">
                             <div class="helpText">
-                                Volcano help text here
+                                <p>Volcano(es) to be ploted on the map.</p>
+                                <p>
+                                    Volcano list is retrieved automatically from
+                                    https://volcanoes.usgs.gov/vsc/api/volcanoApi/regionstatus for the area displayed in
+                                    the <i>main</i> map (inset maps are assumed to be a subset of the main map,
+                                    and therfore covered by the same area), and filtered by historicaly active status.
+                                </p>
                             </div>
                         </div>
                     </div>
                     <div class="setupContent blockDisplay">
+                        <div class="leftAlign">
+                            <p>
+                            Options:<br>
+                            Show names:
+                            <select name="showVolcNames">
+                                <option value='' selected>None</option>
+                                <option value="TL">Bottom Right</option>
+                                <option value="TC">Bottom Center</option>
+                                <option value="TR">Bottom Left</option>
+                                <option value="BL">Top Right</option>
+                                <option value="BC">Top Center</option>
+                                <option value="BR">Top Left</option>
+                            </select>
+                            <br><input type="checkbox" name="showVolcColor" checked> Color Volcano Markers
+                            </p>
+                        </div>
                         <div id="volcanoListTop">
 
                         </div>

@@ -15,6 +15,7 @@ import tempfile
 import uuid
 import zipfile
 
+from collections import defaultdict
 from io import BytesIO
 from tempfile import NamedTemporaryFile
 
@@ -35,6 +36,11 @@ except ImportError:
         from .file_cache import FileCache
 
     _global_session = FileCache()
+
+try:
+    from . import wingdbstub
+except ImportError:
+    pass
 
 try:
     from . import utils
@@ -102,11 +108,19 @@ def init_generator_proc(queue):
 
 
 class MapGenerator:
+    _volc_colors = {
+        'RED': '#D31820',
+        'GREEN': '#87C264',
+        'YELLOW': '#F7F16B',
+        'ORANGE': '#E28C48',
+        'UNASSIGNED': '#777777',
+    }
+
     station_symbols = {
         'GPS': {'symbol': 'a',
                 'color': 'red', },
-        'Seismometer': {'symbol': 'i',
-                        'color': 'green', },
+        'Seismometer': {'symbol': 't',
+                        'color': 'black', },
         'Tiltmeter': {'symbol': 'ktiltmeter.eps/',
                       'color': 'blue', },
         'Camera': {'symbol': 'kwebcam.eps/',
@@ -125,7 +139,7 @@ class MapGenerator:
             'color': 'yellow',
         },
         "volcano": {
-            'symbol': 'kvolcano/',
+            'symbol': 'tV',  # kvolcano/
         },
     }
 
@@ -425,52 +439,83 @@ class MapGenerator:
         if sym_size < 8:
             sym_size = 8
 
-        sym_size = f"{sym_size}p"
-        for station in self.data.get('station', []):
+        stations = self.data.get('station', [])
+        sta_count = len(stations)
+
+        plot_defs = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+        volcNamePos = self.data['showVolcNames']
+
+        for station in stations:
             category = station.get('category', 'Unknown')
             if isinstance(category, dict):
                 category = category['type']
 
-            if category.startswith('volcano'):
-                volc_color = category.replace('volcano', '').lower()
-                if volc_color == "unassigned":
-                    volc_color = 'gray'
-                category = 'volcano'
-
             sta_x = float(station['lon'])
             sta_y = float(station['lat'])
 
-            symbol = self.station_symbols.get(category, {}).get('symbol', 'a')
+            if category.startswith('volcano'):
+                outline = "thin,0"
+                use_color = self.data['showVolcColor']
 
-            if category == 'volcano':
-                color = volc_color
+                if use_color:
+                    color = self._volc_colors.get(category.replace('volcano', ''), 'white')
+                else:
+                    color = 'white'
+
+                category = 'volcano'
+                point_size = sym_size * 1.25
+
             else:
+                point_size = sym_size
                 color = self.station_symbols.get(category, {}).get('color', '#FF00FF')
 
-            if symbol is not None:
-                symbol += sym_size
-                self.fig.plot(x=[sta_x, ], y=[sta_y, ],
-                              style=symbol, color=color,
-                              pen = sym_outline)
+            symbol = self.station_symbols.get(category, {}).get('symbol', 'a')
+            if symbol is None:
+                continue
 
-                if category == 'volcano':
-                    color = "black"
+            point_size_str = f"{point_size}p"
+            symbol += point_size_str
 
+            if symbol.startswith('tV') and volcNamePos != '':
+                if not 'names' in plot_defs[symbol]:
+                    plot_defs[symbol]['names'] = []
+
+                plot_defs[symbol]['names'].append((station['name'], sta_x, sta_y))
+
+            plot_defs[symbol][color]['x'].append(sta_x)
+            plot_defs[symbol][color]['y'].append(sta_y)
+
+            if not symbol.startswith('tV'):
                 self._used_symbols[category.capitalize()] = {'symbol': symbol,
                                                              'color': color, }
-            # else:
-                # icon_path = os.path.join(main_dir, 'static/img', icon_name)
-                # used_symbols[icon_name] = icon_path
 
-                # if not os.path.isfile(icon_path):
-                # req = requests.get(icon_url)
-                # if req.status_code != 200:
-                # continue  # Can't get an icon for this station, move on.
-                # with open(icon_path, 'wb') as icon_file:
-                # icon_file.write(req.content)
+        complete = 0
+        for symbol, sym_dict in plot_defs.items():
+            names = sym_dict.pop('names', [])
+            for color, col_dict in sym_dict.items():
+                x = col_dict['x']
+                y = col_dict['y']
+                outline = sym_outline
+                plot_symbol = symbol
+                if symbol.startswith('tV'):  # this is a volcano marker
+                    plot_symbol = symbol.replace('V', '')
+                    outline = "thin,0"
+                    if names:
+                        vnames, vx, vy = zip(*names)
+                        self.fig.text(x = vx, y = vy, text = vnames,
+                                      justify = volcNamePos,
+                                      offset = f"j{point_size}p+v")
+                        names = None  # Don't plot *again* for other colors
 
-                # position = f"g{sta_x}/{sta_y}+w{sym_size}"
-                # fig.image(icon_path, position=position)
+                self.fig.plot(x=x, y=y, style=plot_symbol,
+                              color=color, pen = outline)
+
+                complete += len(x)
+                prog = round((complete / sta_count) * 100, 1)
+                self._update_status({
+                    'status': "Plotting Stations...",
+                    'progress': prog
+                })
 
     def _plot_data(self, zoom):
         plotdata_file = self.data.get('plotDataFile')
@@ -654,19 +699,23 @@ class MapGenerator:
                 self.gmt_bounds[3]  # max y
             ]
 
-        #     utm_left = self.gmt_bounds[0]
-        #     if utm_left < -180:
-        #         utm_left += 360
+            #     utm_left = self.gmt_bounds[0]
+            #     if utm_left < -180:
+            #         utm_left += 360
 
-        #     utm_zone = math.ceil((utm_left + 180) / 6)
-        #
-        #     UTMChars = "CDEFGHJKLMNPQRSTUVWXX"
-        #     utm_lat = self.gmt_bounds[2]
-        #     if -80 <= utm_lat <= 84:
-        #         utm_char = UTMChars[math.floor((utm_lat + 80) / 8)]
-        #     else:
-        #         utm_char = UTMChars[-1]
-        #     proj = f"U{utm_zone}{utm_char}/{width}{unit}"
+            #     utm_zone = math.ceil((utm_left + 180) / 6)
+            #
+            #     UTMChars = "CDEFGHJKLMNPQRSTUVWXX"
+            #     utm_lat = self.gmt_bounds[2]
+            #     if -80 <= utm_lat <= 84:
+            #         utm_char = UTMChars[math.floor((utm_lat + 80) / 8)]
+            #     else:
+            #         utm_char = UTMChars[-1]
+            #     proj = f"U{utm_zone}{utm_char}/{width}{unit}"
+
+            # For albers equal area. Need to calculate center lon/lat
+            # and top/bottom lon for parameters.
+            # proj = f"B160/60/40/70/{width}{unit}"
 
             proj = f"M{width}{unit}"
             self.fig = pygmt.Figure()

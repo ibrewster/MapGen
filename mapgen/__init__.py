@@ -1,3 +1,8 @@
+try:
+    from . import wingdbstub
+except ImportError:
+    pass
+
 import logging
 
 from apiflask import APIFlask
@@ -10,6 +15,7 @@ app = APIFlask(__name__)
 app.config['SESSION_TYPE'] = 'filesystem'
 session = Session(app)
 sockets = Sockets(app)
+
 
 from .file_cache import FileCache
 _global_session = FileCache()

@@ -127,6 +127,8 @@ class MapSchema(BaseSchema):
     mapFrame = Value(str, default = "fancy")
     tickLabels = List(int, default = [])
     showGrid = Value(bool, default = False)
+    showVolcNames = Value(str, default = "")
+    showVolcColor = Value(bool, default = False)
 
 
 @app.post('/getMap')
