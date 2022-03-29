@@ -109,10 +109,10 @@ def init_generator_proc(queue):
 
 class MapGenerator:
     _volc_colors = {
-        'RED': '#D31820',
+        'RED': '#EC0000',
         'GREEN': '#87C264',
-        'YELLOW': '#F7F16B',
-        'ORANGE': '#E28C48',
+        'YELLOW': '#FFFF66',
+        'ORANGE': '#FF9933',
         'UNASSIGNED': '#777777',
     }
 
@@ -123,6 +123,8 @@ class MapGenerator:
                         'color': 'black', },
         'Tiltmeter': {'symbol': 'ktiltmeter.eps/',
                       'color': 'blue', },
+        'Temperature': {'symbol': 'ktemperature.eps/',
+                        'color': 'blue', },
         'Camera': {'symbol': 'kwebcam.eps/',
                    'color': 'blue',  # Really, could be anything...
                    },
