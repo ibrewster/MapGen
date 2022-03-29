@@ -96,12 +96,21 @@ $(document).ready(function() {
     })
 
     $('div.help').hover(showHelp,hideHelp);
+    $('button.tab').click(showTab);
 
     changeFileType();
     setOverviewDiv();
     getStationsDebounce();
     setupAccordion();
 });
+
+function showTab(){
+    const target=$(this).data('target');
+    $(this).siblings().removeClass('current');
+    $(this).parent().parent().find('div.tabContent').hide();
+    $(`#${target}`).show();
+    $(this).addClass('current');
+}
 
 function setupAccordion(){
     // fix the width of the settings bar so it doesn't change as we open/close segments

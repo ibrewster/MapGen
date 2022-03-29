@@ -68,6 +68,40 @@
         <area shape="rect" coords="460,1809,915,1892" class=cmArea data-cm="viridis" alt="viridis">
         <area shape="rect" coords="460,1898,915,1981" class=cmArea data-cm="wysiwyg" alt="wysiwyg">
     </map>
+    <!--End standard colormap clickmap-->
+    <!--Clickmap for Scientific colormap selector-->
+    <map name="cmMapSci">
+        <area shape="rect" coords="5,21,448,109" class=cmArea data-cm="action" alt="action">
+        <area shape="rect" coords="5,110,448,198" class=cmArea data-cm="bamako" alt="bamako">
+        <area shape="rect" coords="5,199,448,287" class=cmArea data-cm="batlowK" alt="batlowK">
+        <area shape="rect" coords="5,288,448,376" class=cmArea data-cm="berlin" alt="berlin">
+        <area shape="rect" coords="5,377,448,465" class=cmArea data-cm="broc" alt="broc">
+        <area shape="rect" coords="5,466,448,554" class=cmArea data-cm="bukavu" alt="bukavu">
+        <area shape="rect" coords="5,555,448,643" class=cmArea data-cm="davos" alt="davos">
+        <area shape="rect" coords="5,644,448,732" class=cmArea data-cm="fes" alt="fes">
+        <area shape="rect" coords="5,733,448,821" class=cmArea data-cm="hawaii" alt="hawaii">
+        <area shape="rect" coords="5,822,448,910" class=cmArea data-cm="lajolla" alt="lajolla">
+        <area shape="rect" coords="5,911,448,999" class=cmArea data-cm="lisbon" alt="lisbon">
+        <area shape="rect" coords="5,1000,448,1088" class=cmArea data-cm="oleron" alt="oleron">
+        <area shape="rect" coords="5,1089,448,1177" class=cmArea data-cm="roma" alt="roma">
+        <area shape="rect" coords="5,1178,448,1266" class=cmArea data-cm="tokyo" alt="tokyo">
+        <area shape="rect" coords="5,1267,448,1355" class=cmArea data-cm="vanimo" alt="vanimo">
+        <area shape="rect" coords="454,21,897,109" class=cmArea data-cm="bam" alt="bam">
+        <area shape="rect" coords="454,110,897,198" class=cmArea data-cm="batlow" alt="batlow">
+        <area shape="rect" coords="454,199,897,287" class=cmArea data-cm="batlowW" alt="batlowW">
+        <area shape="rect" coords="454,288,897,376" class=cmArea data-cm="bilbao" alt="bilbao">
+        <area shape="rect" coords="454,377,897,465" class=cmArea data-cm="buda" alt="buda">
+        <area shape="rect" coords="454,466,897,554" class=cmArea data-cm="cork" alt="cork">
+        <area shape="rect" coords="454,555,897,643" class=cmArea data-cm="devon" alt="devon">
+        <area shape="rect" coords="454,644,897,732" class=cmArea data-cm="grayC" alt="grayC">
+        <area shape="rect" coords="454,733,897,821" class=cmArea data-cm="imola" alt="imola">
+        <area shape="rect" coords="454,822,897,910" class=cmArea data-cm="lapaz" alt="lapaz">
+        <area shape="rect" coords="454,911,897,999" class=cmArea data-cm="nuuk" alt="nuuk">
+        <area shape="rect" coords="454,1000,897,1088" class=cmArea data-cm="oslo" alt="oslo">
+        <area shape="rect" coords="454,1089,897,1177" class=cmArea data-cm="tofino" alt="tofino">
+        <area shape="rect" coords="454,1178,897,1266" class=cmArea data-cm="turku" alt="turku">
+        <area shape="rect" coords="454,1267,897,1355" class=cmArea data-cm="vik" alt="vik">
+    </map>
 
     <div id="downloading" style="display:none">
         <div id="downloadContent">
@@ -598,10 +632,20 @@
 
         <div id="cmSelector">
             <div id="cmTitle">
-                Click a colormap
+                Choose a colormap
             </div>
-            <div id="cmImage">
-                <img src='static/img/GMT_App_M_1a.png' alt="colormaps" usemap="#cmMap">
+            <div id="cmTabs">
+                <button class="tab current" type="Button" id="cmStandard" data-target="cmImage">
+                    Standard
+                </button><button class="tab" type="button" id="cmScientific" data-target="cmImageSci">
+                    Scientific
+                </button>
+            </div>
+            <div id="cmImage" class="tabContent cmImage">
+                <img src='static/img/GMT_App_M_1a.png' alt="Standard Colormaps" usemap="#cmMap">
+            </div>
+            <div id="cmImageSci" class="tabContent cmImage" style="display:none;">
+                <img src="static/img/GMT_App_M_1b.png" alt="Scientific Colormaps" usemap="#cmMapSci">
             </div>
             <div id="cmFooter">
                 <button id="cmCancel">Cancel</button>
