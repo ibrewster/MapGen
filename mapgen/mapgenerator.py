@@ -896,7 +896,8 @@ class MapGenerator:
             cache_dir = os.path.join(script_dir, "cache")
             os.makedirs(cache_dir, exist_ok = True)
             file_path = os.path.join(cache_dir, save_file)
-            self.fig.savefig(file_path, resize = "+m.25i", anti_alias = True)
+            # resize = "+m.25i" #NEEDS NEWER GMT VERSION
+            self.fig.savefig(file_path, anti_alias = True)
             self.data['map_file'] = file_path
             self.data['gen_status'] = "Complete"
             _global_session[self._req_id] = self.data
