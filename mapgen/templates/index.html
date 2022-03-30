@@ -120,6 +120,15 @@
         </div>
     </div>
 
+    <div id="optSelectorShield" style="display:none;"></div>
+    <div id="staIconOpts" style="display:none;">
+        {% for iconOpt in icons %}
+        <div class="staIconOpt" data-url="{{iconOpt['url']}}" data-symbol="{{iconOpt['symbol']}}">
+            <img src="{{iconOpt['url']}}">
+        </div>
+        {% endfor %}
+    </div>
+
 
     <!--END DIALOGS-->
 
@@ -151,14 +160,6 @@
                                             <img class="staOptIconDisp" src="{{type['url']}}">
                                             <input name="staOpt_Icon" value="{{type['symbol']}}" id="staOpt_Icon">
                                             <div class="staOptDropdown">&#9660;</div>
-                
-                                            <div class="staIconOpts" style="display:none;">
-                                                {% for iconOpt in icons %}
-                                                <div class="staIconOpt" data-symbol="{{iconOpt['symbol']}}">
-                                                    <img src="{{iconOpt['url']}}">
-                                                </div>
-                                                {% endfor %}
-                                            </div>
                                         </div>
                                     </td>
                                     <td>

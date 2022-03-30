@@ -442,16 +442,18 @@ button.tab:not(.current):hover {
 
 .staOptDropdown{
     position:absolute;
-    right:10px;
+    right:0px;
     z-index: 3;
     top:0px;
     font-size:7pt;
     line-height:24px;
+    width:24px;
+    cursor:pointer;
 }
 
 #stationDisplayOpts{
     position: fixed;
-    z-index: 2000;
+    z-index: 1200;
     background-color:whitesmoke;
     box-shadow:5px 5px 2px rgba(0, 0, 0, .5);
     left:50%;
@@ -459,4 +461,42 @@ button.tab:not(.current):hover {
     transform:translate(-50%, -50%);
     border:3px ridge;
     padding:2px;
+}
+
+#optSelectorShield{
+    position:fixed;
+    height:100vh;
+    width:100vw;
+    top:0px;
+    left:0px;
+    z-index:1201;
+}
+
+#staIconOpts{
+    position:absolute;
+    border:1px solid black;
+    box-shadow:5px 5px 2px rgba(0, 0, 0, .5);
+    z-index:1202;
+    width:75%;
+    left:22%;
+}
+
+.staIconOpt{
+    cursor:pointer;
+    border:1px solid black;
+    background-color: whitesmoke;
+    padding-top:2px;
+    padding-bottom:2px;
+    height:28px;
+    text-align: center;
+}
+
+.staIconOpt:hover{
+    background-color:aqua;
+}
+
+.staIconOpt img{
+    width:24px;
+    max-height:24px;
+    vertical-align: middle;
 }

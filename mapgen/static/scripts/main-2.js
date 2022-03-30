@@ -105,11 +105,50 @@ $(document).ready(function() {
         $('#stationDisplayOpts').hide();
     })
 
+    $('#optSelectorShield').click(function(){
+        $('#staIconOpts').hide();
+        $(this).hide();
+    })
+
+    $('.staIconOpt').click(setSymbol);
+
+    $('.staOptDropdown').click(showIconOptions)
+
     changeFileType();
     setOverviewDiv();
     getStationsDebounce();
     setupAccordion();
 });
+
+function setSymbol(){
+    const target=$('#staIconOpts').data('target');
+    const symbol=$(this).data('symbol');
+    const url=$(this).data('url');
+
+    target.find('input').val(symbol);
+    target.find('img').prop('src',url);
+
+    $('#staIconOpts').hide();
+    $('#optSelectorShield').hide();
+}
+
+function showIconOptions(){
+    const totalWidth=$(this).parent().width();
+    const targetWidth=totalWidth*.75;
+    const thisLeft=$(this).offset().left;
+    const thisBottom=$(this).offset().top+$(this).height();
+    const thisWidth=$(this).width();
+    const targetLeft=thisLeft+thisWidth-targetWidth-10;
+    const parentDiv=$(this).closest('.staIconSelector');
+
+    $('#staIconOpts')
+        .css('width',targetWidth)
+        .css('left',targetLeft)
+        .css('top',thisBottom)
+        .data('target',parentDiv)
+        .show();
+    $('#optSelectorShield').show();
+}
 
 function showTab(){
     const target=$(this).data('target');

@@ -28,17 +28,21 @@ from .targets import (
 
 @app.get('/')
 def index():
-    with utils.MySQLCursor() as cursor:
-        cursor.execute('SELECT volcano FROM tbllistvolc WHERE HistoricalCat=1')
-        volcs = cursor.fetchall()
-    volcs = ujson.dumps([x[0] for x in volcs])
+    try:
+        with utils.MySQLCursor() as cursor:
+            cursor.execute('SELECT volcano FROM tbllistvolc WHERE HistoricalCat=1')
+            volcs = cursor.fetchall()
+        volcs = ujson.dumps([x[0] for x in volcs])
+    except Exception as e:
+        app.logger.warning("Unable to fetch active volcanoes from geodiva", e)
+        volcs = ujson.dumps([])
 
     sta_symbols = MapGenerator.station_symbols
     symbol_img = MapGenerator.icon_images
     staTypes = []
 
-    icon_urls = set()
-    icon_symbols = set()
+    icon_urls = {}
+    icon_symbols = {}
 
     for sta_name, sta_info in sta_symbols.items():
         sta_dict = {}
@@ -48,16 +52,16 @@ def index():
             continue
 
         if symbol.startswith('k'):
-            symbol = symbol[1:-1]
             url = symbol[1:-4] + "svg"
+            symbol = symbol[1:-1]
         else:
             url = symbol_img[symbol]
 
         sta_dict['symbol'] = symbol
-        icon_symbols.add(symbol)
+        icon_symbols[symbol] = None
 
         url = f"static/img/{url}"
-        icon_urls.add(url)
+        icon_urls[url] = None
         sta_dict['url'] = url
         sta_dict['color'] = sta_info.get('color', '#FFFFFF')
         staTypes.append(sta_dict)
@@ -67,7 +71,7 @@ def index():
         'url': url,
     }
         for symbol, url
-        in zip(icon_symbols, icon_urls)
+        in zip(icon_symbols.keys(), icon_urls.keys())
     ]
 
     return flask.render_template("index.html", activevolcs = volcs,
