@@ -66,6 +66,12 @@ def index():
         sta_dict['color'] = sta_info.get('color', '#FFFFFF')
         staTypes.append(sta_dict)
 
+    # Make sure all the "standard" icons are in the icon list, even if we are not using them currently
+    for symbol, image in symbol_img.items():
+        url = f"static/img/{image}"
+        icon_urls[url] = None
+        icon_symbols[symbol] = None
+
     iconOpts = [{
         'symbol': symbol,
         'url': url,

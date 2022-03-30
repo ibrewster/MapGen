@@ -113,7 +113,7 @@ body {
     border-bottom-right-radius:0px;
 }
 
-.setupHeader:first-of-type {
+.setupHeader.first {
     margin-top:0px;
 }
 
