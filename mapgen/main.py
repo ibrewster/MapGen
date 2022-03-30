@@ -172,6 +172,10 @@ class MapSchema(BaseSchema):
     showGrid = Value(bool, default = False)
     showVolcNames = Value(str, default = "")
     showVolcColor = Value(bool, default = False)
+    staOpt_Name = List(str, default = [])
+    staOpt_Icon = List(str, default = [])
+    staOpt_Color = List(str, default = [])
+    staOpt_Label = List(str, default = [])
 
 
 @app.post('/getMap')

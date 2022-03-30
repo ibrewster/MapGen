@@ -115,6 +115,7 @@ class MapGenerator:
         'ORANGE': '#FF9933',
         'UNASSIGNED': '#777777',
     }
+
     icon_images = {
         'a': 'star.png',
         'i': 'inverted_triangle.png',
@@ -452,6 +453,19 @@ class MapGenerator:
         plot_defs = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         volcNamePos = self.data['showVolcNames']
         volc_names = []
+        # Pull the user-selected icons/colors from the HTTP request data
+        custom_symbols = self.station_symbols.copy()
+        legend_labels = {}
+        for name, symbol, color, label in zip(self.data['staOpt_Name'],
+                                              self.data['staOpt_Icon'],
+                                              self.data['staOpt_Color'],
+                                              self.data['staOpt_Label']):
+            if symbol.endswith('.eps'):
+                symbol = f"k{symbol}/"
+            custom_symbols[name]['symbol'] = symbol
+            custom_symbols[name]['color'] = color
+            legend_labels[name] = label
+
         for station in stations:
             category = station.get('category', 'Unknown')
             if isinstance(category, dict):
@@ -474,9 +488,9 @@ class MapGenerator:
 
             else:
                 point_size = sym_size
-                color = self.station_symbols.get(category, {}).get('color', '#FF00FF')
+                color = custom_symbols.get(category, {}).get('color', '#FF00FF')
 
-            symbol = self.station_symbols.get(category, {}).get('symbol', 'a')
+            symbol = custom_symbols.get(category, {}).get('symbol', 'a')
             if symbol is None:
                 continue
 
@@ -490,8 +504,9 @@ class MapGenerator:
             plot_defs[symbol][color]['y'].append(sta_y)
 
             if not symbol.startswith('tV'):
-                self._used_symbols[category.capitalize()] = {'symbol': symbol,
-                                                             'color': color, }
+                label = legend_labels[category]
+                self._used_symbols[label] = {'symbol': symbol,
+                                             'color': color, }
 
         complete = 0
         for symbol, sym_dict in plot_defs.items():
