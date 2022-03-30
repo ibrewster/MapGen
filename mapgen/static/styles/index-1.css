@@ -429,3 +429,34 @@ button.tab:not(.current):hover {
     border-top-color: #878787;
     border-right-color: #878787;
 }
+
+.staOptIconDisp{
+    width:24px;
+    max-height:24px;
+    vertical-align: middle;
+}
+
+.staIconSelector{
+    position:relative;
+}
+
+.staOptDropdown{
+    position:absolute;
+    right:10px;
+    z-index: 3;
+    top:0px;
+    font-size:7pt;
+    line-height:24px;
+}
+
+#stationDisplayOpts{
+    position: fixed;
+    z-index: 2000;
+    background-color:whitesmoke;
+    box-shadow:5px 5px 2px rgba(0, 0, 0, .5);
+    left:50%;
+    top:35%;
+    transform:translate(-50%, -50%);
+    border:3px ridge;
+    padding:2px;
+}

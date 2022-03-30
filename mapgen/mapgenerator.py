@@ -115,30 +115,35 @@ class MapGenerator:
         'ORANGE': '#FF9933',
         'UNASSIGNED': '#777777',
     }
+    icon_images = {
+        'a': 'star.png',
+        'i': 'inverted_triangle.png',
+        't': 'triangle.png',
+    }
 
     station_symbols = {
         'GPS': {'symbol': 'a',
-                'color': 'red', },
+                'color': '#FF0000', },
         'Seismometer': {'symbol': 'i',
-                        'color': 'black', },
+                        'color': '#000000', },
         'Tiltmeter': {'symbol': 'ktiltmeter.eps/',
-                      'color': 'blue', },
+                      'color': '#FF0000', },
         'Temperature': {'symbol': 'ktemperature.eps/',
-                        'color': 'blue', },
+                        'color': '#FF0000', },
         'Camera': {'symbol': 'kwebcam.eps/',
-                   'color': 'blue',  # Really, could be anything...
+                   'color': '#0000FF',  # Really, could be anything...
                    },
         'Gas': {
             'symbol': 'kgas.eps/',
-            'color': 'gray',
+            'color': '#777777',
         },
         'Infrasound': {
             'symbol': 'kinfrasound.eps/',
-            'color': 'black',
+            'color': '#000000',
         },
         "User Defined": {
             'symbol': 'a',
-            'color': 'yellow',
+            'color': '#FFFF00',
         },
         "volcano": {
             'symbol': 'tV',  # kvolcano/

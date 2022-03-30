@@ -98,6 +98,13 @@ $(document).ready(function() {
     $('div.help').hover(showHelp,hideHelp);
     $('button.tab').click(showTab);
 
+    $('#stationOptions').click(function(){
+        $('#stationDisplayOpts').show();
+    })
+    $('#closeStaOpts').click(function(){
+        $('#stationDisplayOpts').hide();
+    })
+
     changeFileType();
     setOverviewDiv();
     getStationsDebounce();

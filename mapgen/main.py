@@ -5,6 +5,7 @@ import os
 import threading
 import uuid
 
+from collections import defaultdict
 from urllib.parse import unquote
 
 import flask
@@ -15,7 +16,7 @@ from apiflask import abort
 from werkzeug.utils import secure_filename
 
 from . import app, sockets, _global_session, utils
-from .mapgenerator import MapGenerator, init_generator_proc
+from .mapgenerator import MapGenerator
 from .targets import (
     List,
     Value,
@@ -32,7 +33,45 @@ def index():
         volcs = cursor.fetchall()
     volcs = ujson.dumps([x[0] for x in volcs])
 
-    return flask.render_template("index.html", activevolcs = volcs)
+    sta_symbols = MapGenerator.station_symbols
+    symbol_img = MapGenerator.icon_images
+    staTypes = []
+
+    icon_urls = set()
+    icon_symbols = set()
+
+    for sta_name, sta_info in sta_symbols.items():
+        sta_dict = {}
+        sta_dict['name'] = sta_name
+        symbol = sta_info['symbol']
+        if symbol == "tV":
+            continue
+
+        if symbol.startswith('k'):
+            symbol = symbol[1:-1]
+            url = symbol[1:-4] + "svg"
+        else:
+            url = symbol_img[symbol]
+
+        sta_dict['symbol'] = symbol
+        icon_symbols.add(symbol)
+
+        url = f"static/img/{url}"
+        icon_urls.add(url)
+        sta_dict['url'] = url
+        sta_dict['color'] = sta_info.get('color', '#FFFFFF')
+        staTypes.append(sta_dict)
+
+    iconOpts = [{
+        'symbol': symbol,
+        'url': url,
+    }
+        for symbol, url
+        in zip(icon_symbols, icon_urls)
+    ]
+
+    return flask.render_template("index.html", activevolcs = volcs,
+                                 staTypes = staTypes, icons = iconOpts)
 
 
 def allowed_file(filename):

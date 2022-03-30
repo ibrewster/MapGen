@@ -103,6 +103,7 @@
         <area shape="rect" coords="454,1267,897,1355" class=cmArea data-cm="vik" alt="vik">
     </map>
 
+    <!--Dialog DIVS-->
     <div id="downloading" style="display:none">
         <div id="downloadContent">
             Generating map image.
@@ -119,12 +120,62 @@
         </div>
     </div>
 
+
+    <!--END DIALOGS-->
+
     <div id="main">
         <div id="setup">
             <div id="setupInner">
                 <form id="setupForm" enctype="multipart/form-data" action="getMap" method="POST">
-                    <input type=hidden name="socketID" id="socketID" />
 
+                    <!--Station display options form-->
+                    <div id="stationDisplayOpts" style="display:none">
+                        <table id="staOpts">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Icon</th>
+                                    <th>Color</th>
+                                    <th>Label</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {%for type in staTypes %}
+                                <tr>
+                                    <td>
+                                        {{type['name']}}
+                                        <input type="hidden" name="staOpt_Name" value="{{type['name']}}">
+                                    </td>
+                                    <td>
+                                        <div class="staIconSelector">
+                                            <img class="staOptIconDisp" src="{{type['url']}}">
+                                            <input name="staOpt_Icon" value="{{type['symbol']}}" id="staOpt_Icon">
+                                            <div class="staOptDropdown">&#9660;</div>
+                
+                                            <div class="staIconOpts" style="display:none;">
+                                                {% for iconOpt in icons %}
+                                                <div class="staIconOpt" data-symbol="{{iconOpt['symbol']}}">
+                                                    <img src="{{iconOpt['url']}}">
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <input type="color" name="staOpt_Color" value='{{type["color"]}}'>
+                                    </td>
+                                    <td>
+                                        <input type="text" name="staOpt_Label" value='{{type["name"]}}'>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <div><button type="button" id="closeStaOpts">Ok</button></div>
+                    </div>
+                    <!--END station display options form-->
+
+                    <input type=hidden name="socketID" id="socketID" />
 
                     <div class="setupHeader">
                         Map Location
@@ -371,7 +422,7 @@
                     <!--End Overview map options-->
                     <!--Basemap image options-->
                     <div class="setupHeader">
-                        Basemap Image
+                        Custom Basemap Image
                         <div class="help">
                             <div class="helpText">
                                 <p>Upload an image to use instead of the default hillshade files</p>
@@ -560,7 +611,13 @@
                                                 <td>Gas</td><td>7</td>
                                             </tr>
                                             <tr>
+                                                <td>Teperature</td><td>12</td>
+                                            </tr>
+                                            <tr>
                                                 <td>Camera</td><td>22</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Infrasound</td><td>23</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -574,6 +631,7 @@
                             Upload CSV:<br>
                             <input type=file id="addStationCSV">
                         </div>
+                        <button type="button" id="stationOptions">Display Options</button>
                         <div id="stationListTop">
 
                         </div>
