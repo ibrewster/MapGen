@@ -462,6 +462,10 @@ button.tab:not(.current):hover {
     z-index: 3;
 }
 
+input.hidden{
+    display:none;
+}
+
 #stationDisplayOpts{
     position: fixed;
     z-index: 1200;

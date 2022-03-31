@@ -137,6 +137,14 @@ function setSymbol(){
         target.removeClass('custom');
     }
 
+    const colorSelector=target.closest('td').siblings('td.color').find('input');
+    if(symbol.endsWith('.eps')){
+        colorSelector.addClass('hidden');
+    }
+    else{
+        colorSelector.removeClass('hidden');
+    }
+
     $('#staIconOpts').hide();
     $('#optSelectorShield').hide();
     setTimeout(positionOpts,50);

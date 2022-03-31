@@ -186,8 +186,8 @@
                                             <div class="staOptDropdown">&#9660;</div>
                                         </div>
                                     </td>
-                                    <td>
-                                        <input type="color" name="staOpt_Color" value='{{type["color"]}}'>
+                                    <td class="color">
+                                        <input type="color" name="staOpt_Color" value='{{type["color"]}}'{%if type['symbol'][-3:]=='eps' %} class="hidden"{%endif%}>
                                     </td>
                                     <td>
                                         <input type="text" name="staOpt_Label" value='{{type["name"]}}'>
