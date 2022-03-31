@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg
-   xmlns:dc="http://purl.org/dc/elements/1.1/"
-   xmlns:cc="http://creativecommons.org/ns#"
-   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-   xmlns:svg="http://www.w3.org/2000/svg"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="100.79375mm"
-   height="100.79375mm"
-   viewBox="0 0 100.79375 100.79375"
+   width="100.65228mm"
+   height="77.285423mm"
+   viewBox="0 0 100.65228 77.285426"
    version="1.1"
    id="svg8"
    sodipodi:docname="webcam.svg"
-   inkscape:version="1.0.2 (e86c8708, 2021-01-15)">
+   inkscape:version="1.1.2 (b8e25be8, 2022-02-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
   <sodipodi:namedview
      pagecolor="#ffffff"
      bordercolor="#666666"
@@ -27,13 +27,19 @@
      inkscape:window-height="1056"
      id="namedview904"
      showgrid="false"
-     inkscape:zoom="2.0060209"
-     inkscape:cx="190.47637"
-     inkscape:cy="190.47637"
+     inkscape:zoom="1.1388"
+     inkscape:cx="41.710573"
+     inkscape:cy="108.00843"
      inkscape:window-x="2674"
-     inkscape:window-y="197"
+     inkscape:window-y="175"
      inkscape:window-maximized="0"
-     inkscape:current-layer="layer1" />
+     inkscape:current-layer="layer1"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="mm"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0" />
   <defs
      id="defs2" />
   <metadata
@@ -44,17 +50,16 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
   <g
      id="layer1"
-     transform="translate(-7.9186024,-7.9186043)">
+     transform="translate(-7.9893329,-31.356198)">
     <path
        id="rect833"
        style="fill:#25aae1;fill-opacity:1;stroke:#93acbd;stroke-width:0.652289;stroke-opacity:1"
-       d="m 8.3154774,40.78307 72.8267866,0 v -9.100728 l 22.676856,0 v 9.100728 h 4.49634 v 67.53241 H 8.3154774 Z"
+       d="M 8.3154774,40.78307 H 81.142264 v -9.100728 h 22.676856 v 9.100728 h 4.49634 v 67.53241 H 8.3154774 Z"
        sodipodi:nodetypes="ccccccccc" />
     <circle
        style="fill:#000000;fill-opacity:1;stroke:#93acbd;stroke-width:0.79375;stroke-opacity:1"

@@ -125,14 +125,21 @@ function setSymbol(){
     const symbol=$(this).data('symbol');
     const url=$(this).data('url');
 
-    target.find('input').val(symbol);
-    target.find('img').prop('src',url);
+    if(url=='other'){
+        target.addClass('custom');
+    }
+    else{
+        target.find('input').val(symbol);
+        target.find('img').prop('src',url);
+        target.removeClass('custom');
+    }
 
     $('#staIconOpts').hide();
     $('#optSelectorShield').hide();
 }
 
 function showIconOptions(){
+    const windowBottom= $(window).scrollTop() + $(window).height()-20;
     const totalWidth=$(this).parent().width();
     const targetWidth=totalWidth*.75;
     const thisLeft=$(this).offset().left;
@@ -142,11 +149,20 @@ function showIconOptions(){
     const parentDiv=$(this).closest('.staIconSelector');
 
     $('#staIconOpts')
-        .css('width',targetWidth)
+        .css('min-width',targetWidth)
         .css('left',targetLeft)
         .css('top',thisBottom)
+        .css('height','')
         .data('target',parentDiv)
         .show();
+
+    let iconOptsHeight=$('#staIconOpts').height();
+    const iconOptsBottom=$('#staIconOpts').offset().top+iconOptsHeight;
+    if (iconOptsBottom>windowBottom){
+        iconOptsHeight-=(iconOptsBottom-windowBottom);
+        $('#staIconOpts').css('height',iconOptsHeight);
+    }
+
     $('#optSelectorShield').show();
 }
 

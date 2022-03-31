@@ -117,9 +117,16 @@ class MapGenerator:
     }
 
     icon_images = {
-        'a': 'star.png',
-        'i': 'inverted_triangle.png',
-        't': 'triangle.png',
+        't': 'triangle.svg',
+        'a': 'star.svg',
+        'i': 'inverted_triangle.svg',
+        'c': 'circle.svg',
+        'd': 'diamond.svg',
+        'g': 'octagon.svg',
+        'h': 'hexagon.svg',
+        'n': 'pentagon.svg',
+        's': 'square.svg',
+        'p': 'point.svg',
     }
 
     station_symbols = {
@@ -462,6 +469,9 @@ class MapGenerator:
                                               self.data['staOpt_Label']):
             if symbol.endswith('.eps'):
                 symbol = f"k{symbol}/"
+            if symbol.startswith('k') and not symbol.endswith('/'):
+                symbol += '/'
+
             custom_symbols[name]['symbol'] = symbol
             custom_symbols[name]['color'] = color
             legend_labels[name] = label
