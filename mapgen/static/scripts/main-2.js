@@ -99,8 +99,11 @@ $(document).ready(function() {
     $('button.tab').click(showTab);
 
     $('#stationOptions').click(function(){
-        $('#stationDisplayOpts').show();
+        const target=$('#stationDisplayOpts').show();
+        const halfWidth=target.width()/2;
+        target.css('left',`calc( 50% - ${halfWidth}px )`);
     })
+
     $('#closeStaOpts').click(function(){
         $('#stationDisplayOpts').hide();
     })
@@ -136,6 +139,13 @@ function setSymbol(){
 
     $('#staIconOpts').hide();
     $('#optSelectorShield').hide();
+    setTimeout(positionOpts,50);
+}
+
+function positionOpts(){
+    const target=$('#stationDisplayOpts');
+    const halfWidth=target.width()/2;
+    target.css('left',`calc( 50% - ${halfWidth}px )`);
 }
 
 function showIconOptions(){

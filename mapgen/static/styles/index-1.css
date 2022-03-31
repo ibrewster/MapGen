@@ -336,7 +336,6 @@ div.helpText::before{
     height:0px;
     border-left:5px solid transparent;
     border-right:5px solid transparent;
-
     border-bottom:7px solid whitesmoke;
     bottom:100%;
     left:0px;
@@ -354,13 +353,11 @@ div.helpText{
     z-index:1101;
     text-align:left;
     max-width:80ch;
+    font-weight:normal;
 }
 
 div.help{
     position:absolute;
-}
-
-.setupHeader div.help{
     top:0px;
     right:0px;
 }
@@ -377,9 +374,6 @@ div.help::before{
     line-height: 16px;
     box-shadow:inset -1px -1px 1px 0px rgba(0,0,0,0.25);
     cursor:pointer;
-}
-
-.setupHeader div.help::before{
     position:absolute;
     top:3px;
     right:3px;
@@ -454,6 +448,7 @@ button.tab:not(.current):hover {
 
 .staIconSelector.custom input{
     display:inline;
+    width:12ch;
 }
 
 .staIconSelector.custom img{
@@ -473,8 +468,7 @@ button.tab:not(.current):hover {
     background-color:whitesmoke;
     box-shadow:5px 5px 2px rgba(0, 0, 0, .5);
     left:50%;
-    top:35%;
-    transform:translate(-50%, -50%);
+    top:25%;
     border:3px ridge;
     padding:2px;
 }
@@ -516,6 +510,11 @@ button.tab:not(.current):hover {
     max-height:18px;
     vertical-align: middle;
 }
+#staOpts thead th{
+    position:relative;
+    padding-top:2px;
+}
+
 #staOpts tbody td{
     padding:1px 5px;
 }
