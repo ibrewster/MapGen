@@ -13,3 +13,5 @@ flask-session
 #flask-sockets
 gevent-websocket
 streaming-form-data
+gdal
+pymysql

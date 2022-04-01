@@ -314,11 +314,11 @@
                             <div class="helpText">
                                 <ul>
                                     <li>
-                                        Show Scale: Display a map scale in the requested location,
+                                        Scale: Display a map scale in the requested location,
                                         or "none" to not display a scale
                                     </li>
                                     <li>
-                                        Show Legend: Display a legend with station and volcano symbols 
+                                        Legend: Display a legend with station and volcano symbols 
                                         in the requested location, or "none" to not display a legend.
                                     </li>
                                     <li>
@@ -357,8 +357,26 @@
                         </div>
                     </div>
                     <div class="setupContent">
+                        <div id="legendOptionsDlg" style="display:none;">
+                            <div id="legendOptsHeader">
+                                <h2>Legend Options</h2>
+                            </div>
+                            <div id="legendOptsForm">
+                                <label for="ltc">Text Color:</label>
+                                <input type="color" id="ltc" name="legendTextColor" value="'#000000">
+                                <label for="lbkc" >Background Color:</label>
+                                <input type="color" id="lbkc" name="legendBkgColor" value="#FFFFFF">
+                                <label for="lbkt">Background Transparency:</label>
+                                <input type="range" id="lbkt" min="0" max="100" value="0" class="slider" name="legendBkgTransp">
+                                <label for="lts">Text Size:</label>
+                                <input type="number" id="lts" value="12" name="legendTextSize">
+                            </div>
+                            <div id="legendOptionsBtns">
+                                <button type="button" id="closeLegendOptions">Close</button>
+                            </div>
+                        </div>
                         <div class="leftAlign">
-                            Show Scale:
+                            Scale:
                             <select id=showScale name="scale">
                                 <option value="False">None</option>
                                 <option value="BR">Bottom Right</option>
@@ -370,7 +388,7 @@
                             </select>
                         </div>
                         <div id="LegendSetup" class="leftAlign">
-                            Show Legend:
+                            Legend:
                             <select id=legendShow name="legend">
                                 <option value="False">None</option>
                                 <option value="BR">Bottom Right</option>
@@ -380,6 +398,7 @@
                                 <option value="TC">Top Center</option>
                                 <option value="TL">Top Left</option>
                             </select>
+                            <button type="button" id="legendOptions">Options</button>
                         </div>
                         <div class="leftAlign">
                             Frame Type:

@@ -98,6 +98,14 @@ $(document).ready(function() {
     $('div.help').hover(showHelp,hideHelp);
     $('button.tab').click(showTab);
 
+    $('#legendOptions').click(function(){
+        $('#legendOptionsDlg').show();
+    })
+
+    $('#closeLegendOptions').click(function(){
+        $('#legendOptionsDlg').hide();
+    })
+
     $('#stationOptions').click(function(){
         const target=$('#stationDisplayOpts').show();
         const halfWidth=target.width()/2;

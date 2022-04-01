@@ -182,6 +182,10 @@ class MapSchema(BaseSchema):
     staOpt_Icon = List(str, default = [])
     staOpt_Color = List(str, default = [])
     staOpt_Label = List(str, default = [])
+    legendTextColor = Value(str, default = '#000000')
+    legendBkgColor = Value(str, default = '#FFFFFF')
+    legendTextSize = Value(int, default = 12)
+    legendBkgTransp = Value(int, default = 100)
 
 
 @app.post('/getMap')

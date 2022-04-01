@@ -515,6 +515,7 @@ class MapGenerator:
 
             if not symbol.startswith('tV'):
                 label = legend_labels[category]
+                plot_defs[symbol][color]['label'] = label
                 self._used_symbols[label] = {'symbol': symbol,
                                              'color': color, }
 
@@ -523,6 +524,7 @@ class MapGenerator:
             for color, col_dict in sym_dict.items():
                 x = col_dict['x']
                 y = col_dict['y']
+                label = col_dict.get('label')
                 outline = sym_outline
                 plot_symbol = symbol
                 if symbol.startswith('tV'):  # this is a volcano marker
@@ -872,6 +874,8 @@ class MapGenerator:
                 logging.info("Adding legend")
                 self._update_status("Adding Legend...")
 
+                font_size = self.data['legendTextSize']
+                icon_size = 1.333333 * font_size
                 with tempfile.NamedTemporaryFile('w+') as file:
                     pos = f"J{legend}+j{legend}+o0.2c+l1.5"
                     use_width = False
@@ -901,7 +905,8 @@ class MapGenerator:
                                 pass
 
                         sym_color = symbol['color']
-                        file.write(f'S 11p {sym_char} 16p {sym_color} - 23p {sym_label}')
+                        # file.write(f'S 11p {sym_char} 16p {sym_color} - 23p {sym_label}')
+                        file.write(f'S - {sym_char} {icon_size}p {sym_color} - - {sym_label}')
                         file.write('\n')
 
                     file.seek(0)
@@ -910,11 +915,18 @@ class MapGenerator:
                     if use_width:
                         pos += "+w1.5i"
 
-                    self.fig.legend(
-                        file_name,
-                        position = pos,
-                        box="+gwhite+p1p"
-                    )
+                    # Set FONT_ANNOT_PRIMARY for use in drawing legend
+                    font_color = self.data['legendTextColor']
+                    font_str = f"{font_size}p,Helvetica,{font_color}"
+                    bkg_color = self.data['legendBkgColor']
+                    bkg_transp = self.data['legendBkgTransp']
+                    box_fill = f"+g{bkg_color}@{bkg_transp}+p1p"
+                    with pygmt.config(FONT_ANNOT_PRIMARY = font_str):
+                        self.fig.legend(
+                            file_name,
+                            position = pos,
+                            box=box_fill
+                        )
 
             os.chdir(cur_dir)
             self._update_status("Saving final image...")
@@ -926,8 +938,7 @@ class MapGenerator:
             cache_dir = os.path.join(script_dir, "cache")
             os.makedirs(cache_dir, exist_ok = True)
             file_path = os.path.join(cache_dir, save_file)
-            # resize = "+m.25i" #NEEDS NEWER GMT VERSION
-            self.fig.savefig(file_path, anti_alias = True)
+            self.fig.savefig(file_path, resize = "+m.25i", anti_alias = True)
             self.data['map_file'] = file_path
             self.data['gen_status'] = "Complete"
             _global_session[self._req_id] = self.data
