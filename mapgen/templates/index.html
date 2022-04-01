@@ -141,6 +141,9 @@
 
                     <!--Station display options form-->
                     <div id="stationDisplayOpts" style="display:none">
+                        <div id="stationDispOptsHeader">
+                            <h2>Station Display Options</h2>
+                        </div>
                         <table id="staOpts">
                             <thead>
                                 <tr>
@@ -357,6 +360,8 @@
                         </div>
                     </div>
                     <div class="setupContent">
+
+                        <!--Legend options dialog-->
                         <div id="legendOptionsDlg" style="display:none;">
                             <div id="legendOptsHeader">
                                 <h2>Legend Options</h2>
@@ -367,14 +372,19 @@
                                 <label for="lbkc" >Background Color:</label>
                                 <input type="color" id="lbkc" name="legendBkgColor" value="#FFFFFF">
                                 <label for="lbkt">Background Transparency:</label>
-                                <input type="range" id="lbkt" min="0" max="100" value="0" class="slider" name="legendBkgTransp">
+                                <div id="transSlider">
+                                    <input type="range" id="lbkt" min="0" max="100" value="0" class="slider" name="legendBkgTransp">
+                                    <span id="lbktTransValue">0</span>
+                                </div>
                                 <label for="lts">Text Size:</label>
-                                <input type="number" id="lts" value="12" name="legendTextSize">
+                                <input type="number" id="lts" min=6 max=128 value="12" name="legendTextSize">
                             </div>
                             <div id="legendOptionsBtns">
                                 <button type="button" id="closeLegendOptions">Close</button>
                             </div>
                         </div>
+                        <!--End legend options dialog -->
+
                         <div class="leftAlign">
                             Scale:
                             <select id=showScale name="scale">

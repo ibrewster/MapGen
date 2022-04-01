@@ -471,24 +471,41 @@ input.hidden{
     z-index:1200;
     background-color: whitesmoke;
     box-shadow:5px 5px 2px rgba(0, 0, 0, .5);
-    left:calc(50% - 165px );
+    left:calc(50% - 160px );
     top:25%;
     border:3px ridge;
     padding:2px;
-    width:330px;
+    width:315px;
 }
 
 #legendOptsForm{
     display:grid;
-    grid-template-columns:1fr 1fr;
+    grid-template-columns:1fr auto;
     grid-gap: 10px;
     border-top:1px solid #C9C9C9;
     border-bottom:1px solid #C9C9C9;
     padding-top:8px;
     padding-bottom:3px;
+    padding-right:10px;
 }
 
-#legendOptsHeader h2{
+#lbktTransValue{
+    width:3ch;
+    display: inline-block;
+}
+
+#transSlider{
+    text-align: left;
+}
+
+#lbkt{
+    width:75px;
+}
+#lts{
+    width:5ch;
+}
+
+#legendOptsHeader h2, #stationDispOptsHeader h2{
     margin-top:0px;
     margin-bottom:3px;
 }

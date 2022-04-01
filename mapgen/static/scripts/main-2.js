@@ -106,6 +106,10 @@ $(document).ready(function() {
         $('#legendOptionsDlg').hide();
     })
 
+    $('#lbkt')[0].oninput=function(){
+        $('#lbktTransValue').text(this.value);
+    }
+
     $('#stationOptions').click(function(){
         const target=$('#stationDisplayOpts').show();
         const halfWidth=target.width()/2;
