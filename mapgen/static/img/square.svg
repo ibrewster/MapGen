@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   fill-opacity="1"
+   color-rendering="auto"
+   color-interpolation="auto"
+   text-rendering="auto"
+   stroke="#000000"
+   stroke-linecap="square"
+   stroke-miterlimit="10"
+   shape-rendering="auto"
+   stroke-opacity="1"
+   fill="#000000"
+   stroke-dasharray="none"
+   font-weight="normal"
+   stroke-width="1"
+   font-family="Dialog"
+   font-style="normal"
+   stroke-linejoin="miter"
+   font-size="12px"
+   stroke-dashoffset="0"
+   image-rendering="auto"
+   version="1.1"
+   id="svg176"
+   sodipodi:docname="square.svg"
+   width="283.46457"
+   height="283.14716"
+   inkscape:version="1.1.2 (b8e25be8, 2022-02-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview178"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     showgrid="false"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:zoom="3.61"
+     inkscape:cx="65.512465"
+     inkscape:cy="55.124654"
+     inkscape:window-width="1680"
+     inkscape:window-height="976"
+     inkscape:window-x="2145"
+     inkscape:window-y="139"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg176" />
+  <!--Unicode Character 'BLACK SQUARE' (U+25A0)-->
+  <defs
+     id="genericDefs" />
+  <g
+     id="g174"
+     transform="matrix(2.2575095,0,0,2.2575095,-53.34837,-485.73187)"
+     style="fill:#add8e6;fill-opacity:1;stroke:#000000;stroke-width:1.67457;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1">
+    <g
+       id="g172"
+       style="fill:#add8e6;fill-opacity:1;stroke:#000000;stroke-width:1.67457;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1">
+      <path
+         d="M 148.3594,216 V 339.75 H 24.4688 V 216 Z"
+         stroke="none"
+         id="path170"
+         style="fill:#add8e6;fill-opacity:1;stroke:#000000;stroke-width:1.67457;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1" />
+    </g>
+  </g>
+</svg>
