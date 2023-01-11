@@ -1,4 +1,6 @@
 var map = null;
+var volcanoMarkers=[]
+let uncheckedVolcs=[]
 var overviewRatio = 5;
 var staTimer = null;
 var monitorSocket = null;
@@ -68,6 +70,8 @@ $(document).ready(function() {
     $(document).on('click', '.sectionSelectAll', toggleStations);
     $(document).on('click', 'button.deleteInset', removeInsetMap);
     $(document).on('change', '#overview, #overviewWidth', setOverviewDiv);
+    $(document).on('change', 'div.volc .staCheck',plotVolcanoes);
+    $(document).on('change', '.staCheck', trackUnchecked);
 
     $('#overviewWidth').change(function() { overviewChanged = true; })
     $('#getMap').click(getMap);
@@ -75,6 +79,7 @@ $(document).ready(function() {
     initMap();
 
     $(window).resize(sizeMap);
+    $('#showVolcColor').change(plotVolcanoes);
     $('.latLon').change(setBounds);
     $('.reload').click(updateBounds);
     $('#addNewMap').click(addNewMap);
@@ -776,7 +781,7 @@ function init_socket() {
         }, 5000)
     }
     monitorSocket.onclose = function() {
-        console.error("Web socket closed");
+        console.log("Web socket closed");
         if (pingTimer !== null) {
             clearInterval(pingTimer);
             pingTimer = null;
@@ -879,14 +884,120 @@ function query_volcs(minLat, maxLat, eastLon, westLon, eastLon2, westLon2){
     $.getJSON(url)
     .done(function(data){
         //filter volcanoes to only show historically active
-        if (typeof(ACTIVE_VOLCS) !== 'undefined'){
+        if (typeof(ACTIVE_VOLCS) !== 'undefined' && ACTIVE_VOLCS.size>0){
             data=data.filter(volc=>ACTIVE_VOLCS.has(volc.vName))
         }
         all_volcs=all_volcs.concat(data);
         if (westLon2 !== null && eastLon2 !== null) {
             query_volcs(minLat, maxLat, eastLon2, westLon2, null, null);
         }
+
+        //plot volcanoes
+        plotVolcanoes()
     })
+}
+
+function trackUnchecked(){
+    const value=JSON.parse(this.value);
+    const identStr=`${value['lat']}_${value['lon']}_${value['category']}`;
+    if($(this).is(':checked')){
+        const itemIdx=uncheckedVolcs.indexOf(identStr);
+        if(itemIdx>=0){
+            uncheckedVolcs.splice(itemIdx,1);
+        }
+    }
+    else{
+        uncheckedVolcs.push(identStr);
+    }
+}
+
+function getChecked(parent){
+    const inputs=$(parent+' .staCheck:checked');
+    let locs=[]
+    inputs.each(function(idx,input){
+        let value=JSON.parse(this.value);
+        let lat=value['lat'];
+        let lng=value['lon'];
+        let cat=value['category'];
+        let name=value['name'];
+
+        let itemObj={
+            lat:lat,
+            lng:lng,
+            cat:cat,
+            name:name
+        }
+        //Make the lat and lon a string for easy comparison
+        locs.push(itemObj);
+    })
+
+    return locs
+}
+
+let volcPlotTimer=null;
+function plotVolcanoes(){
+    if(volcPlotTimer!=null){
+        clearTimeout(volcPlotTimer);
+    }
+
+    volcPlotTimer=setTimeout(plotVolcanoesRun,100);
+}
+
+//use a debounce timer on this so it doesn't get triggered many times when checking/unchecking all
+function plotVolcanoesRun(){
+    volcPlotTimer=null;
+    for(const i in volcanoMarkers){
+        let marker=volcanoMarkers[i];
+        map.removeLayer(marker);
+    }
+    volcanoMarkers=[];
+    volcanoTooltips=[];
+    
+    const checkedVolcs=getChecked('div.volc');
+    const useColor=$('#showVolcColor').is(':checked')
+    const colors={
+        volcanoRED:'#EC0000',
+        volcanoGREEN:'#87C264',
+        volcanoYELLOW:'#FFFF66',
+        volcanoORANGE:'#FF9933',
+        volcanoUNASSIGNED:'#777777'
+    }
+
+    const labelOffsets={}
+    const toolTipOpts={
+        offset:[17,-17],
+        direction:'right',
+        permanent:true,
+        className: "volcNameLabel",
+        opacity:1,
+        fill:false,
+        fillColor:'#0F0'
+    }
+
+    $(checkedVolcs).each(function(idx,volcInfo){
+        let color=useColor? colors[volcInfo['cat']] : '#FFF';
+        let lng=Number(volcInfo['lng']);
+        if(lng>0){
+            lng-=360;
+        }
+        let latlng=[Number(volcInfo['lat']), lng];
+        let marker=new L.triangleMarker(latlng,
+        {
+            color:'#000',
+            weight:1,
+            fill:true,
+            fillColor:color,
+            fillOpacity:1.0,
+            width:17,
+            height:10
+        }
+        )
+        .addTo(map);
+
+        marker.bindTooltip(volcInfo['name'],toolTipOpts).openTooltip();
+        volcanoMarkers.push(marker);
+    })
+
 }
 
 function query_stations(minLat, maxLat, eastLon, westLon, eastLon2, westLon2) {
@@ -1078,9 +1189,26 @@ function toggleStations() {
     }
 
     $(this).closest('div.setupHeader').next('div.setupContent').find('input.staCheck').each(function() {
-        this.checked = checked;
+        if(checked){
+            const value=JSON.parse(this.value);
+            const identStr=`${value['lat']}_${value['lon']}_${value['category']}`;
+            if(uncheckedVolcs.indexOf(identStr)>=0){
+                //this one should NOT be checked
+                this.checked=false;
+            }
+            else{
+                this.checked=true;
+            }
+        }
+        else{ //checked=false
+            this.checked = checked;
+        }
         checkForAll.call(this);
     })
+
+    if($(this).closest('div.setupHeader').hasClass('volcanoHeader')){
+        plotVolcanoes();
+    }
 }
 
 function toggleAll() {
@@ -1089,8 +1217,28 @@ function toggleAll() {
         checked = true;
     }
     $(this).closest('div.stationType').find('input.staCheck').each(function() {
+        const value=JSON.parse(this.value);
+        const identStr=`${value['lat']}_${value['lon']}_${value['category']}`;
+        const itemIdx=uncheckedVolcs.indexOf(identStr);
+        if(checked){
+            // if in the list, remove it
+            if(itemIdx>=0){
+                uncheckedVolcs.splice(itemIdx,1);
+            }
+        }
+        else{
+            // if not in the list, add it
+            if(itemIdx<0){
+                uncheckedVolcs.push(identStr);
+            }
+        }
+
         this.checked = checked;
     })
+
+    if($(this).closest('div.setupContent').hasClass('volcanoContent')){
+        plotVolcanoes();
+    }
 }
 
 function checkForAll() {

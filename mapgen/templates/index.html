@@ -12,6 +12,7 @@
     <script src="static/scripts/jquery-ui.min.js" defer></script>
     <script src="static/scripts/leaflet.js" defer></script>
     <script src="static/scripts/Leaflet.Graticule.js" defer></script>
+    <script src="static/scripts/leaflet-triangle-marker.min.js" defer></script>
     <script src="static/scripts/jquery.csv.js" defer></script>
     <script src="static/scripts/main-2.js" defer></script>
     <script type="text/javascript">
@@ -694,7 +695,7 @@
                     <!--End Station Selector Sidebar-->
 
                     <!--Volcano Selector Sidebar-->
-                    <div class="setupHeader">
+                    <div class="setupHeader volcanoHeader">
                         <span class="leftEdge"><input type="checkbox" class="sectionSelectAll" id="volcanoSelAll">All</span> Volcanoes
                         <div class="help">
                             <div class="helpText">
@@ -708,7 +709,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="setupContent blockDisplay">
+                    <div class="setupContent blockDisplay volcanoContent">
                         <div class="leftAlign">
                             <p>
                             Options:<br>
@@ -727,7 +728,7 @@
                                 
                                 
                             </select>
-                            <br><input type="checkbox" name="showVolcColor" checked> Color Volcano Markers
+                            <br><input type="checkbox" id="showVolcColor" name="showVolcColor" checked> Color Volcano Markers
                             </p>
                         </div>
                         <div id="volcanoListTop">

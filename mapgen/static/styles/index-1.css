@@ -575,3 +575,12 @@ input.hidden{
 #staOpts tbody td{
     padding:1px 5px;
 }
+
+.volcNameLabel{
+    background-color: transparent;
+    padding:0px;
+    border:none;
+    box-shadow: none;
+    font-size:12pt;
+    font-family: helvetica;
+}

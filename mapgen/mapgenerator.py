@@ -94,19 +94,6 @@ def run_process(queue):
         return
 
 
-def init_generator_proc(queue):
-    logging.info(f"-->Environ in init proc: {os.getenv('DYLD_LIBRARY_PATH')}")
-    if not os.getenv('DYLD_LIBRARY_PATH') and os.path.isdir('/usr/local/opt/gcc/lib/gcc/11'):
-        os.environ['DYLD_LIBRARY_PATH'] = '/usr/local/opt/gcc/lib/gcc/11'
-
-    global _SOCKET_QUEUE
-    _SOCKET_QUEUE = queue
-
-    logging.basicConfig(level = logging.INFO,
-                        format = "%(asctime)-15s %(message)s",
-                        datefmt='%Y-%m-%d %H:%M:%S')
-
-
 class MapGenerator:
     _volc_colors = {
         'RED': '#EC0000',
@@ -795,7 +782,6 @@ class MapGenerator:
             logging.info("Adding scalebar")
             self._add_scalebar()
 
-            logging.info("Adding overview")
             if overview:
                 logging.info("Adding Overview")
                 self._update_status("Adding Overview Map...")
