@@ -5,16 +5,17 @@ except ImportError:
 
 import logging
 
-from apiflask import APIFlask
+import flask
 from flask_session import Session
-from .flask_sockets.flask_sockets import Sockets
+from flask_sock import Sock
 
 logging.basicConfig(level = logging.INFO)
 
-app = APIFlask(__name__)
+app = flask.Flask(__name__)
 app.config['SESSION_TYPE'] = 'filesystem'
+
 session = Session(app)
-sockets = Sockets(app)
+sockets = Sock(app)
 
 
 from .file_cache import FileCache

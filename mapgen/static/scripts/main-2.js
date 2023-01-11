@@ -5,13 +5,13 @@ var monitorSocket = null;
 var pingTimer = null;
 var units = "i"
 
-/* 
+/*
 multiplication factor to go from one unit of measure to another
 Key is two characters: source unit and destination unit.
 p=pixels
 i=inches
 c=centimeters
-Unit characters come from GMT 
+Unit characters come from GMT
 */
 var conversions = {
     'pi': (1 / 300), //pixels -->inches, 300 DPI
@@ -659,7 +659,7 @@ function updateStatus(payload) {
     } else {
         var stat = payload;
         if (stat == "COMPLETE") {
-            url = 'getMap';
+            url = `getMap?REQ_ID=${req_id}`;
             window.location.href = url;
             closeStatus(5000);
         } else if (stat == "ERROR") {
@@ -695,7 +695,7 @@ function checkDownloadStatus() {
     $.getJSON('checkstatus')
         .done(function(resp) {
             if (resp['done']) {
-                url = 'getMap';
+                url = `getMap?REQ_ID=${req_id}`;
                 window.location.href = url;
                 $('#downloading').hide();
                 monitorSocket.close();
@@ -949,7 +949,7 @@ function addCSVStations() {
 function displayVolcs(){
     const dest=$('#volcanoListTop').empty();
 
-    //we don't really need the seenCodes list at this point, but I'm 
+    //we don't really need the seenCodes list at this point, but I'm
     // leaving it in just in case we get an unexpected code.
     let seenCodes=[];
 
@@ -1010,7 +1010,7 @@ function displayStations() {
         this.checked=true;
         toggleStations.call(this);
     });
-    
+
     //make sure the map size is correct
     sizeMap();
 }

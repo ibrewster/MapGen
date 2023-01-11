@@ -9,10 +9,8 @@ from collections import defaultdict
 from urllib.parse import unquote
 
 import flask
-import gevent
 import ujson
 
-from apiflask import abort
 from werkzeug.utils import secure_filename
 
 from . import app, sockets, _global_session, utils
@@ -232,9 +230,12 @@ def request_map(data):
 @app.get('/getMap')
 def get_map_image():
     logging.info("Final image requested")
-    req_id = flask.session.get('REQ_ID')
+    req_id = flask.request.args.get('REQ_ID')
     if req_id is None:
-        abort(404)
+        req_id = flask.session.get('REQ_ID')
+
+    if req_id is None:
+        flask.abort(404)
 
     file_path = _global_session[req_id]['map_file']
     with open(file_path, 'rb') as file:
@@ -259,11 +260,11 @@ def check_status():
     try:
         data_dict = _global_session[req_id]
     except KeyError:
-        abort(404)
+        flask.abort(404)
 
     stat = data_dict.get('gen_status', "Initalizing...")
     if stat == "FAILED":
-        abort(500, 'Unable to generate map. An internal server error occured.')
+        flask.abort(500, 'Unable to generate map. An internal server error occured.')
 
     if data_dict.get('map_file') is None:
         return {'status': stat, 'done': False}
@@ -272,45 +273,52 @@ def check_status():
 
 
 socket_queues = {}
+ws_objects = {}
 
 
+# This is weird (to me) but to be able to handle this URL both with and without
+# a trailing slash, I have to declare both options as completly seperate functions,
+# each calling the same third, undecorated function. Otherwise things get confused.
 @sockets.route('/monitor')
+def monitor_wo_slash(ws):
+    return monitor_socket(ws)
+
+
+@sockets.route('/monitor/')
+def monitor_w_slash(ws):
+    return monitor_socket(ws)
+
+
 def monitor_socket(ws):
     logging.info("New web socket connection opened")
     socket_id = uuid.uuid4().hex
     read_pipe, write_pipe = multiprocessing.Pipe()
     socket_queues[socket_id] = (read_pipe, write_pipe)
+    ws_objects[socket_id] = ws
     msg = {'type': 'socketID', 'content': socket_id, }
     ws.send(json.dumps(msg))
 
+    # This thread monitors the sockets, above, and sends information to the client,
+    # while the loop below keeps the web socket alive and responds to messages received
+    # FROM the client.
     logging.info("Creating webSocket monitor thread")
     thread = threading.Thread(target = _run_monitor_socket,
                               args = (ws, read_pipe))
     thread.start()
     logging.info("Web socket monitor thread started")
-    while thread.is_alive():
-        gevent.spawn(_recieve_ws, ws)
-        gevent.sleep(1)
+
+    while True:
+        msg = ws.receive()
+        if msg == "PING":
+            ws.send('PONG')
 
     logging.info("Web socket closed")
-
-
-def _recieve_ws(ws):
-    msg = None
-    try:
-        with gevent.Timeout(.01):
-            msg = ws.receive()
-    except:
-        pass
-
-    if msg == "PING":
-        ws.send('PONG')
 
 
 def _run_monitor_socket(ws, pipe):
     # Needs to be run in a seperate thread so it doesn't block other requests
     logging.info("Web socket handler thread started")
-    while not ws.closed:
+    while ws.connected:
         # Check and loop rather than blocking indefinitely
         # so we can know if the socket has closed.
         msg_waiting = pipe.poll(.25)

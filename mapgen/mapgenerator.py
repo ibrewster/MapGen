@@ -532,7 +532,7 @@ class MapGenerator:
                     outline = "thin,0"
 
                 self.fig.plot(x=x, y=y, style=plot_symbol,
-                              color=color, pen = outline)
+                              fill=color, pen = outline)
 
                 complete += len(x)
                 prog = round((complete / sta_count) * 100, 1)
@@ -684,7 +684,7 @@ class MapGenerator:
             offset = '.575c/' + offset
 
         map_scale = f'j{self.data["scale"]}+w{scale_length}k+f+o{offset}+c{mid_lat}N+l'
-        self.fig.basemap(map_scale = map_scale, F = '+gwhite+p')
+        self.fig.basemap(map_scale = map_scale, box = '+gwhite+p')
 
     def _gen_fail_callback(self, req_id, error):
         print("Map generation failed! Error:")
@@ -833,7 +833,7 @@ class MapGenerator:
                     x_loc = self.gmt_bounds[0] + (self.gmt_bounds[1] - self.gmt_bounds[0]) / 2
                     y_loc = self.gmt_bounds[2] + (self.gmt_bounds[3] - self.gmt_bounds[2]) / 2
                     self.fig.plot(x=[x_loc, ], y=[y_loc, ],
-                                  style=f"a{star_size}", color="blue")
+                                  style=f"a{star_size}", fill="blue")
 
             inset_maps = zip(self.data['insetBounds'],
                              self.data['insetZoom'],

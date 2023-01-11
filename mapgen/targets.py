@@ -1,14 +1,13 @@
 import os
 import shutil
 import tempfile
+import time
 
 from functools import wraps
 from pathlib import Path
 
 import flask
-import gevent
 
-from apiflask import abort
 from streaming_form_data.targets import BaseTarget, DirectoryTarget
 from streaming_form_data import StreamingFormDataParser
 
@@ -21,7 +20,7 @@ def api_input(schema, **kwargs):
                 try:
                     data = _parseFormData(schema, flask.request, tempdir)
                 except ValueError as e:
-                    return abort(400, "Missing Parameter:" + str(e))
+                    return flask.abort(400, "Missing Parameter:" + str(e))
                 result = f(data)
             return result
         return wrapper
@@ -56,7 +55,7 @@ class BaseSchema:
             if len(chunk) == 0:
                 break
             self._parser.data_received(chunk)
-            gevent.sleep(0)
+            time.sleep(0)
 
     def values(self):
         values = {}
