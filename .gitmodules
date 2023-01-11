@@ -1,3 +1,0 @@
-[submodule "mapgen/flask-sockets"]
-	path = mapgen/flask_sockets
-	url = git@github.com:ibrewster/flask-sockets.git
