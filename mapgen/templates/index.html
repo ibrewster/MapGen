@@ -133,6 +133,31 @@
     </div>
 
 
+    <div id="volcLabelPosShield" style="display:none">
+        <div id="volcLabelPosDiv">
+            <div class="topDiv">
+                <h2>Customize Label Positions</h2>
+            </div>
+            <div id="customVolcLabelOuter">
+                <div id="customVolcLabelPos">
+                    <table id="volcLabelsTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>X</th>
+                                <th>Y</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div><button type=button id=closeVolcLabel>Close</button></div>
+        </div>
+    </div>
+
+
     <!--END DIALOGS-->
 
     <div id="main">
@@ -711,10 +736,10 @@
                     </div>
                     <div class="setupContent blockDisplay volcanoContent">
                         <div class="leftAlign">
-                            <p>
+                            <div id="volcOptionsWrapper">
                             Options:<br>
                             Show names:
-                            <select name="showVolcNames">
+                            <select name="showVolcNames" id="volcLabelLocation">
                                 <option value='' selected>None</option>
                                 <option value="BC">Top Center</option>
                                 <option value="BL">Top Right</option>
@@ -724,12 +749,12 @@
                                 <option value="TR">Bottom Left</option>
                                 <option value="MR">Left</option>
                                 <option value="BR">Top Left</option>
-                                
-                                
-                                
                             </select>
-                            <br><input type="checkbox" id="showVolcColor" name="showVolcColor" checked> Color Volcano Markers
-                            </p>
+                            <div id="volcEditDiv">
+                                <button type="button" id="editVolcLocs">Edit Label Locations</button>
+                            </div>
+                            <input type="checkbox" id="showVolcColor" name="showVolcColor" checked> Color Volcano Markers
+                            </div>
                         </div>
                         <div id="volcanoListTop">
 

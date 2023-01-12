@@ -13,6 +13,7 @@ logging.basicConfig(level = logging.INFO)
 
 app = flask.Flask(__name__)
 app.config['SESSION_TYPE'] = 'filesystem'
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 session = Session(app)
 sockets = Sock(app)

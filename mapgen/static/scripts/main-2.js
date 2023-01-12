@@ -1,11 +1,31 @@
 var map = null;
 var volcanoMarkers=[]
 let uncheckedVolcs=[]
+let customVolcLabels=[]
 var overviewRatio = 5;
 var staTimer = null;
 var monitorSocket = null;
 var pingTimer = null;
 var units = "i"
+
+const labelOffsets={
+    BL: [[17,-17],'right'], //top right
+    BR: [[-17,-17],'left'], //top left
+    TR: [[-17,28],'left'],  //bottom left
+    TL: [[17,28],'right'],  //bottom right
+    BC: [[0,-17],'center'], //top center
+    ML: [[17,5],'right'],   //right
+    TC: [[0,17],'bottom'],  //bottom center
+    MR: [[-17,8],'left']    //left
+}
+
+const volcColors={
+    volcanoRED:'#EC0000',
+    volcanoGREEN:'#87C264',
+    volcanoYELLOW:'#FFFF66',
+    volcanoORANGE:'#FF9933',
+    volcanoUNASSIGNED:'#777777'
+}
 
 /*
 multiplication factor to go from one unit of measure to another
@@ -72,6 +92,7 @@ $(document).ready(function() {
     $(document).on('change', '#overview, #overviewWidth', setOverviewDiv);
     $(document).on('change', 'div.volc .staCheck',plotVolcanoes);
     $(document).on('change', '.staCheck', trackUnchecked);
+    $(document).on('change','#volcLabelsTable tbody tr td input',updateVolcOffset)
 
     $('#overviewWidth').change(function() { overviewChanged = true; })
     $('#getMap').click(getMap);
@@ -80,6 +101,8 @@ $(document).ready(function() {
 
     $(window).resize(sizeMap);
     $('#showVolcColor').change(plotVolcanoes);
+    $('#editVolcLocs').click(showVolcLabelEditor);
+    $('#volcLabelLocation').change(plotVolcanoes);
     $('.latLon').change(setBounds);
     $('.reload').click(updateBounds);
     $('#addNewMap').click(addNewMap);
@@ -93,6 +116,11 @@ $(document).ready(function() {
     $('#plotDataCSV').change(parseDataHeaders);
     $('.setCM').click(openCMSelector);
     $('area.cmArea').click(selectColormap);
+    
+    $('#closeVolcLabel').click(function(){
+      $('#volcLabelPosShield').hide();  
+    })
+
     $('#cmCancel').click(function(){
         $('#cmSelector').hide();
     });
@@ -134,11 +162,72 @@ $(document).ready(function() {
 
     $('.staOptDropdown').click(showIconOptions)
 
+    $('#volcLabelPosDiv').draggable({
+        handle:"div.topDiv, dif.topDiv h2"
+    })
+
     changeFileType();
     setOverviewDiv();
     getStationsDebounce();
     setupAccordion();
 });
+
+function updateVolcOffset(){
+    //this should be an offset input box
+    const row=$(this).closest('tr.volcOffsetRow');
+    const checkID=row.data('volc');
+    const currVal=JSON.parse($(`#${checkID}`).val())
+    let xoffset=row.find('td.xoffset input').val();
+    let yoffset=row.find('td.yoffset input').val();
+
+    let defOffset,dir;
+    [defOffset,dir]=labelOffsets[$('#volcLabelLocation').val()];
+    currVal['offx']=xoffset-defOffset[0];
+    currVal['offy']=yoffset-defOffset[1];
+    $(`#${checkID}`).val(JSON.stringify(currVal));
+
+    plotVolcanoes();
+}
+
+function makeOffsetEntry(val){
+    const picker=$('<input type=number max=500 min=-500 step=1>');
+    picker.val(val);
+    const item=$('<td>');
+    item.append(picker);
+    return item;
+}
+
+function showVolcLabelEditor(){
+    if($('#volcLabelLocation').val()==''){
+        return;
+    }
+
+    const listTable=$('#volcLabelsTable tbody').empty();
+    const checkedVolcs=getChecked('div.volc');
+    let offset,dir;
+    [offset,dir]=labelOffsets[$('#volcLabelLocation').val()];
+    $(checkedVolcs).each(function(idx,volc){
+        const checkID=computeVolcID(volc['name']);
+
+        const row=$(`<tr class="volcOffsetRow" data-volc=${checkID}>`);
+        const curData=JSON.parse($('#'+checkID).val());
+        let offx=offset[0]
+        let offy=offset[1]
+        if(curData['offx'] || curData['offy']){
+            offx=curData['offx']+offset[0];
+            offy=curData['offy']+offset[1];
+        }
+        row.append(`<td>${volc['name']}`);
+        const xentry=makeOffsetEntry(offx).addClass('xoffset');
+        const yentry=makeOffsetEntry(offy).addClass('yoffset');
+        row.append(xentry);
+        row.append(yentry);
+
+        listTable.append(row);
+    })
+
+    $('#volcLabelPosShield').show();
+}
 
 function setSymbol(){
     const target=$('#staIconOpts').data('target');
@@ -955,18 +1044,17 @@ function plotVolcanoesRun(){
     
     const checkedVolcs=getChecked('div.volc');
     const useColor=$('#showVolcColor').is(':checked')
-    const colors={
-        volcanoRED:'#EC0000',
-        volcanoGREEN:'#87C264',
-        volcanoYELLOW:'#FFFF66',
-        volcanoORANGE:'#FF9933',
-        volcanoUNASSIGNED:'#777777'
+
+    let offset,dir;
+    const labelPos=labelOffsets[$('#volcLabelLocation').val()];
+
+    if(typeof(labelPos)!='undefined'){
+        [offset,dir]=labelPos;
     }
 
-    const labelOffsets={}
     const toolTipOpts={
-        offset:[17,-17],
-        direction:'right',
+        offset:offset,
+        direction:dir,
         permanent:true,
         className: "volcNameLabel",
         opacity:1,
@@ -975,13 +1063,14 @@ function plotVolcanoesRun(){
     }
 
     $(checkedVolcs).each(function(idx,volcInfo){
-        let color=useColor? colors[volcInfo['cat']] : '#FFF';
+        const color=useColor? volcColors[volcInfo['cat']] : '#FFF';
         let lng=Number(volcInfo['lng']);
         if(lng>0){
             lng-=360;
         }
-        let latlng=[Number(volcInfo['lat']), lng];
-        let marker=new L.triangleMarker(latlng,
+        const latlng=[Number(volcInfo['lat']), lng];
+
+        const marker=new L.triangleMarker(latlng,
         {
             color:'#000',
             weight:1,
@@ -990,11 +1079,25 @@ function plotVolcanoesRun(){
             fillOpacity:1.0,
             width:17,
             height:10
-        }
-        )
+        })
         .addTo(map);
 
-        marker.bindTooltip(volcInfo['name'],toolTipOpts).openTooltip();
+        if(typeof(labelPos)!='undefined'){
+            const checkVal=JSON.parse($('#'+computeVolcID(volcInfo['name'])).val());
+            const custX=checkVal['offx'];
+            const custY=checkVal['offy'];
+            let itemOffset=offset;
+            if(typeof(custX)!=='undefined' && typeof(custY)!=='undefined'){
+                itemOffset=[
+                    Number(custX)+offset[0],
+                    Number(custY)+offset[1]
+                ];
+            }
+            toolTipOpts['offset']=itemOffset;
+
+            marker.bindTooltip(volcInfo['name'],toolTipOpts).openTooltip();
+        }
+
         volcanoMarkers.push(marker);
     })
 
@@ -1126,6 +1229,10 @@ function displayStations() {
     sizeMap();
 }
 
+function computeVolcID(volc_name){
+    return 'volc_'+volc_name.replace(/[^a-zA-Z]/g,'');
+}
+
 function createVolcDiv(volc) {
     var info = {
         'lat': volc['lat'],
@@ -1137,6 +1244,8 @@ function createVolcDiv(volc) {
     var div = $('<div class="volc">')
     var value = JSON.stringify(info);
     var checkbox = $('<input type="checkbox" class="staCheck" name="station">');
+    checkbox.attr('id',computeVolcID(volc['vName']));
+
     checkbox.val(value);
     div.append(checkbox);
     div.append(volc['vName']);
