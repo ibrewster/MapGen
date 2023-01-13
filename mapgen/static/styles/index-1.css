@@ -581,8 +581,12 @@ input.hidden{
     padding:0px;
     border:none;
     box-shadow: none;
-    font-size:17pt;
+    font-size:14pt;
     font-family: helvetica;
+}
+
+.volcNameLabel:before{
+    border:none;
 }
 
 #volcLabelPosShield{

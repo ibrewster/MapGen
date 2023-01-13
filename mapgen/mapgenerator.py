@@ -546,18 +546,25 @@ class MapGenerator:
                 })
 
         if volc_names:
+            try:
+                import pygmt
+            except Exception:
+                os.environ['GMT_LIBRARY_PATH'] = '/usr/local/lib'
+                import pygmt
+                
             vnames, vx, vy = zip(*volc_names)
-            
-            # Plot the names using standard positioning    
-            self.fig.text(x = vx, y = vy, text = vnames,
-                          justify = volcNamePos,
-                          offset = f"j{point_size}p")
-            
-            # Plot the names using custom positioning
-            for name, x, y, offx, offy in volc_names_offset:
-                self.fig.text(x = x, y = y, text = name,
+            font_str = f"8p,Helvetica,black"
+            with pygmt.config(FONT_ANNOT_PRIMARY = font_str):
+                # Plot the names using standard positioning    
+                self.fig.text(x = vx, y = vy, text = vnames,
                               justify = volcNamePos,
-                              offset = f"j{offx}p/{offy}p")
+                              offset = f"j{point_size}p")
+                
+                # Plot the names using custom positioning
+                for name, x, y, offx, offy in volc_names_offset:
+                    self.fig.text(x = x, y = y, text = name,
+                                  justify = volcNamePos,
+                                  offset = f"j{offx}p/{offy}p")
 
     def _plot_data(self, zoom):
         plotdata_file = self.data.get('plotDataFile')
