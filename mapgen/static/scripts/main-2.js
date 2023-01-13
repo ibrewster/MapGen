@@ -179,6 +179,8 @@ function updateVolcOffset(){
     const currVal=JSON.parse($(`#${checkID}`).val())
     let xoffset=row.find('td.xoffset input').val();
     let yoffset=row.find('td.yoffset input').val();
+    // Re-invert the yoffset to leaflet coordinate system (up is down)
+    yoffset*=-1;
 
     let defOffset,dir;
     [defOffset,dir]=labelOffsets[$('#volcLabelLocation').val()];
@@ -186,7 +188,7 @@ function updateVolcOffset(){
     currVal['offy']=yoffset-defOffset[1];
     $(`#${checkID}`).val(JSON.stringify(currVal));
 
-    plotVolcanoes();
+    plotVolcanoesRun();
 }
 
 function makeOffsetEntry(val){
@@ -217,6 +219,10 @@ function showVolcLabelEditor(){
             offx=curData['offx']+offset[0];
             offy=curData['offy']+offset[1];
         }
+
+        //Invert the Y offset so up is up and down is down
+        offy*=-1;
+
         row.append(`<td>${volc['name']}`);
         const xentry=makeOffsetEntry(offx).addClass('xoffset');
         const yentry=makeOffsetEntry(offy).addClass('yoffset');
