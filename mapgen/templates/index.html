@@ -651,7 +651,7 @@
                         <span class="leftEdge"><input type="checkbox" class="sectionSelectAll" id="stationSelAll">All</span> Stations/Markers
                         <div class="help">
                             <div class="helpText">
-                                <p>Station(s) to be ploted on the map.</p>
+                                <p>Station(s) and other custom (via CSV) markers to be ploted on the map.</p>
                                 <p>
                                     Station list is retrieved automatically from
                                     https://volcanoes.usgs.gov/vsc/api/instrumentApi for the area displayed in
@@ -659,13 +659,13 @@
                                     and therfore covered by the same area).
                                 </p>
                                 <p>
-                                    You can add aditional stations to be plotted by uploading a CSV file
-                                    with the following columns:
+                                    You can add aditional stations or other custom markers to be plotted by 
+                                    uploading a CSV file with the following columns:
                                     <table>
                                         <tr>
                                             <td>Latitude</td>
                                             <td>Longitude</td>
-                                            <td>Station</td>
+                                            <td>Name</td>
                                             <td>Category ID</td>
                                         </tr>
                                     </table><br>
@@ -702,6 +702,15 @@
                                         </tbody>
                                     </table>
                                     The first row of the CSV is assumed to be a header row and is ignored.
+                                </p>
+                                <p>
+                                Custom labels (for the key), icons, and, in some cases, colors can be set for each 
+                                category by clicking the "Display Options" button. This allows you to use one of the 
+                                "standard" station types for other purposes - for example, you could set the "camera"
+                                station type label to "Targeted Volcano", and set it to use a filled black triangle icon,
+                                while setting the "Temperature" label to "Other Volcano" and setting the icon to a white
+                                triangle. Then, after deselecting the auto-retrieved temperature and camera stations (if any),
+                                you could upload a CSV of volcano locations, grouped into those two categories.
                                 </p>
                             </div>
                         </div>
