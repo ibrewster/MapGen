@@ -589,6 +589,22 @@ input.hidden{
     border:none;
 }
 
+.volcNameLabel .leaflet-popup-content-wrapper{
+    box-shadow:none;
+    background:transparent;
+    border:none;
+    padding:0px;
+}
+
+.volcNameLabel .leaflet-popup-content{
+    padding:0px;
+    margin:0px;
+}
+
+.volcNameLabel .leaflet-popup-tip-container{
+    display:none;
+}
+
 #volcLabelPosShield{
     position:fixed;
     z-index: 1202;

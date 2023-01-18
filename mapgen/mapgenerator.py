@@ -447,7 +447,6 @@ class MapGenerator:
         plot_defs = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         volcNamePos = self.data['showVolcNames']
         volc_names = []
-        volc_names_offset = []
         
         # Pull the user-selected icons/colors from the HTTP request data
         custom_symbols = self.station_symbols.copy()
@@ -497,22 +496,9 @@ class MapGenerator:
             symbol += point_size_str
 
             if symbol.startswith('tV') and volcNamePos != '':
-                offset_x = station.get('offx')
-                offset_y = station.get('offy')
-                if (offset_x or offset_y):
-                    ymul = -1 if volcNamePos[0] in ['B', 'M'] else 1
-                    xmul = -1 if volcNamePos[1] in ['R'] else 1
-                    offset_x = xmul * .6 * int(offset_x) + point_size
-                    offset_y = ymul * .6 * int(offset_y) + point_size
-                    volc_names_offset.append((
-                        station['name'],
-                        sta_x,
-                        sta_y,
-                        offset_x,
-                        offset_y
-                    ))
-                else:
-                    volc_names.append((station['name'], sta_x, sta_y))
+                label_x = station.get('labelLon')
+                label_y = station.get('labelLat')
+                volc_names.append((station['name'], label_x, label_y))
 
             plot_defs[symbol][color]['x'].append(sta_x)
             plot_defs[symbol][color]['y'].append(sta_y)
@@ -556,15 +542,11 @@ class MapGenerator:
             font_str = f"8p,Helvetica,black"
             with pygmt.config(FONT_ANNOT_PRIMARY = font_str):
                 # Plot the names using standard positioning    
-                self.fig.text(x = vx, y = vy, text = vnames,
-                              justify = volcNamePos,
-                              offset = f"j{point_size}p")
-                
-                # Plot the names using custom positioning
-                for name, x, y, offx, offy in volc_names_offset:
-                    self.fig.text(x = x, y = y, text = name,
-                                  justify = volcNamePos,
-                                  offset = f"j{offx}p/{offy}p")
+                self.fig.text(
+                    x = vx, y = vy,
+                    text = vnames,
+                    justify = 'TC',
+                )
 
     def _plot_data(self, zoom):
         plotdata_file = self.data.get('plotDataFile')

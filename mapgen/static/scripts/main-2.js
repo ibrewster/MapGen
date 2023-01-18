@@ -1,7 +1,7 @@
 var map = null;
 var volcanoMarkers=[]
+let volcanoTooltips=[]
 let uncheckedVolcs=[]
-let customVolcLabels=[]
 var overviewRatio = 5;
 var staTimer = null;
 var monitorSocket = null;
@@ -9,14 +9,14 @@ var pingTimer = null;
 var units = "i"
 
 const labelOffsets={
-    BL: [[17,-17],'right'], //top right
-    BR: [[-17,-17],'left'], //top left
-    TR: [[-17,28],'left'],  //bottom left
-    TL: [[17,28],'right'],  //bottom right
-    BC: [[0,-17],'center'], //top center
-    ML: [[17,5],'right'],   //right
+    BL: [[17,-37],'left'], //top right
+    BR: [[-17,-37],'right'], //top left
+    TR: [[-17,17],'right'],  //bottom left
+    TL: [[17,17],'left'],  //bottom right
+    BC: [[0,-37],'center'], //top center
+    ML: [[17,-12],'left'],   //right
     TC: [[0,17],'bottom'],  //bottom center
-    MR: [[-17,8],'left']    //left
+    MR: [[-17,-12],'right']    //left
 }
 
 const volcColors={
@@ -189,6 +189,37 @@ function updateVolcOffset(){
     $(`#${checkID}`).val(JSON.stringify(currVal));
 
     plotVolcanoesRun();
+}
+
+function makeDraggable(popup,checkID,offset){
+    const pos = map.latLngToLayerPoint(popup.getLatLng());
+    L.DomUtil.setPosition(popup._wrapper.parentNode, pos);
+    var draggable = new L.Draggable(popup._container, popup._wrapper);
+    draggable.enable();
+    
+    draggable.on('dragend', function() {
+        const volcCheck=$('#'+checkID);
+        const checkVal=JSON.parse(volcCheck.val());
+        var newLatLon = map.layerPointToLatLng(this._newPos);
+        let dx=this._newPos['x']-pos['x'];
+        let dy=this._newPos['y']-pos['y'];
+        popup.setLatLng(newLatLon);
+
+        checkVal['labelLat']=newLatLon['lat'];
+        checkVal['labelLon']=newLatLon['lng'];
+
+        // new position is change in position PLUS the default offset, 
+        // but we only want to save the difference between the default 
+        // offset position and the current position.
+        checkVal['offx']=dx-offset[0];
+        checkVal['offy']=dy-offset[1];
+
+        volcCheck.val(JSON.stringify(checkVal));
+
+        // again have to clear the top/bottom CSS leaflet adds to get 
+        // the label to show up in the correct position.
+        $(popup._container).css('top','').css('bottom','');
+    });
 }
 
 function makeOffsetEntry(val){
@@ -1041,10 +1072,28 @@ function plotVolcanoes(){
 //use a debounce timer on this so it doesn't get triggered many times when checking/unchecking all
 function plotVolcanoesRun(){
     volcPlotTimer=null;
-    for(const i in volcanoMarkers){
-        let marker=volcanoMarkers[i];
-        map.removeLayer(marker);
+    if(volcanoMarkers.length==volcanoTooltips.length){
+        //save a loop, if we can
+        for(const i in volcanoMarkers){
+            let marker=volcanoMarkers[i];
+            let tip=volcanoTooltips[i];
+            map.removeLayer(marker);
+            map.removeLayer(tip);
+        }
     }
+    else {
+        for(const i in volcanoMarkers){
+            let marker=volcanoMarkers[i];
+            map.removeLayer(marker);
+        }
+        
+        for(const i in volcanoTooltips){
+            let tip=volcanoTooltips[i];
+            map.removeLayer(tip);
+        }
+    }
+
+
     volcanoMarkers=[];
     volcanoTooltips=[];
     
@@ -1060,12 +1109,18 @@ function plotVolcanoesRun(){
 
     const toolTipOpts={
         offset:offset,
-        direction:dir,
         permanent:true,
         className: "volcNameLabel",
         opacity:1,
         fill:false,
-        fillColor:'#0F0'
+        fillColor:'#0F0',
+        interactive:true,
+        autoPan:false,
+        closeButton:false,
+        autoClose:false,
+        closeOnEscapeKey:false,
+        closeOnClick:false,
+        offset:[0,0]
     }
 
     $(checkedVolcs).each(function(idx,volcInfo){
@@ -1089,19 +1144,58 @@ function plotVolcanoesRun(){
         .addTo(map);
 
         if(typeof(labelPos)!='undefined'){
-            const checkVal=JSON.parse($('#'+computeVolcID(volcInfo['name'])).val());
+            const checkID=computeVolcID(volcInfo['name'])
+            const volcCheck=$('#'+checkID);
+            const checkVal=JSON.parse(volcCheck.val());
             const custX=checkVal['offx'];
             const custY=checkVal['offy'];
-            let itemOffset=offset;
+            let itemOffset=[offset[0],offset[1]];
             if(typeof(custX)!=='undefined' && typeof(custY)!=='undefined'){
                 itemOffset=[
                     Number(custX)+offset[0],
                     Number(custY)+offset[1]
                 ];
             }
-            toolTipOpts['offset']=itemOffset;
 
-            marker.bindTooltip(volcInfo['name'],toolTipOpts).openTooltip();
+            const tooltip=L.popup(toolTipOpts)
+            .setLatLng(latlng)
+            .setContent(volcInfo['name'])
+            .addTo(map)
+            .openTooltip();
+            
+            makeDraggable(tooltip,checkID,itemOffset);
+
+            // figure out where the label *actually* needs to be
+            // leaflet adds some huge offsets to the position of the text vs
+            // the lat/lon set for the "popup"
+            // would be easier with a tooltip, but I haven't managed to make
+            // one of those draggable as of yet
+            const container=$(tooltip._container);
+            
+            if(['left','right'].includes(dir)){
+                let labelWidth=container.width();
+                if(dir=='right'){
+                    labelWidth*=-1;
+                }
+                itemOffset[0]=itemOffset[0]+(labelWidth/2);
+            }
+
+            let pos=map.latLngToLayerPoint(tooltip.getLatLng());
+            pos['x']+=itemOffset[0];
+            pos['y']+=itemOffset[1];
+            const newPos=map.layerPointToLatLng(pos);
+            tooltip.setLatLng(newPos);
+
+            // add or update the lat/lon stored in this item to 
+            // the label position rather than the station position.
+            checkVal['labelLat']=newPos['lat'];
+            checkVal['labelLon']=newPos['lng'];
+            volcCheck.val(JSON.stringify(checkVal));
+
+            //unset the top/bottom CSS so the label actually shows up at the position it is set to.
+            container.css('top','').css('bottom','');
+
+            volcanoTooltips.push(tooltip);
         }
 
         volcanoMarkers.push(marker);
