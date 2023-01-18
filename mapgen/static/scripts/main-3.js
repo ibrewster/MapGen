@@ -1,6 +1,8 @@
 var map = null;
 var volcanoMarkers=[]
+let labelLocChanged=false;
 let volcanoTooltips=[]
+let customLabelLocs={}
 let uncheckedVolcs=[]
 var overviewRatio = 5;
 var staTimer = null;
@@ -102,7 +104,7 @@ $(document).ready(function() {
     $(window).resize(sizeMap);
     $('#showVolcColor').change(plotVolcanoes);
     $('#editVolcLocs').click(showVolcLabelEditor);
-    $('#volcLabelLocation').change(plotVolcanoes);
+    $('#volcLabelLocation').change(labelLocationChanged);
     $('.latLon').change(setBounds);
     $('.reload').click(updateBounds);
     $('#addNewMap').click(addNewMap);
@@ -1060,6 +1062,12 @@ function getChecked(parent){
     return locs
 }
 
+function labelLocationChanged(){
+    labelLocChanged=true;
+    customLabelLocs={};
+    plotVolcanoesRun();
+}
+
 let volcPlotTimer=null;
 function plotVolcanoes(){
     if(volcPlotTimer!=null){
@@ -1151,10 +1159,17 @@ function plotVolcanoesRun(){
             const custY=checkVal['offy'];
             let itemOffset=[offset[0],offset[1]];
             if(typeof(custX)!=='undefined' && typeof(custY)!=='undefined'){
-                itemOffset=[
-                    Number(custX)+offset[0],
-                    Number(custY)+offset[1]
-                ];
+                if(labelLocChanged){
+                    delete checkVal['offx'];
+                    delete checkVal['offy'];
+                }
+                else{
+                    customLabelLocs[checkVal['name']]=[custX,custY];
+                    itemOffset=[
+                        Number(custX)+offset[0],
+                        Number(custY)+offset[1]
+                    ];
+                }
             }
 
             const tooltip=L.popup(toolTipOpts)
@@ -1200,6 +1215,8 @@ function plotVolcanoesRun(){
 
         volcanoMarkers.push(marker);
     })
+
+    labelLocChanged=false;
 
 }
 
@@ -1339,6 +1356,12 @@ function createVolcDiv(volc) {
         'lon': volc['long'],
         'name': volc['vName'],
         'category': `volcano${volc['colorCode']}`
+    }
+
+    const custOffset=customLabelLocs[volc['vName']]
+    if(typeof(custOffset)!=='undefined'){
+        info['offx']=custOffset[0];
+        info['offy']=custOffset[1];
     }
 
     var div = $('<div class="volc">')
