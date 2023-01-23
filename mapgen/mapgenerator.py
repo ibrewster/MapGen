@@ -446,8 +446,10 @@ class MapGenerator:
 
         plot_defs = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         volcNamePos = self.data['showVolcNames']
+        staNamePos = self.data.get('showStationNames', True)
         volc_names = []
-        
+        station_names = []
+
         # Pull the user-selected icons/colors from the HTTP request data
         custom_symbols = self.station_symbols.copy()
         legend_labels = {}
@@ -495,10 +497,14 @@ class MapGenerator:
             point_size_str = f"{point_size}p"
             symbol += point_size_str
 
+            label_x = station.get('labelLon')
+            label_y = station.get('labelLat')
+
             if symbol.startswith('tV') and volcNamePos != '':
-                label_x = station.get('labelLon')
-                label_y = station.get('labelLat')
                 volc_names.append((station['name'], label_x, label_y))
+
+            if not symbol.startswith('tV') and staNamePos != '':
+                station_names.append((station['name'], label_x, label_y))
 
             plot_defs[symbol][color]['x'].append(sta_x)
             plot_defs[symbol][color]['y'].append(sta_y)
@@ -531,17 +537,36 @@ class MapGenerator:
                     'progress': prog
                 })
 
+        #Station/marker name labels
+        if station_names:
+            try:
+                import pygmt
+            except Exception:
+                os.environ['GMT_LIBRARY_PATH'] = '/usr/local/lib'
+                import pygmt
+
+            snames, vx, vy = zip(*station_names)
+            font_str = f"8p,Helvetica,black"
+            with pygmt.config(FONT_ANNOT_PRIMARY = font_str):
+                # Plot the names using standard positioning
+                self.fig.text(
+                    x = vx, y = vy,
+                    text = snames,
+                    justify = 'TC',
+                )
+
+        # Volcano Name labels
         if volc_names:
             try:
                 import pygmt
             except Exception:
                 os.environ['GMT_LIBRARY_PATH'] = '/usr/local/lib'
                 import pygmt
-                
+
             vnames, vx, vy = zip(*volc_names)
             font_str = f"8p,Helvetica,black"
             with pygmt.config(FONT_ANNOT_PRIMARY = font_str):
-                # Plot the names using standard positioning    
+                # Plot the names using standard positioning
                 self.fig.text(
                     x = vx, y = vy,
                     text = vnames,
@@ -790,6 +815,7 @@ class MapGenerator:
             logging.info("Getting ready to add stations")
             cur_dir = os.getcwd()
 
+            # Plot stations/markers on map
             stations = self.data.get('station', [])
             self._add_stations(stations, zoom)
 

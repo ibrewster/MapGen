@@ -1,8 +1,14 @@
 var map = null;
+let volcLabelLocChanged=false;
+let staLabelLocChanged=false;
 var volcanoMarkers=[]
-let labelLocChanged=false;
 let volcanoTooltips=[]
 let customLabelLocs={}
+
+let stationMarkers=[]
+let stationTooltips=[]
+let stationLabelLocs={}
+
 let uncheckedVolcs=[]
 var overviewRatio = 5;
 var staTimer = null;
@@ -242,7 +248,7 @@ function showVolcLabelEditor(){
     let offset,dir;
     [offset,dir]=labelOffsets[$('#volcLabelLocation').val()];
     $(checkedVolcs).each(function(idx,volc){
-        const checkID=computeVolcID(volc['name']);
+        const checkID=computeItemID(volc['name']);
 
         const row=$(`<tr class="volcOffsetRow" data-volc=${checkID}>`);
         const curData=JSON.parse($('#'+checkID).val());
@@ -1040,6 +1046,10 @@ function trackUnchecked(){
 }
 
 function getChecked(parent){
+    if(typeof(parent)==='undefined'){
+        parent='';
+    }
+
     const inputs=$(parent+' .staCheck:checked');
     let locs=[]
     inputs.each(function(idx,input){
@@ -1063,7 +1073,7 @@ function getChecked(parent){
 }
 
 function labelLocationChanged(){
-    labelLocChanged=true;
+    volcLabelLocChanged=true;
     customLabelLocs={};
     plotVolcanoesRun();
 }
@@ -1080,43 +1090,48 @@ function plotVolcanoes(){
 //use a debounce timer on this so it doesn't get triggered many times when checking/unchecking all
 function plotVolcanoesRun(){
     volcPlotTimer=null;
-    if(volcanoMarkers.length==volcanoTooltips.length){
-        //save a loop, if we can
-        for(const i in volcanoMarkers){
-            let marker=volcanoMarkers[i];
-            let tip=volcanoTooltips[i];
-            map.removeLayer(marker);
-            map.removeLayer(tip);
-        }
-    }
-    else {
-        for(const i in volcanoMarkers){
-            let marker=volcanoMarkers[i];
-            map.removeLayer(marker);
-        }
-        
-        for(const i in volcanoTooltips){
-            let tip=volcanoTooltips[i];
-            map.removeLayer(tip);
-        }
-    }
 
+    //clear out tracking lists
+    const maxLen=Math.max(
+        volcanoMarkers.length,
+        volcanoTooltips.length,
+        stationMarkers.length,
+        stationTooltips.length
+    )
+
+    const toRemove=[volcanoMarkers,volcanoTooltips,stationMarkers,stationLabelLocs];
+
+    for(let i=0;i<maxLen;i++){
+        for(const j in toRemove){
+            let layer=toRemove[j][i];
+            if(typeof(layer)!=='undefined'){
+                map.removeLayer(layer);
+            }
+        }
+    }
 
     volcanoMarkers=[];
     volcanoTooltips=[];
+    stationMarkers=[];
+    stationTooltips=[];
     
-    const checkedVolcs=getChecked('div.volc');
-    const useColor=$('#showVolcColor').is(':checked')
+    const checkedItems=getChecked();
+    const volcsUseColor=$('#showVolcColor').is(':checked')
 
-    let offset,dir;
-    const labelPos=labelOffsets[$('#volcLabelLocation').val()];
+    let volcOffset,volcDir,staOffset,staDir,labelOffset,labelDir,labelLocChanged;
+    const volcLabelPos=labelOffsets[$('#volcLabelLocation').val()];
+    const staLabelPos=labelOffsets[$('#staLabelLocation').val()];
 
-    if(typeof(labelPos)!='undefined'){
-        [offset,dir]=labelPos;
+    if(typeof(volcLabelPos)!='undefined'){
+        [volcOffset,volcDir]=volcLabelPos;
+    }
+
+    if(typeof(staLabelPos)!='undefined'){
+        [staOffset,staDir]=staLabelPos;
     }
 
     const toolTipOpts={
-        offset:offset,
+        offset:volcOffset,
         permanent:true,
         className: "volcNameLabel",
         opacity:1,
@@ -1131,33 +1146,67 @@ function plotVolcanoesRun(){
         offset:[0,0]
     }
 
-    $(checkedVolcs).each(function(idx,volcInfo){
-        const color=useColor? volcColors[volcInfo['cat']] : '#FFF';
-        let lng=Number(volcInfo['lng']);
+    $(checkedItems).each(function(idx,itemInfo){
+        let marker,labelPos;
+
+        //only applies to volcanoes, stations/markers will be undefined.
+        let isVolc=false;
+        try{
+            isVolc=itemInfo['cat'].startsWith('volcano');
+        } catch {
+            // Not a string, so not a volcano.
+            isVolc=false;
+        }
+
+        const color=volcsUseColor? volcColors[itemInfo['cat']] : '#FFF';
+        let lng=Number(itemInfo['lng']);
         if(lng>0){
             lng-=360;
         }
-        const latlng=[Number(volcInfo['lat']), lng];
+        const latlng=[Number(itemInfo['lat']), lng];
 
-        const marker=new L.triangleMarker(latlng,
-        {
-            color:'#000',
-            weight:1,
-            fill:true,
-            fillColor:color,
-            fillOpacity:1.0,
-            width:17,
-            height:10
-        })
-        .addTo(map);
+
+        if(isVolc){
+            labelPos=volcLabelPos;
+            labelOffset=volcOffset;
+            labelDir=volcDir;
+            labelLocChanged=volcLabelLocChanged;
+            marker=new L.triangleMarker(latlng,
+            {
+                color:'#000',
+                weight:1,
+                fill:true,
+                fillColor:color,
+                fillOpacity:1.0,
+                width:17,
+                height:10
+            })
+            .addTo(map);
+        }
+        else{
+            labelPos=staLabelPos;
+            labelOffset=staOffset;
+            labelDir=staDir;
+            labelLocChanged=staLabelLocChanged;
+            marker=new L.CircleMarker(latlng,
+                {
+                    color:'#000',
+                    weight:1,
+                    fill:true,
+                    fillColor:'#00C',
+                    fillOpacity:0.5,
+                    radius:6
+                })
+                .addTo(map);
+        }
 
         if(typeof(labelPos)!='undefined'){
-            const checkID=computeVolcID(volcInfo['name'])
-            const volcCheck=$('#'+checkID);
-            const checkVal=JSON.parse(volcCheck.val());
+            const checkID=computeItemID(itemInfo['name'])
+            const itemCheck=$('#'+checkID);
+            const checkVal=JSON.parse(itemCheck.val());
             const custX=checkVal['offx'];
             const custY=checkVal['offy'];
-            let itemOffset=[offset[0],offset[1]];
+            let itemOffset=[labelOffset[0],labelOffset[1]];
             if(typeof(custX)!=='undefined' && typeof(custY)!=='undefined'){
                 if(labelLocChanged){
                     delete checkVal['offx'];
@@ -1166,15 +1215,15 @@ function plotVolcanoesRun(){
                 else{
                     customLabelLocs[checkVal['name']]=[custX,custY];
                     itemOffset=[
-                        Number(custX)+offset[0],
-                        Number(custY)+offset[1]
+                        Number(custX)+labelOffset[0],
+                        Number(custY)+labelOffset[1]
                     ];
                 }
             }
 
             const tooltip=L.popup(toolTipOpts)
             .setLatLng(latlng)
-            .setContent(volcInfo['name'])
+            .setContent(itemInfo['name'])
             .addTo(map)
             .openTooltip();
             
@@ -1187,9 +1236,9 @@ function plotVolcanoesRun(){
             // one of those draggable as of yet
             const container=$(tooltip._container);
             
-            if(['left','right'].includes(dir)){
+            if(['left','right'].includes(labelDir)){
                 let labelWidth=container.width();
-                if(dir=='right'){
+                if(labelDir=='right'){
                     labelWidth*=-1;
                 }
                 itemOffset[0]=itemOffset[0]+(labelWidth/2);
@@ -1205,18 +1254,28 @@ function plotVolcanoesRun(){
             // the label position rather than the station position.
             checkVal['labelLat']=newPos['lat'];
             checkVal['labelLon']=newPos['lng'];
-            volcCheck.val(JSON.stringify(checkVal));
+            itemCheck.val(JSON.stringify(checkVal));
 
             //unset the top/bottom CSS so the label actually shows up at the position it is set to.
             container.css('top','').css('bottom','');
 
-            volcanoTooltips.push(tooltip);
+            if(isVolc){
+                volcanoTooltips.push(tooltip);
+            }
+            else{
+                stationTooltips.push(tooltip);
+            }
         }
 
-        volcanoMarkers.push(marker);
+        if(isVolc){
+            volcanoMarkers.push(marker);
+        }else{
+            stationMarkers.push(marker);
+        }
     })
 
-    labelLocChanged=false;
+    volcLabelLocChanged=false;
+    staLabelLocChanged=false;
 
 }
 
@@ -1346,7 +1405,7 @@ function displayStations() {
     sizeMap();
 }
 
-function computeVolcID(volc_name){
+function computeItemID(volc_name){
     return 'volc_'+volc_name.replace(/[^a-zA-Z]/g,'');
 }
 
@@ -1367,7 +1426,7 @@ function createVolcDiv(volc) {
     var div = $('<div class="volc">')
     var value = JSON.stringify(info);
     var checkbox = $('<input type="checkbox" class="staCheck" name="station">');
-    checkbox.attr('id',computeVolcID(volc['vName']));
+    checkbox.attr('id',computeItemID(volc['vName']));
 
     checkbox.val(value);
     div.append(checkbox);
@@ -1380,7 +1439,7 @@ function createStationDiv(sta, cat) {
     var info = {
         'lat': sta['lat'],
         'lon': sta['long'],
-        'name': sta['staton'],
+        'name': sta['station'],
         'category': cat
     }
 
@@ -1388,6 +1447,7 @@ function createStationDiv(sta, cat) {
     var value = JSON.stringify(info);
     var checkbox = $('<input type="checkbox" class="staCheck" name="station">');
     checkbox.val(value);
+    checkbox.attr('id',computeItemID(sta['station']));
     div.append(checkbox);
     div.append(sta['station']);
     var destID = `staCat${sta['catId']}`;
