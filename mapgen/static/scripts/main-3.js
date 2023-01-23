@@ -7,7 +7,6 @@ let customLabelLocs={}
 
 let stationMarkers=[]
 let stationTooltips=[]
-let stationLabelLocs={}
 
 let uncheckedVolcs=[]
 var overviewRatio = 5;
@@ -219,8 +218,13 @@ function makeDraggable(popup,checkID,offset){
         // new position is change in position PLUS the default offset, 
         // but we only want to save the difference between the default 
         // offset position and the current position.
-        checkVal['offx']=dx-offset[0];
-        checkVal['offy']=dy-offset[1];
+        const offx=dx-offset[0];
+        const offy=dy-offset[1];
+        customLabelLocs[checkVal['name']]=[offx,offy];
+
+        checkVal['offx']=offx;
+        checkVal['offy']=offy;
+
 
         volcCheck.val(JSON.stringify(checkVal));
 
@@ -1087,6 +1091,7 @@ function plotVolcanoes(){
     volcPlotTimer=setTimeout(plotVolcanoesRun,100);
 }
 
+let DEBUG=false;
 //use a debounce timer on this so it doesn't get triggered many times when checking/unchecking all
 function plotVolcanoesRun(){
     volcPlotTimer=null;
@@ -1099,7 +1104,7 @@ function plotVolcanoesRun(){
         stationTooltips.length
     )
 
-    const toRemove=[volcanoMarkers,volcanoTooltips,stationMarkers,stationLabelLocs];
+    const toRemove=[volcanoMarkers,volcanoTooltips,stationMarkers,stationTooltips];
 
     for(let i=0;i<maxLen;i++){
         for(const j in toRemove){
@@ -1108,6 +1113,10 @@ function plotVolcanoesRun(){
                 map.removeLayer(layer);
             }
         }
+    }
+
+    if(DEBUG==true){
+        return;
     }
 
     volcanoMarkers=[];
@@ -1441,6 +1450,12 @@ function createStationDiv(sta, cat) {
         'lon': sta['long'],
         'name': sta['station'],
         'category': cat
+    }
+
+    const custOffset=customLabelLocs[sta['station']]
+    if(typeof(custOffset)!=='undefined'){
+        info['offx']=custOffset[0];
+        info['offy']=custOffset[1];
     }
 
     var div = $('<div class="sta">')
