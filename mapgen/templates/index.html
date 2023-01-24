@@ -172,7 +172,7 @@
                         </div>
                         <div>
                             Show names:
-                            <select name="showStationNames" id="staLabelLocation">
+                            <select name="showStationNames" class="labelLocation" id="staLabelLocation" data-parent="div.sta">
                                 <option value='' selected>None</option>
                                 <option value="BC">Top Center</option>
                                 <option value="BL">Top Right</option>
@@ -661,7 +661,7 @@
                     <!--End data plot CSV upload-->
 
                     <!--Station Selector Sidebar-->
-                    <div class="setupHeader">
+                    <div class="setupHeader markerSection">
                         <span class="leftEdge"><input type="checkbox" class="sectionSelectAll" id="stationSelAll">All</span> Stations/Markers
                         <div class="help">
                             <div class="helpText">
@@ -729,7 +729,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="setupContent blockDisplay">
+                    <div class="setupContent blockDisplay markerSection">
                         <button type="button" id="stationOptions">Display Options</button>
 
                         <div id="stationCSV">
@@ -743,7 +743,7 @@
                     <!--End Station Selector Sidebar-->
 
                     <!--Volcano Selector Sidebar-->
-                    <div class="setupHeader volcanoHeader">
+                    <div class="setupHeader markerSection">
                         <span class="leftEdge"><input type="checkbox" class="sectionSelectAll" id="volcanoSelAll">All</span> Volcanoes
                         <div class="help">
                             <div class="helpText">
@@ -765,12 +765,12 @@
                             </div>
                         </div>
                     </div>
-                    <div class="setupContent blockDisplay volcanoContent">
+                    <div class="setupContent blockDisplay markerSection">
                         <div class="leftAlign">
                             <div id="volcOptionsWrapper">
                             Options:<br>
                             Show names:
-                            <select name="showVolcNames" id="volcLabelLocation">
+                            <select name="showVolcNames" class="labelLocation" id="volcLabelLocation" data-parent="div.volc">
                                 <option value='' selected>None</option>
                                 <option value="BC">Top Center</option>
                                 <option value="BL">Top Right</option>

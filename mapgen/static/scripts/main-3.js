@@ -1,6 +1,5 @@
 var map = null;
-let volcLabelLocChanged=false;
-let staLabelLocChanged=false;
+
 var volcanoMarkers=[]
 let volcanoTooltips=[]
 let customLabelLocs={}
@@ -8,7 +7,8 @@ let customLabelLocs={}
 let stationMarkers=[]
 let stationTooltips=[]
 
-let uncheckedVolcs=[]
+let uncheckedMarkers=[]
+
 var overviewRatio = 5;
 var staTimer = null;
 var monitorSocket = null;
@@ -100,7 +100,7 @@ $(document).ready(function() {
     });
     $(document).on('click', 'button.deleteInset', removeInsetMap);
     $(document).on('change', '#overview, #overviewWidth', setOverviewDiv);
-    $(document).on('change', 'div.volc .staCheck',plotMarkers);
+    $(document).on('change', '.staCheck',plotMarkers);
     $(document).on('change', '.staCheck', trackUnchecked);
     $(document).on('change','#volcLabelsTable tbody tr td input',updateVolcOffset)
 
@@ -112,7 +112,7 @@ $(document).ready(function() {
     $(window).resize(sizeMap);
     $('#showVolcColor').change(plotMarkers);
     $('#editVolcLocs').click(showVolcLabelEditor);
-    $('#volcLabelLocation').change(labelLocationChanged);
+    $('.labelLocation').change(labelLocationChanged);
     $('.latLon').change(setBounds);
     $('.reload').click(updateBounds);
     $('#addNewMap').click(addNewMap);
@@ -1019,6 +1019,9 @@ function getStations() {
 
     query_volcs(minLat,maxLat,eastLon,westLon,eastLon2,westLon2);
     query_stations(minLat, maxLat, eastLon, westLon, eastLon2, westLon2);
+
+    //plot markers
+    plotMarkers()
 }
 
 function query_volcs(minLat, maxLat, eastLon, westLon, eastLon2, westLon2){
@@ -1033,9 +1036,6 @@ function query_volcs(minLat, maxLat, eastLon, westLon, eastLon2, westLon2){
         if (westLon2 !== null && eastLon2 !== null) {
             query_volcs(minLat, maxLat, eastLon2, westLon2, null, null);
         }
-
-        //plot volcanoes
-        plotMarkers()
     })
 }
 
@@ -1043,13 +1043,13 @@ function trackUnchecked(){
     const value=JSON.parse(this.value);
     const identStr=`${value['lat']}_${value['lon']}_${value['category']}`;
     if($(this).is(':checked')){
-        const itemIdx=uncheckedVolcs.indexOf(identStr);
+        const itemIdx=uncheckedMarkers.indexOf(identStr);
         if(itemIdx>=0){
-            uncheckedVolcs.splice(itemIdx,1);
+            uncheckedMarkers.splice(itemIdx,1);
         }
     }
     else{
-        uncheckedVolcs.push(identStr);
+        uncheckedMarkers.push(identStr);
     }
 }
 
@@ -1080,9 +1080,19 @@ function getChecked(parent){
     return locs
 }
 
+function removeCustomPosition(){
+    //"this" is a station checkbox, thanks to jQuery
+    const checkVal=JSON.parse(this.value);
+    const markerName=checkVal['name'];
+    delete checkVal['offx'];
+    delete checkVal['offy'];
+    delete customLabelLocs[markerName];
+    this.value=JSON.stringify(checkVal);
+}
+
 function labelLocationChanged(){
-    volcLabelLocChanged=true;
-    customLabelLocs={};
+    const parent=$(this).data('parent');
+    $(parent+' .staCheck').each(removeCustomPosition);
     plotMarkersRun();
 }
 
@@ -1183,7 +1193,6 @@ function plotMarkersRun(){
             labelPos=volcLabelPos;
             labelOffset=volcOffset;
             labelDir=volcDir;
-            labelLocChanged=volcLabelLocChanged;
             marker=new L.triangleMarker(latlng,
             {
                 color:'#000',
@@ -1200,7 +1209,6 @@ function plotMarkersRun(){
             labelPos=staLabelPos;
             labelOffset=staOffset;
             labelDir=staDir;
-            labelLocChanged=staLabelLocChanged;
             marker=new L.CircleMarker(latlng,
                 {
                     color:'#000',
@@ -1221,17 +1229,11 @@ function plotMarkersRun(){
             const custY=checkVal['offy'];
             let itemOffset=[labelOffset[0],labelOffset[1]];
             if(typeof(custX)!=='undefined' && typeof(custY)!=='undefined'){
-                if(labelLocChanged){
-                    delete checkVal['offx'];
-                    delete checkVal['offy'];
-                }
-                else{
-                    customLabelLocs[checkVal['name']]=[custX,custY];
-                    itemOffset=[
-                        Number(custX)+labelOffset[0],
-                        Number(custY)+labelOffset[1]
-                    ];
-                }
+                customLabelLocs[checkVal['name']]=[custX,custY];
+                itemOffset=[
+                    Number(custX)+labelOffset[0],
+                    Number(custY)+labelOffset[1]
+                ];
             }
 
             const tooltip=L.popup(toolTipOpts)
@@ -1286,10 +1288,6 @@ function plotMarkersRun(){
             stationMarkers.push(marker);
         }
     })
-
-    volcLabelLocChanged=false;
-    staLabelLocChanged=false;
-
 }
 
 function query_stations(minLat, maxLat, eastLon, westLon, eastLon2, westLon2) {
@@ -1419,7 +1417,7 @@ function displayStations() {
 }
 
 function computeItemID(volc_name){
-    return 'volc_'+volc_name.replace(/[^a-zA-Z]/g,'');
+    return 'marker_'+volc_name.replace(/[^a-zA-Z0-9]/g,'');
 }
 
 function createVolcDiv(volc) {
@@ -1429,23 +1427,8 @@ function createVolcDiv(volc) {
         'name': volc['vName'],
         'category': `volcano${volc['colorCode']}`
     }
-
-    const custOffset=customLabelLocs[volc['vName']]
-    if(typeof(custOffset)!=='undefined'){
-        info['offx']=custOffset[0];
-        info['offy']=custOffset[1];
-    }
-
-    var div = $('<div class="volc">')
-    var value = JSON.stringify(info);
-    var checkbox = $('<input type="checkbox" class="staCheck" name="station">');
-    checkbox.attr('id',computeItemID(volc['vName']));
-
-    checkbox.val(value);
-    div.append(checkbox);
-    div.append(volc['vName']);
     var destID = `volcCat${volc['colorCode']}`;
-    $(`#${destID}`).append(div);
+    createMarkerDiv(info,destID,"volc");
 }
 
 function createStationDiv(sta, cat) {
@@ -1455,21 +1438,33 @@ function createStationDiv(sta, cat) {
         'name': sta['station'],
         'category': cat
     }
+    var destID = `staCat${sta['catId']}`;
+    createMarkerDiv(info,destID,"sta");
+}
 
-    const custOffset=customLabelLocs[sta['station']]
+function createMarkerDiv(info,destID,classname){
+    const markerName=info['name'];
+
+    const custOffset=customLabelLocs[markerName];
     if(typeof(custOffset)!=='undefined'){
         info['offx']=custOffset[0];
         info['offy']=custOffset[1];
     }
 
-    var div = $('<div class="sta">')
+    var div = $('<div>')
+    .addClass(classname);
+
     var value = JSON.stringify(info);
-    var checkbox = $('<input type="checkbox" class="staCheck" name="station">');
-    checkbox.val(value);
-    checkbox.attr('id',computeItemID(sta['station']));
+    var checkbox = $('<input type="checkbox">')
+    .addClass("staCheck")
+    .attr("name","station")
+    .attr('id',computeItemID(markerName))
+    .data('name',markerName)
+    .val(value);
+
     div.append(checkbox);
-    div.append(sta['station']);
-    var destID = `staCat${sta['catId']}`;
+    div.append(markerName);
+
     $(`#${destID}`).append(div);
 }
 
@@ -1502,11 +1497,11 @@ function toggleStations(reset) {
     $(this).closest('div.setupHeader').next('div.setupContent').find('input.staCheck').each(function() {
         const value=JSON.parse(this.value);
         const identStr=`${value['lat']}_${value['lon']}_${value['category']}`;
-        let itemIdx=uncheckedVolcs.indexOf(identStr);
+        let itemIdx=uncheckedMarkers.indexOf(identStr);
         if(checked){
             if(reset===true && itemIdx>=0){
                 //if resetting, remove this item from the unchecked list
-                uncheckedVolcs.splice(itemIdx,1);
+                uncheckedMarkers.splice(itemIdx,1);
                 //no longer in list, so index is now -1
                 itemIdx=-1;
             }
@@ -1521,13 +1516,13 @@ function toggleStations(reset) {
         else{ //checked=false
             this.checked = checked;
             if(itemIdx<0){
-                uncheckedVolcs.push(identStr);
+                uncheckedMarkers.push(identStr);
             }
         }
         checkForAll.call(this);
     })
 
-    if($(this).closest('div.setupHeader').hasClass('volcanoHeader')){
+    if($(this).closest('div.setupHeader').hasClass('markerSection')){
         plotMarkers();
     }
 }
@@ -1540,24 +1535,24 @@ function toggleAll() {
     $(this).closest('div.stationType').find('input.staCheck').each(function() {
         const value=JSON.parse(this.value);
         const identStr=`${value['lat']}_${value['lon']}_${value['category']}`;
-        const itemIdx=uncheckedVolcs.indexOf(identStr);
+        const itemIdx=uncheckedMarkers.indexOf(identStr);
         if(checked){
             // if in the list, remove it
             if(itemIdx>=0){
-                uncheckedVolcs.splice(itemIdx,1);
+                uncheckedMarkers.splice(itemIdx,1);
             }
         }
         else{
             // if not in the list, add it
             if(itemIdx<0){
-                uncheckedVolcs.push(identStr);
+                uncheckedMarkers.push(identStr);
             }
         }
 
         this.checked = checked;
     })
 
-    if($(this).closest('div.setupContent').hasClass('volcanoContent')){
+    if($(this).closest('div.setupContent').hasClass('markerSection')){
         plotMarkers();
     }
 
