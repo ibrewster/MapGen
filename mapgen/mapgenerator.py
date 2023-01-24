@@ -232,6 +232,7 @@ class MapGenerator:
                     est_size += file_info.get('bytes', -1)
 
         _t_start = time.time()
+        total_size_str = utils.format_size(est_size)
         for geojson in bounds_list:
             req = requests.get(url,
                                params = {'geojson': geojson,
@@ -244,19 +245,21 @@ class MapGenerator:
                 continue
 
             with open(zf_path, 'wb') as zf:
-                for chunk in req.iter_content(chunk_size = chunk_size):
+                for chunk in req.iter_content(chunk_size = None):
                     if chunk:
                         bytes_written = zf.write(chunk)
                         loaded_bytes += bytes_written
                         if est_size > 0:
                             pc = round((loaded_bytes / est_size) * 100, 1)
+                            current_size = utils.format_size(loaded_bytes)
 
                             self._update_status({
-                                'status': "Downloading hillshade files...",
+                                'status': f"Downloading hillshade files ({current_size}/{total_size_str})...",
                                 'progress': pc
                             })
 
-            logging.info(f"Downloaded {loaded_bytes} bytes of hillshade files")
+            _t_download = time.time() - _t_start
+            logging.info(f"Downloaded {utils.format_size(loaded_bytes)} of hillshade files in {_t_download} ({utils.format_size(loaded_bytes / _t_download)}/sec)")
 
             # Pull out the various tiff files needed
             logging.info("Extracting tiffs")
