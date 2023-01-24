@@ -113,6 +113,9 @@ $(document).ready(function() {
     $('#showVolcColor').change(plotMarkers);
     $('#editVolcLocs').click(showVolcLabelEditor);
     $('.labelLocation').change(labelLocationChanged);
+    $('#staLabelLocation').change(function(){
+        $('#stationNamesValue').val(this.value);
+    })
     $('.latLon').change(setBounds);
     $('.reload').click(updateBounds);
     $('#addNewMap').click(addNewMap);
@@ -1459,7 +1462,6 @@ function createMarkerDiv(info,destID,classname){
     .addClass("staCheck")
     .attr("name","station")
     .attr('id',computeItemID(markerName))
-    .data('name',markerName)
     .val(value);
 
     div.append(checkbox);

@@ -244,7 +244,7 @@ class MapGenerator:
                 continue
 
             with open(zf_path, 'wb') as zf:
-                for chunk in req.iter_content(chunk_size = None):
+                for chunk in req.iter_content(chunk_size = chunk_size):
                     if chunk:
                         bytes_written = zf.write(chunk)
                         loaded_bytes += bytes_written
