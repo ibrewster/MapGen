@@ -94,10 +94,13 @@ $(document).ready(function() {
     $(document).on('change', '.mapSize', sizeMap);
     $(document).on('click', 'input.staCheck', checkForAll);
     $(document).on('click', 'input.staCatAll', toggleAll);
-    $(document).on('click', '.sectionSelectAll', toggleStations);
+    $('.sectionSelectAll').click(function(e){
+        e.stopPropagation();
+        toggleStations.call(this,true);
+    });
     $(document).on('click', 'button.deleteInset', removeInsetMap);
     $(document).on('change', '#overview, #overviewWidth', setOverviewDiv);
-    $(document).on('change', 'div.volc .staCheck',plotVolcanoes);
+    $(document).on('change', 'div.volc .staCheck',plotMarkers);
     $(document).on('change', '.staCheck', trackUnchecked);
     $(document).on('change','#volcLabelsTable tbody tr td input',updateVolcOffset)
 
@@ -107,7 +110,7 @@ $(document).ready(function() {
     initMap();
 
     $(window).resize(sizeMap);
-    $('#showVolcColor').change(plotVolcanoes);
+    $('#showVolcColor').change(plotMarkers);
     $('#editVolcLocs').click(showVolcLabelEditor);
     $('#volcLabelLocation').change(labelLocationChanged);
     $('.latLon').change(setBounds);
@@ -195,7 +198,7 @@ function updateVolcOffset(){
     currVal['offy']=yoffset-defOffset[1];
     $(`#${checkID}`).val(JSON.stringify(currVal));
 
-    plotVolcanoesRun();
+    plotMarkersRun();
 }
 
 function makeDraggable(popup,checkID,offset){
@@ -399,7 +402,8 @@ function initMap() {
     map = L.map('topMap', {
         zoomSnap: 0,
         tap: false,
-        layers: [tiles]
+        layers: [tiles],
+        renderer: L.canvas()
     });
 
     L.latlngGraticule({
@@ -1031,7 +1035,7 @@ function query_volcs(minLat, maxLat, eastLon, westLon, eastLon2, westLon2){
         }
 
         //plot volcanoes
-        plotVolcanoes()
+        plotMarkers()
     })
 }
 
@@ -1079,22 +1083,22 @@ function getChecked(parent){
 function labelLocationChanged(){
     volcLabelLocChanged=true;
     customLabelLocs={};
-    plotVolcanoesRun();
+    plotMarkersRun();
 }
 
-let volcPlotTimer=null;
-function plotVolcanoes(){
-    if(volcPlotTimer!=null){
-        clearTimeout(volcPlotTimer);
+let markerPlotTimer=null;
+function plotMarkers(){
+    if(markerPlotTimer!=null){
+        clearTimeout(markerPlotTimer);
     }
 
-    volcPlotTimer=setTimeout(plotVolcanoesRun,100);
+    markerPlotTimer=setTimeout(plotMarkersRun,100);
 }
 
 let DEBUG=false;
 //use a debounce timer on this so it doesn't get triggered many times when checking/unchecking all
-function plotVolcanoesRun(){
-    volcPlotTimer=null;
+function plotMarkersRun(){
+    markerPlotTimer=null;
 
     //clear out tracking lists
     const maxLen=Math.max(
@@ -1489,17 +1493,24 @@ function createGroupDiv(group, id, dest,type) {
     dest.append(div);
 }
 
-function toggleStations() {
+function toggleStations(reset) {
     var checked = false;
     if ($(this).is(':checked')) {
         checked = true;
     }
 
     $(this).closest('div.setupHeader').next('div.setupContent').find('input.staCheck').each(function() {
+        const value=JSON.parse(this.value);
+        const identStr=`${value['lat']}_${value['lon']}_${value['category']}`;
+        let itemIdx=uncheckedVolcs.indexOf(identStr);
         if(checked){
-            const value=JSON.parse(this.value);
-            const identStr=`${value['lat']}_${value['lon']}_${value['category']}`;
-            if(uncheckedVolcs.indexOf(identStr)>=0){
+            if(reset===true && itemIdx>=0){
+                //if resetting, remove this item from the unchecked list
+                uncheckedVolcs.splice(itemIdx,1);
+                //no longer in list, so index is now -1
+                itemIdx=-1;
+            }
+            if(itemIdx>=0){
                 //this one should NOT be checked
                 this.checked=false;
             }
@@ -1509,12 +1520,15 @@ function toggleStations() {
         }
         else{ //checked=false
             this.checked = checked;
+            if(itemIdx<0){
+                uncheckedVolcs.push(identStr);
+            }
         }
         checkForAll.call(this);
     })
 
     if($(this).closest('div.setupHeader').hasClass('volcanoHeader')){
-        plotVolcanoes();
+        plotMarkers();
     }
 }
 
@@ -1544,16 +1558,22 @@ function toggleAll() {
     })
 
     if($(this).closest('div.setupContent').hasClass('volcanoContent')){
-        plotVolcanoes();
+        plotMarkers();
     }
+
+    //check if a higher level "all" checkbox needs to be checked.
+    checkForAll.call(this);
 }
 
 function checkForAll() {
-    var parent = $(this).closest('div.stationType');
-    if (parent.find('input.staCheck').length == parent.find('input.staCheck:checked').length) {
-        parent.find('input.staCatAll')[0].checked = true;
-    } else {
-        parent.find('input.staCatAll')[0].checked = false;
+    if(!$(this).hasClass('staCatAll')){
+        //only check the stationType div checkbox if this is not *already* a stationType div checkbox.
+        var parent = $(this).closest('div.stationType');
+        if (parent.find('input.staCheck').length == parent.find('input.staCheck:checked').length) {
+            parent.find('input.staCatAll')[0].checked = true;
+        } else {
+            parent.find('input.staCatAll')[0].checked = false;
+        }
     }
 
     var top = $(this).closest('div.setupContent');
