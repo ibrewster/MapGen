@@ -14,6 +14,7 @@
     <script src="static/scripts/Leaflet.Graticule.js" defer></script>
     <script src="static/scripts/leaflet-triangle-marker.min.js" defer></script>
     <script src="static/scripts/jquery.csv.js" defer></script>
+    <script src="static/scripts/svg_shapes.js" defer></script>
     <script src="static/scripts/main-3.js" defer></script>
     <script type="text/javascript">
         const ACTIVE_VOLCS=new Set({{activevolcs | safe}})
@@ -217,7 +218,7 @@
                             </thead>
                             <tbody>
                                 {%for type in staTypes %}
-                                <tr>
+                                <tr class="opt{{type['name']}} staIconOpts" data-markerClass="staMarker{{type['name']}}">
                                     <td>
                                         {{type['name']}}
                                         <input type="hidden" name="staOpt_Name" value="{{type['name']}}">
@@ -225,7 +226,7 @@
                                     <td>
                                         <div class="staIconSelector">
                                             <img class="staOptIconDisp" src="{{type['url']}}">
-                                            <input name="staOpt_Icon" value="{{type['symbol']}}" id="staOpt_Icon">
+                                            <input name="staOpt_Icon" value="{{type['symbol']}}" class="staOpt_Icon">
                                             <div class="staOptDropdown">&#9660;</div>
                                         </div>
                                     </td>

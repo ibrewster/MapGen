@@ -164,6 +164,8 @@ $(document).ready(function() {
 
     $('#closeStaOpts').click(function(){
         $('#stationDisplayOpts').hide();
+        refreshStationMarkerOpts();
+        plotMarkers();
     })
 
     $('#optSelectorShield').click(function(){
@@ -183,6 +185,7 @@ $(document).ready(function() {
     setOverviewDiv();
     getStationsDebounce();
     setupAccordion();
+    refreshStationMarkerOpts();
 });
 
 function updateVolcOffset(){
@@ -1099,6 +1102,32 @@ function labelLocationChanged(){
     plotMarkersRun();
 }
 
+let staIcons={};
+function refreshStationMarkerOpts(){
+    //generate a color/icon array for the station markers
+    $('#staMarkerStyle').remove(); //get rid of any old styles, as they may have changed.
+    const staStyle=$('<style id="staMarkerStyle" type="text/css">');
+    staIcons={};
+    $('#staOpts tbody tr.staIconOpts').each(function(){
+        const markerClass=$(this).data('markerclass');
+        let svg=icon_images[$(this).find('input.staOpt_Icon').val()];
+        if(typeof(svg)=='undefined'){
+            //set a default icon if none specified for this type
+            svg=icon_images['i'];
+        }
+
+        staIcons[markerClass]=svg;
+        const colorSelector=$(this).find('td.color input')
+        if(!colorSelector.hasClass('hidden')){
+            const css=`
+.${markerClass} path {fill:${colorSelector.val()};}
+            `;
+            staStyle.append(css);
+        }
+    })
+    $('head').append(staStyle);
+}
+
 let markerPlotTimer=null;
 function plotMarkers(){
     if(markerPlotTimer!=null){
@@ -1108,7 +1137,6 @@ function plotMarkers(){
     markerPlotTimer=setTimeout(plotMarkersRun,100);
 }
 
-let DEBUG=false;
 //use a debounce timer on this so it doesn't get triggered many times when checking/unchecking all
 function plotMarkersRun(){
     markerPlotTimer=null;
@@ -1130,10 +1158,6 @@ function plotMarkersRun(){
                 map.removeLayer(layer);
             }
         }
-    }
-
-    if(DEBUG==true){
-        return;
     }
 
     volcanoMarkers=[];
@@ -1173,7 +1197,7 @@ function plotMarkersRun(){
     }
 
     $(checkedItems).each(function(idx,itemInfo){
-        let marker,labelPos;
+        let marker,labelPos,svgIcon;
 
         //only applies to volcanoes, stations/markers will be undefined.
         let isVolc=false;
@@ -1184,7 +1208,8 @@ function plotMarkersRun(){
             isVolc=false;
         }
 
-        const color=volcsUseColor? volcColors[itemInfo['cat']] : '#FFF';
+        const itemCat=itemInfo['cat'];
+        const color=volcsUseColor? volcColors[itemCat] : '#FFF';
         let lng=Number(itemInfo['lng']);
         if(lng>0){
             lng-=360;
@@ -1212,14 +1237,19 @@ function plotMarkersRun(){
             labelPos=staLabelPos;
             labelOffset=staOffset;
             labelDir=staDir;
-            marker=new L.CircleMarker(latlng,
+            const markerClass=`staMarker${itemCat}`;
+            const svg=staIcons[markerClass]
+
+            svgIcon=L.divIcon({
+                html:svg,
+                className:markerClass,
+                iconSize:[15,15],
+                iconAnchor:[7.5,7.5]
+            })
+
+            marker=new L.Marker(latlng,
                 {
-                    color:'#000',
-                    weight:1,
-                    fill:true,
-                    fillColor:'#00C',
-                    fillOpacity:0.5,
-                    radius:6
+                    icon:svgIcon
                 })
                 .addTo(map);
         }
@@ -1291,6 +1321,8 @@ function plotMarkersRun(){
             stationMarkers.push(marker);
         }
     })
+
+
 }
 
 function query_stations(minLat, maxLat, eastLon, westLon, eastLon2, westLon2) {
