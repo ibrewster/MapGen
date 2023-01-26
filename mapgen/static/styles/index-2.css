@@ -576,7 +576,7 @@ input.hidden{
     padding:1px 5px;
 }
 
-.volcNameLabel{
+.markerNameLabel{
     background-color: transparent;
     padding:0px;
     border:none;
@@ -585,23 +585,23 @@ input.hidden{
     font-family: helvetica;
 }
 
-.volcNameLabel:before{
+.markerNameLabel:before{
     border:none;
 }
 
-.volcNameLabel .leaflet-popup-content-wrapper{
+.markerNameLabel .leaflet-popup-content-wrapper{
     box-shadow:none;
     background:transparent;
     border:none;
     padding:0px;
 }
 
-.volcNameLabel .leaflet-popup-content{
+.markerNameLabel .leaflet-popup-content{
     padding:0px;
     margin:0px;
 }
 
-.volcNameLabel .leaflet-popup-tip-container{
+.markerNameLabel .leaflet-popup-tip-container{
     display:none;
 }
 

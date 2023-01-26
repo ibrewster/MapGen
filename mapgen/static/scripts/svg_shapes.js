@@ -109,8 +109,8 @@ const point=`
 
 const tiltmeter=`
 <svg
-  width="15"
-  height="9.32"
+  width="24.14"
+  height="15"
   viewBox="0 0 141.74 88.068"
   version="1.1"
   preserveAspectRatio="none"
@@ -141,8 +141,8 @@ const temperature=`
 
 const camera=`
 <svg
-  width="15"
-  height="11.51"
+  width="19.5"
+  height="15"
   viewBox="0 0 100.65 77.285"
   version="1.1"
   preserveAspectRatio="none"
@@ -154,8 +154,8 @@ const camera=`
 
 const gas=`
 <svg
-  width="15"
-  height="9.15"
+  width="24.566"
+  height="15"
   viewBox="0 0 21.312 13.013"
   version="1.1"
   preserveAspectRatio="none"

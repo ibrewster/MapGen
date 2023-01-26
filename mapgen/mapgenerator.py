@@ -267,17 +267,25 @@ class MapGenerator:
             self._update_status("Decompressing hillshade data...")
 
             with zipfile.ZipFile(zf_path, 'r') as zf:
-                for file in zf.namelist():
-                    if file.endswith('.zip'):
-                        logging.info(f"Reading {file}")
-                        zf_data = BytesIO(zf.read(file))
-                        with zipfile.ZipFile(zf_data, 'r') as zf2:
-                            for tiffile in zf2.namelist():
-                                if tiffile.endswith('.tif'):
-                                    if os.path.isfile(os.path.join(tiff_dir, tiffile)):
-                                        continue  # already extracted, move on
-                                    logging.info(f"Extracting {tiffile}")
-                                    zf2.extract(tiffile, path = tiff_dir)
+                files = [x for x in zf.namelist() if x.endswith('.zip')]
+                file_count = len(files)
+                for idx, file in enumerate(files):
+                    logging.info(f"Reading {file}")
+                    zf_data = BytesIO(zf.read(file))
+                    with zipfile.ZipFile(zf_data, 'r') as zf2:
+                        for tiffile in zf2.namelist():
+                            if tiffile.endswith('.tif'):
+                                if os.path.isfile(os.path.join(tiff_dir, tiffile)):
+                                    continue  # already extracted, move on
+                                logging.info(f"Extracting {tiffile}")
+                                zf2.extract(tiffile, path = tiff_dir)
+                    if file_count > 1:                        
+                        pc = round(( (idx +1) / file_count) *100, 1)
+                        self._update_status({
+                            'status': f"Decompressing hillshade data ({idx + 1}/{file_count})...",
+                            'progress': pc
+                        })
+                    
         logging.info("Downloaded files in %f", time.time() - _t_start)
         return tiff_dir
 

@@ -1079,7 +1079,6 @@ function getChecked(parent){
             cat:cat,
             name:name
         }
-        //Make the lat and lon a string for easy comparison
         locs.push(itemObj);
     })
 
@@ -1137,26 +1136,32 @@ function plotMarkers(){
     markerPlotTimer=setTimeout(plotMarkersRun,100);
 }
 
+const toolTipOpts={
+    permanent:true,
+    className: "markerNameLabel",
+    opacity:1,
+    fill:false,
+    fillColor:'#0F0',
+    interactive:true,
+    autoPan:false,
+    closeButton:false,
+    autoClose:false,
+    closeOnEscapeKey:false,
+    closeOnClick:false,
+    offset:[0,0]
+}
+
 //use a debounce timer on this so it doesn't get triggered many times when checking/unchecking all
 function plotMarkersRun(){
     markerPlotTimer=null;
 
     //clear out tracking lists
-    const maxLen=Math.max(
-        volcanoMarkers.length,
-        volcanoTooltips.length,
-        stationMarkers.length,
-        stationTooltips.length
-    )
+    const toRemove=volcanoMarkers.concat(volcanoTooltips,stationMarkers,stationTooltips);
 
-    const toRemove=[volcanoMarkers,volcanoTooltips,stationMarkers,stationTooltips];
-
-    for(let i=0;i<maxLen;i++){
-        for(const j in toRemove){
-            let layer=toRemove[j][i];
-            if(typeof(layer)!=='undefined'){
-                map.removeLayer(layer);
-            }
+    for(const i in toRemove){
+        let layer=toRemove[i];
+        if(typeof(layer)!=='undefined'){
+            map.removeLayer(layer);
         }
     }
 
@@ -1165,10 +1170,9 @@ function plotMarkersRun(){
     stationMarkers=[];
     stationTooltips=[];
     
-    const checkedItems=getChecked();
     const volcsUseColor=$('#showVolcColor').is(':checked')
 
-    let volcOffset,volcDir,staOffset,staDir,labelOffset,labelDir,labelLocChanged;
+    let volcOffset,volcDir,staOffset,staDir,labelOffset,labelDir;
     const volcLabelPos=labelOffsets[$('#volcLabelLocation').val()];
     const staLabelPos=labelOffsets[$('#staLabelLocation').val()];
 
@@ -1180,37 +1184,26 @@ function plotMarkersRun(){
         [staOffset,staDir]=staLabelPos;
     }
 
-    const toolTipOpts={
-        offset:volcOffset,
-        permanent:true,
-        className: "volcNameLabel",
-        opacity:1,
-        fill:false,
-        fillColor:'#0F0',
-        interactive:true,
-        autoPan:false,
-        closeButton:false,
-        autoClose:false,
-        closeOnEscapeKey:false,
-        closeOnClick:false,
-        offset:[0,0]
-    }
-
-    $(checkedItems).each(function(idx,itemInfo){
+    const checkedItems=$('.staCheck:checked');
+    $(checkedItems).each(function(){
         let marker,labelPos,svgIcon;
+        const itemInfo=JSON.parse(this.value);
+        const itemCat=itemInfo['category'];
 
         //only applies to volcanoes, stations/markers will be undefined.
         let isVolc=false;
         try{
-            isVolc=itemInfo['cat'].startsWith('volcano');
+            isVolc=itemCat.startsWith('volcano');
         } catch {
             // Not a string, so not a volcano.
             isVolc=false;
         }
 
-        const itemCat=itemInfo['cat'];
         const color=volcsUseColor? volcColors[itemCat] : '#FFF';
-        let lng=Number(itemInfo['lng']);
+
+        //For some reason, leaflet wants items on the far side of the 
+        //dateline to be more negitive.
+        let lng=Number(itemInfo['lon']);
         if(lng>0){
             lng-=360;
         }
@@ -1231,7 +1224,6 @@ function plotMarkersRun(){
                 width:17,
                 height:10
             })
-            .addTo(map);
         }
         else{
             labelPos=staLabelPos;
@@ -1248,10 +1240,15 @@ function plotMarkersRun(){
             })
 
             marker=new L.Marker(latlng,
-                {
-                    icon:svgIcon
-                })
-                .addTo(map);
+                {icon:svgIcon}
+            )
+        }
+        marker.addTo(map);
+
+        if(isVolc){
+            volcanoMarkers.push(marker);
+        }else{
+            stationMarkers.push(marker);
         }
 
         if(typeof(labelPos)!='undefined'){
@@ -1314,15 +1311,7 @@ function plotMarkersRun(){
                 stationTooltips.push(tooltip);
             }
         }
-
-        if(isVolc){
-            volcanoMarkers.push(marker);
-        }else{
-            stationMarkers.push(marker);
-        }
     })
-
-
 }
 
 function query_stations(minLat, maxLat, eastLon, westLon, eastLon2, westLon2) {
