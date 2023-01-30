@@ -12,6 +12,7 @@ import shutil
 import signal
 import time
 import tempfile
+import traceback
 import uuid
 import zipfile
 
@@ -279,13 +280,13 @@ class MapGenerator:
                                     continue  # already extracted, move on
                                 logging.info(f"Extracting {tiffile}")
                                 zf2.extract(tiffile, path = tiff_dir)
-                    if file_count > 1:                        
-                        pc = round(( (idx +1) / file_count) *100, 1)
+                    if file_count > 1:
+                        pc = round(((idx + 1) / file_count) * 100, 1)
                         self._update_status({
                             'status': f"Decompressing hillshade data ({idx + 1}/{file_count})...",
                             'progress': pc
                         })
-                    
+
         logging.info("Downloaded files in %f", time.time() - _t_start)
         return tiff_dir
 
@@ -450,7 +451,7 @@ class MapGenerator:
 
         # sym_size = (8 / 3) * zoom - (13 + (1 / 3))
         # if sym_size < 8:
-            # sym_size = 8
+        # sym_size = 8
 
         stations = self.data.get('station', [])
         sta_count = len(stations)
@@ -550,7 +551,7 @@ class MapGenerator:
             labels += station_names
         if volc_names:
             labels += volc_names
-            
+
         if labels:
             try:
                 import pygmt
@@ -975,6 +976,7 @@ class MapGenerator:
             logging.debug(str(file_path))
         except Exception as e:
             self._socket_queue.send('ERROR')
+            traceback.print_exc()
             self._gen_fail_callback(req_id, e)
 
 

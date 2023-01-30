@@ -103,15 +103,6 @@ def _process_file(request, name, save_dir):
         return None
 
 
-def _gen_fail_callback(req_id, error):
-    print("Map generation failed! Error:")
-    print(error)
-    print("-->{}<--".format(error.__cause__))
-    data = _global_session[req_id]
-    data['gen_status'] = "FAILED"
-    _global_session[req_id] = data
-
-
 def Bounds(value):
     """Returns a sw_lng, sw_lat, ne_lng, ne_lat tupple"""
     if value:
@@ -176,6 +167,7 @@ class MapSchema(BaseSchema):
     showGrid = Value(bool, default = False)
     showVolcNames = Value(str, default = "")
     showVolcColor = Value(bool, default = False)
+    showStationNames = Value(str, default = "")
     staOpt_Name = List(str, default = [])
     staOpt_Icon = List(str, default = [])
     staOpt_Color = List(str, default = [])

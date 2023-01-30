@@ -21,9 +21,9 @@ const labelOffsets={
     TR: [[-17,17],'right'],  //bottom left
     TL: [[17,17],'left'],  //bottom right
     BC: [[0,-37],'center'], //top center
-    ML: [[17,-12],'left'],   //right
-    TC: [[0,17],'bottom'],  //bottom center
-    MR: [[-17,-12],'right']    //left
+    ML: [[17,-6],'left'],   //right
+    TC: [[0,17],'center'],  //bottom center
+    MR: [[-17,-6],'right']    //left
 }
 
 const volcColors={
@@ -113,9 +113,6 @@ $(document).ready(function() {
     $('#showVolcColor').change(plotMarkers);
     $('#editVolcLocs').click(showVolcLabelEditor);
     $('.labelLocation').change(labelLocationChanged);
-    $('#staLabelLocation').change(function(){
-        $('#stationNamesValue').val(this.value);
-    })
     $('.latLon').change(setBounds);
     $('.reload').click(updateBounds);
     $('#addNewMap').click(addNewMap);
@@ -1295,8 +1292,13 @@ function plotMarkersRun(){
             pos['x']+=itemOffset[0];
             pos['y']+=itemOffset[1];
             
-            //Add an offset to X of 50% of width, so "reference" is located top center
-            pos['x']-=($(label.getElement()).width()/2)
+            // Reference point is top-left corner, so to center or right justify text
+            // we need to offset the X position by a percentage of the label width.
+            if(labelDir=="center"){
+                pos['x']-=($(label.getElement()).width()/2);
+            }else if(labelDir=="right"){
+                pos['x']-=$(label.getElement()).width();
+            }
 
             const newPos=map.layerPointToLatLng(pos);
             label.setLatLng(newPos);
