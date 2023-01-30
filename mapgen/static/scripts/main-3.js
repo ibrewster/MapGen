@@ -1305,17 +1305,29 @@ function plotMarkersRun(){
             label.setLatLng(newPos);
 
             label.on('dragend',function(event){
+                const icon=$(this._icon);
                 const volcCheck=$('#'+checkID);
                 const checkVal=JSON.parse(volcCheck.val());
-                const newLatLon=this.getLatLng();
-                checkVal['labelLat']=newLatLon['lat'];
-                checkVal['labelLon']=newLatLon['lng'];
+                let newLatLon=this.getLatLng();
 
                 let offx=checkVal['offx'] || 0;
                 let offy=checkVal['offy'] || 0;
 
-                const dx=event.sourceTarget._newPos.x-event.sourceTarget._startPos.x
-                const dy=event.sourceTarget._newPos.y-event.sourceTarget._startPos.y
+                let dx=event.sourceTarget._newPos.x-event.sourceTarget._startPos.x
+                let dy=event.sourceTarget._newPos.y-event.sourceTarget._startPos.y
+
+                if(icon.hasClass("stationLabel") && !icon.hasClass("moved")){
+                    icon.addClass('moved');
+                    dy-=6;
+                    let offsetPos=event.sourceTarget._newPos;
+                    offsetPos.y+=6;
+                    newLatLon=map.layerPointToLatLng(offsetPos);
+                    label.setLatLng(newLatLon);
+                    
+                }
+
+                checkVal['labelLat']=newLatLon['lat'];
+                checkVal['labelLon']=newLatLon['lng'];
 
                 offx+=dx;
                 offy+=dy;
@@ -1323,6 +1335,7 @@ function plotMarkersRun(){
                 checkVal['offy']=offy;
                 
                 volcCheck.val(JSON.stringify(checkVal));
+                
             });
 
             // add or update the lat/lon stored in this item to 

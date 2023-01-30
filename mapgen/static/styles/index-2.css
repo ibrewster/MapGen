@@ -587,6 +587,10 @@ input.hidden{
     margin-top:-6px;
 }
 
+.markerLabel.stationLabel.moved{
+    margin-top:-12px;
+}
+
 #volcLabelPosShield{
     position:fixed;
     z-index: 1202;
