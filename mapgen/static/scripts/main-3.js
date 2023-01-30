@@ -1213,7 +1213,7 @@ function plotMarkersRun(){
             lng-=360;
         }
         const latlng=[Number(itemInfo['lat']), lng];
-
+        let labelClass="markerLabel";
 
         if(isVolc){
             labelPos=volcLabelPos;
@@ -1234,14 +1234,15 @@ function plotMarkersRun(){
             labelPos=staLabelPos;
             labelOffset=staOffset;
             labelDir=staDir;
+            labelClass="markerLabel stationLabel"
             const markerClass=`staMarker${itemCat}`;
             const svg=staIcons[markerClass]
 
             svgIcon=L.divIcon({
                 html:svg,
                 className:markerClass,
-                iconSize:[15,15],
-                iconAnchor:[7.5,7.5]
+                iconSize:[19,19],
+                iconAnchor:[9.5,9.5]
             })
 
             marker=new L.Marker(latlng,
@@ -1273,7 +1274,7 @@ function plotMarkersRun(){
 
             const labelIcon=L.divIcon({
                 html:itemInfo['name'],
-                className:"markerLabel",
+                className:labelClass,
                 iconSize:'auto'
             })
 

@@ -1,7 +1,7 @@
 const invertedTriangle=`
 <svg
-  width="15"
-  height="15"
+  width="19"
+  height="19"
   viewBox="0 0 283.46 268.39"
   version="1.1"
   preserveAspectRatio="none"
@@ -13,8 +13,8 @@ const invertedTriangle=`
 
 const triangle=`
 <svg
-  width="15"
-  height="15"
+  width="19"
+  height="19"
   viewBox="0 0 283.46 268.39"
   version="1.1"
   preserveAspectRatio="none"
@@ -25,8 +25,8 @@ const triangle=`
 
 const star=`
 <svg
-  width="15"
-  height="15"
+  width="19"
+  height="19"
   viewBox="0 0 283.46 274.99"
   version="1.1"
   preserveAspectRatio="none"
@@ -37,8 +37,8 @@ const star=`
 
 const circle=`
 <svg
-  width="15"
-  height="15"
+  width="19"
+  height="19"
   viewBox="0 0 283.46 283.46"
   version="1.1"
   preserveAspectRatio="none"
@@ -49,8 +49,8 @@ const circle=`
 
 const diamond=`
 <svg
-  width="15"
-  height="15"
+  width="19"
+  height="19"
   viewBox="0 0 283.46 283.46"
   version="1.1"
   preserveAspectRatio="none"
@@ -61,8 +61,8 @@ const diamond=`
 
 const octagon=`
 <svg
-  width="15"
-  height="15"
+  width="19"
+  height="19"
   viewBox="0 0 283.46 283.46"
   version="1.1"
   preserveAspectRatio="none"
@@ -73,8 +73,8 @@ const octagon=`
 
 const pentagon=`
 <svg
-  width="15"
-  height="15"
+  width="19"
+  height="19"
   viewBox="0 0 283.46 272.04"
   version="1.1"
   preserveAspectRatio="none"
@@ -85,8 +85,8 @@ const pentagon=`
 
 const square=`
 <svg
-  width="15"
-  height="15"
+  width="19"
+  height="19"
   viewBox="0 0 283.46 283.15"
   version="1.1"
   preserveAspectRatio="none"
@@ -97,8 +97,8 @@ const square=`
 
 const point=`
 <svg
-  width="15"
-  height="15"
+  width="19"
+  height="19"
   viewBox="0 0 279 279"
   version="1.1"
   preserveAspectRatio="none"
@@ -109,8 +109,8 @@ const point=`
 
 const tiltmeter=`
 <svg
-  width="24.14"
-  height="15"
+  width="30.577"
+  height="19"
   viewBox="0 0 141.74 88.068"
   version="1.1"
   preserveAspectRatio="none"
@@ -123,8 +123,8 @@ const tiltmeter=`
 
 const temperature=`
 <svg
-  width="15"
-  height="15"
+  width="19"
+  height="19"
   viewBox="0 0 4.9384 4.9384"
   version="1.1"
   preserveAspectRatio="none"
@@ -141,8 +141,8 @@ const temperature=`
 
 const camera=`
 <svg
-  width="19.5"
-  height="15"
+  width="24.7"
+  height="19"
   viewBox="0 0 100.65 77.285"
   version="1.1"
   preserveAspectRatio="none"
@@ -154,8 +154,8 @@ const camera=`
 
 const gas=`
 <svg
-  width="24.566"
-  height="15"
+  width="31.12"
+  height="19"
   viewBox="0 0 21.312 13.013"
   version="1.1"
   preserveAspectRatio="none"
@@ -167,8 +167,8 @@ const gas=`
 
 const infrasound=`
 <svg
-  width="15"
-  height="15.23"
+  width="19"
+  height="19.29"
   viewBox="0 0 3.6831 3.7411"
   version="1.1"
   preserveAspectRatio="none"
