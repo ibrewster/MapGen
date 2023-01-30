@@ -1193,7 +1193,10 @@ function plotMarkersRun(){
     $(checkedItems).each(function(){
         let marker,labelPos,svgIcon;
         const itemInfo=JSON.parse(this.value);
-        const itemCat=itemInfo['category'];
+        let itemCat=itemInfo['category'];
+        if(typeof(itemCat)=='object'){
+            itemCat=itemCat.type;
+        }
 
         //only applies to volcanoes, stations/markers will be undefined.
         let isVolc=false;
