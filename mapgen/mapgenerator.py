@@ -448,9 +448,9 @@ class MapGenerator:
 
         sym_outline = "faint,128" if zoom < 10 else 'thin,128'
 
-        sym_size = (8 / 3) * zoom - (13 + (1 / 3))
-        if sym_size < 8:
-            sym_size = 8
+        # sym_size = (8 / 3) * zoom - (13 + (1 / 3))
+        # if sym_size < 8:
+            # sym_size = 8
 
         stations = self.data.get('station', [])
         sta_count = len(stations)
@@ -495,18 +495,14 @@ class MapGenerator:
                     color = 'white'
 
                 category = 'volcano'
-                point_size = sym_size * 1.25
-
             else:
-                point_size = sym_size
                 color = custom_symbols.get(category, {}).get('color', '#FF00FF')
 
             symbol = custom_symbols.get(category, {}).get('symbol', 'a')
             if symbol is None:
                 continue
 
-            point_size_str = f"{point_size}p"
-            symbol += point_size_str
+            symbol += "12p"
 
             label_x = station.get('labelLon')
             label_y = station.get('labelLat')
@@ -549,39 +545,27 @@ class MapGenerator:
                 })
 
         #Station/marker name labels
+        labels = []
         if station_names:
-            try:
-                import pygmt
-            except Exception:
-                os.environ['GMT_LIBRARY_PATH'] = '/usr/local/lib'
-                import pygmt
-
-            snames, vx, vy = zip(*station_names)
-            font_str = f"8p,Helvetica,black"
-            with pygmt.config(FONT_ANNOT_PRIMARY = font_str):
-                # Plot the names using standard positioning
-                self.fig.text(
-                    x = vx, y = vy,
-                    text = snames,
-                    justify = 'TC',
-                )
-
-        # Volcano Name labels
+            labels += station_names
         if volc_names:
+            labels += volc_names
+            
+        if labels:
             try:
                 import pygmt
             except Exception:
                 os.environ['GMT_LIBRARY_PATH'] = '/usr/local/lib'
                 import pygmt
 
-            vnames, vx, vy = zip(*volc_names)
-            font_str = f"8p,Helvetica,black"
+            names, vx, vy = zip(*labels)
+            font_str = f"9.5p,Helvetica,black"
             with pygmt.config(FONT_ANNOT_PRIMARY = font_str):
                 # Plot the names using standard positioning
                 self.fig.text(
                     x = vx, y = vy,
-                    text = vnames,
-                    justify = 'TC',
+                    text = names,
+                    justify = 'TL',
                 )
 
     def _plot_data(self, zoom):

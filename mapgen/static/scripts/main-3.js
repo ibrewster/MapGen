@@ -1151,6 +1151,11 @@ const toolTipOpts={
     offset:[0,0]
 }
 
+const labelOpts={
+    interactive:true,
+    className:"markerLabel",
+
+}
 //use a debounce timer on this so it doesn't get triggered many times when checking/unchecking all
 function plotMarkersRun(){
     markerPlotTimer=null;
@@ -1266,34 +1271,53 @@ function plotMarkersRun(){
                 ];
             }
 
-            const tooltip=L.popup(toolTipOpts)
-            .setLatLng(latlng)
-            .setContent(itemInfo['name'])
-            .addTo(map)
-            .openTooltip();
-            
-            makeDraggable(tooltip,checkID,itemOffset);
+            const labelIcon=L.divIcon({
+                html:itemInfo['name'],
+                className:"markerLabel",
+                iconSize:'auto'
+            })
 
-            // figure out where the label *actually* needs to be
-            // leaflet adds some huge offsets to the position of the text vs
-            // the lat/lon set for the "popup"
-            // would be easier with a tooltip, but I haven't managed to make
-            // one of those draggable as of yet
-            const container=$(tooltip._container);
-            
-            if(['left','right'].includes(labelDir)){
-                let labelWidth=container.width();
-                if(labelDir=='right'){
-                    labelWidth*=-1;
+            const label=new L.Marker(latlng,
+                {
+                    icon:labelIcon,
+                    interactive:true,
+                    draggable:true
                 }
-                itemOffset[0]=itemOffset[0]+(labelWidth/2);
-            }
+            )
+            .addTo(map);
 
-            let pos=map.latLngToLayerPoint(tooltip.getLatLng());
+            // Currently marker is positioned at the same point as the volcano
+            // we want to offset that somewhat.
+            let pos=map.latLngToLayerPoint(label.getLatLng());
             pos['x']+=itemOffset[0];
             pos['y']+=itemOffset[1];
+            
+            //Add an offset to X of 50% of width, so "reference" is located top center
+            pos['x']-=($(label.getElement()).width()/2)
+
             const newPos=map.layerPointToLatLng(pos);
-            tooltip.setLatLng(newPos);
+            label.setLatLng(newPos);
+
+            label.on('dragend',function(event){
+                const volcCheck=$('#'+checkID);
+                const checkVal=JSON.parse(volcCheck.val());
+                const newLatLon=this.getLatLng();
+                checkVal['labelLat']=newLatLon['lat'];
+                checkVal['labelLon']=newLatLon['lng'];
+
+                let offx=checkVal['offx'] || 0;
+                let offy=checkVal['offy'] || 0;
+
+                const dx=event.sourceTarget._newPos.x-event.sourceTarget._startPos.x
+                const dy=event.sourceTarget._newPos.y-event.sourceTarget._startPos.y
+
+                offx+=dx;
+                offy+=dy;
+                checkVal['offx']=offx;
+                checkVal['offy']=offy;
+                
+                volcCheck.val(JSON.stringify(checkVal));
+            });
 
             // add or update the lat/lon stored in this item to 
             // the label position rather than the station position.
@@ -1302,13 +1326,13 @@ function plotMarkersRun(){
             itemCheck.val(JSON.stringify(checkVal));
 
             //unset the top/bottom CSS so the label actually shows up at the position it is set to.
-            container.css('top','').css('bottom','');
+            //container.css('top','').css('bottom','');
 
             if(isVolc){
-                volcanoTooltips.push(tooltip);
+                volcanoTooltips.push(label);
             }
             else{
-                stationTooltips.push(tooltip);
+                stationTooltips.push(label);
             }
         }
     })

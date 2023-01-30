@@ -576,33 +576,11 @@ input.hidden{
     padding:1px 5px;
 }
 
-.markerNameLabel{
-    background-color: transparent;
-    padding:0px;
-    border:none;
-    box-shadow: none;
+.markerLabel{
+    white-space: nowrap;
     font-size:14pt;
-    font-family: helvetica;
-}
-
-.markerNameLabel:before{
-    border:none;
-}
-
-.markerNameLabel .leaflet-popup-content-wrapper{
-    box-shadow:none;
-    background:transparent;
-    border:none;
-    padding:0px;
-}
-
-.markerNameLabel .leaflet-popup-content{
-    padding:0px;
-    margin:0px;
-}
-
-.markerNameLabel .leaflet-popup-tip-container{
-    display:none;
+    font-family: helvetica,sans-serif;
+    margin-top:-6px;
 }
 
 #volcLabelPosShield{
