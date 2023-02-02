@@ -1270,6 +1270,7 @@ function plotMarkersRun(){
                     Number(custX)+labelOffset[0],
                     Number(custY)+labelOffset[1]
                 ];
+
             }
 
             const labelIcon=L.divIcon({
@@ -1316,15 +1317,15 @@ function plotMarkersRun(){
                 let dx=event.sourceTarget._newPos.x-event.sourceTarget._startPos.x
                 let dy=event.sourceTarget._newPos.y-event.sourceTarget._startPos.y
 
-                if(icon.hasClass("stationLabel") && !icon.hasClass("moved")){
-                    icon.addClass('moved');
-                    dy-=6;
-                    let offsetPos=event.sourceTarget._newPos;
-                    offsetPos.y+=6;
-                    newLatLon=map.layerPointToLatLng(offsetPos);
-                    label.setLatLng(newLatLon);
+                // // if(icon.hasClass("stationLabel") && !icon.hasClass("moved")){
+                // //     icon.addClass('moved');
+                // //     dy-=6;
+                //     let offsetPos=event.sourceTarget._newPos;
+                //     offsetPos.y+=6;
+                //     newLatLon=map.layerPointToLatLng(offsetPos);
+                //     label.setLatLng(newLatLon);
                     
-                }
+                // // }
 
                 checkVal['labelLat']=newLatLon['lat'];
                 checkVal['labelLon']=newLatLon['lng'];
@@ -1335,6 +1336,7 @@ function plotMarkersRun(){
                 checkVal['offy']=offy;
                 
                 volcCheck.val(JSON.stringify(checkVal));
+                plotMarkersRun()
                 
             });
 
