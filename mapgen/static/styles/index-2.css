@@ -581,10 +581,11 @@ input.hidden{
     font-size:14pt;
     font-family: helvetica,sans-serif;
     margin-top:-3px;
+    line-height:.95em;
 }
 
 .markerLabel.stationLabel{
-    margin-top:-6px;
+    margin-top:-8px;
 }
 
 .markerLabel.stationLabel.moved{

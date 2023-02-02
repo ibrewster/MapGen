@@ -461,6 +461,8 @@ class MapGenerator:
         staNamePos = self.data.get('showStationNames', True)
         volc_names = []
         station_names = []
+        volc_label_lines = []
+        station_label_lines = []
 
         # Pull the user-selected icons/colors from the HTTP request data
         custom_symbols = self.station_symbols.copy()
@@ -507,12 +509,18 @@ class MapGenerator:
 
             label_x = station.get('labelLon')
             label_y = station.get('labelLat')
+            anchor_x = station.get('anchorLon')
+            anchor_y = station.get('anchorLat')
+            origin_x = station.get('lon')
+            origin_y = station.get('lat')
 
             if symbol.startswith('tV') and volcNamePos != '':
                 volc_names.append((station['name'], label_x, label_y))
+                volc_label_lines.append(((anchor_x, origin_x), (anchor_y, origin_y)))
 
             if not symbol.startswith('tV') and staNamePos != '':
                 station_names.append((station['name'], label_x, label_y))
+                station_label_lines.append(((anchor_x, origin_x), (anchor_y, origin_y)))
 
             plot_defs[symbol][color]['x'].append(sta_x)
             plot_defs[symbol][color]['y'].append(sta_y)
@@ -547,12 +555,15 @@ class MapGenerator:
 
         #Station/marker name labels
         labels = []
+        label_lines = []
         if station_names:
             labels += station_names
+            label_lines += station_label_lines
         if volc_names:
             labels += volc_names
+            label_lines += volc_label_lines
 
-        if labels:
+        if labels: # if labels, then label lines as well, or else bug.
             try:
                 import pygmt
             except Exception:
@@ -568,6 +579,9 @@ class MapGenerator:
                     text = names,
                     justify = 'TL',
                 )
+                
+            for line_x, line_y in label_lines:
+                self.fig.plot(x = line_x, y = line_y, pen = '1pblack')
 
     def _plot_data(self, zoom):
         plotdata_file = self.data.get('plotDataFile')

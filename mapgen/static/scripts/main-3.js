@@ -1270,7 +1270,6 @@ function plotMarkersRun(){
                     Number(custX)+labelOffset[0],
                     Number(custY)+labelOffset[1]
                 ];
-
             }
 
             const labelIcon=L.divIcon({
@@ -1288,9 +1287,11 @@ function plotMarkersRun(){
             )
             .addTo(map);
 
+            $(label).data('checkID',checkID);
+
             // Currently marker is positioned at the same point as the volcano
             // we want to offset that somewhat.
-            let pos=map.latLngToLayerPoint(label.getLatLng());
+            let pos=map.latLngToLayerPoint(label.getLatLng()); //top-left corner
             pos['x']+=itemOffset[0];
             pos['y']+=itemOffset[1];
             
@@ -1305,8 +1306,8 @@ function plotMarkersRun(){
             const newPos=map.layerPointToLatLng(pos);
             label.setLatLng(newPos);
 
+            //declared inline so we get pos as a closure variable
             label.on('dragend',function(event){
-                const icon=$(this._icon);
                 const volcCheck=$('#'+checkID);
                 const checkVal=JSON.parse(volcCheck.val());
                 let newLatLon=this.getLatLng();
@@ -1314,18 +1315,8 @@ function plotMarkersRun(){
                 let offx=checkVal['offx'] || 0;
                 let offy=checkVal['offy'] || 0;
 
-                let dx=event.sourceTarget._newPos.x-event.sourceTarget._startPos.x
-                let dy=event.sourceTarget._newPos.y-event.sourceTarget._startPos.y
-
-                // // if(icon.hasClass("stationLabel") && !icon.hasClass("moved")){
-                // //     icon.addClass('moved');
-                // //     dy-=6;
-                //     let offsetPos=event.sourceTarget._newPos;
-                //     offsetPos.y+=6;
-                //     newLatLon=map.layerPointToLatLng(offsetPos);
-                //     label.setLatLng(newLatLon);
-                    
-                // // }
+                const dx=event.sourceTarget._newPos.x-pos.x
+                const dy=event.sourceTarget._newPos.y-pos.y
 
                 checkVal['labelLat']=newLatLon['lat'];
                 checkVal['labelLon']=newLatLon['lng'];
@@ -1336,8 +1327,8 @@ function plotMarkersRun(){
                 checkVal['offy']=offy;
                 
                 volcCheck.val(JSON.stringify(checkVal));
-                plotMarkersRun()
-                
+
+                setTimeout(calcLineAnchor,500,[this]);
             });
 
             // add or update the lat/lon stored in this item to 
@@ -1355,7 +1346,67 @@ function plotMarkersRun(){
             else{
                 stationTooltips.push(label);
             }
+
+            setTimeout(calcLineAnchor,500);
         }
+    })
+}
+
+function calcLineAnchor(elements){
+    if(typeof(elements)=='undefined'){
+        elements=stationTooltips.concat(volcanoTooltips);
+    }
+    $(elements).each(function(){
+        //this is a label "marker"
+        const LabelLatLon=this.getLatLng();
+        const topLeft=map.latLngToLayerPoint(LabelLatLon);
+
+        const checkID=$(this).data('checkID');
+        const itemCheck=$('#'+checkID);
+        const checkVal=JSON.parse(itemCheck.val());
+        const originLatLon=L.latLng(checkVal['lat'], checkVal['lon']);
+        const originPos=map.latLngToLayerPoint(originLatLon);
+
+        const width=$(this._icon).width();
+
+        // subtract a constant from the height to keep the line from being
+        // too far down on the final render.
+        const height=$(this._icon).height();
+
+        const leftX=topLeft.x;
+        const centerX=leftX+(width/2);
+        const rightX=leftX+width;
+        let topY=topLeft.y;
+        let bottomY=topY+height;
+        const centerY=topY+(height/2)
+
+        let anchorX=centerX;
+        let anchorY=topY;
+
+        const y_inset=4;
+        if(leftX>originPos.x){
+            anchorX=leftX;
+            topY+=y_inset;
+            bottomY-=y_inset;
+        }else if(rightX<originPos.x){
+            anchorX=rightX;
+            topY+=y_inset;
+            bottomY-=y_inset;
+        }
+
+        //Positive Y is down
+        if(bottomY>originPos.y && topY<originPos.y){
+            anchorY=centerY;
+        } else if(bottomY<originPos.y){
+            anchorY=bottomY;
+        }
+
+        const anchorPos=L.point(anchorX,anchorY);
+        const anchorLatLon=map.layerPointToLatLng(anchorPos);
+
+        checkVal['anchorLat']=anchorLatLon.lat;
+        checkVal['anchorLon']=anchorLatLon.lng;
+        itemCheck.val(JSON.stringify(checkVal));
     })
 }
 
