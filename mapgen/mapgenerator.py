@@ -581,7 +581,7 @@ class MapGenerator:
                 )
                 
             for line_x, line_y in label_lines:
-                self.fig.plot(x = line_x, y = line_y, pen = '1pblack')
+                self.fig.plot(x = line_x, y = line_y, pen = '1p')
 
     def _plot_data(self, zoom):
         plotdata_file = self.data.get('plotDataFile')
