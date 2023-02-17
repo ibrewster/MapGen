@@ -5,7 +5,6 @@ import os
 import threading
 import uuid
 
-from collections import defaultdict
 from urllib.parse import unquote
 
 import flask

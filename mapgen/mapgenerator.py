@@ -571,6 +571,8 @@ class MapGenerator:
                 import pygmt
 
             names, vx, vy = zip(*labels)
+            vx = numpy.asarray(vx, dtype = float)
+            vy = numpy.asarray(vy, dtype = float)
             font_str = f"9.5p,Helvetica,black"
             with pygmt.config(FONT_ANNOT_PRIMARY = font_str):
                 # Plot the names using standard positioning
@@ -581,7 +583,10 @@ class MapGenerator:
                 )
                 
             for line_x, line_y in label_lines:
-                self.fig.plot(x = line_x, y = line_y, pen = '1p')
+                try:
+                    self.fig.plot(x = line_x, y = line_y, pen = '1p')
+                except:
+                    pass
 
     def _plot_data(self, zoom):
         plotdata_file = self.data.get('plotDataFile')

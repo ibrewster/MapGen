@@ -258,7 +258,7 @@ function showVolcLabelEditor(){
     let offset,dir;
     [offset,dir]=labelOffsets[$('#volcLabelLocation').val()];
     $(checkedVolcs).each(function(idx,volc){
-        const checkID=computeItemID(volc['name']);
+        const checkID=computeItemID(volc['name'],'volc');
 
         const row=$(`<tr class="volcOffsetRow" data-volc=${checkID}>`);
         const curData=JSON.parse($('#'+checkID).val());
@@ -1258,7 +1258,8 @@ function plotMarkersRun(){
         }
 
         if(typeof(labelPos)!='undefined'){
-            const checkID=computeItemID(itemInfo['name'])
+            const markerType=isVolc?'volc':'sta'
+            const checkID=computeItemID(itemInfo['name'],markerType)
             const itemCheck=$('#'+checkID);
             const checkVal=JSON.parse(itemCheck.val());
             const custX=checkVal['offx'];
@@ -1536,8 +1537,8 @@ function displayStations() {
     sizeMap();
 }
 
-function computeItemID(volc_name){
-    return 'marker_'+volc_name.replace(/[^a-zA-Z0-9]/g,'');
+function computeItemID(volc_name,type){
+    return type+'Marker_'+volc_name.replace(/[^a-zA-Z0-9]/g,'');
 }
 
 function createVolcDiv(volc) {
@@ -1578,7 +1579,7 @@ function createMarkerDiv(info,destID,classname){
     var checkbox = $('<input type="checkbox">')
     .addClass("staCheck")
     .attr("name","station")
-    .attr('id',computeItemID(markerName))
+    .attr('id',computeItemID(markerName,classname))
     .val(value);
 
     div.append(checkbox);
