@@ -21,11 +21,11 @@ const BASE_MAP_SIZE=[1232,924];
 let scale=1;
 
 const labelOffsets={
-    BL: [[17,-43],'left'], //top right
-    BR: [[-17,-43],'right'], //top left
+    BL: [[17,-33],'left'], //top right
+    BR: [[-17,-33],'right'], //top left
     TR: [[-17,17],'right'],  //bottom left
     TL: [[17,17],'left'],  //bottom right
-    BC: [[0,-43],'center'], //top center
+    BC: [[0,-33],'center'], //top center
     ML: [[17,-6],'left'],   //right
     TC: [[0,17],'center'],  //bottom center
     MR: [[-17,-6],'right']    //left
