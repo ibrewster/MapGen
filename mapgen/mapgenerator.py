@@ -372,11 +372,7 @@ class MapGenerator:
     def _set_hillshade(self, zoom, map_bounds):
         if zoom <= 7:
             hillshade_files = ["@earth_relief_15s"]
-        #elif zoom < 10:
-        ###########################
-        # DEBUG. REMOVE THIS LINE BEFORE DEPLOY
-        elif zoom < 20:
-            ###########################
+        elif zoom < 10:
             hillshade_files = ["@earth_relief_01s"]
         else:
             # For higher zooms, use elevation.alaska.gov data
