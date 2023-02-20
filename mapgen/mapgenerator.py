@@ -157,6 +157,9 @@ class MapGenerator:
         self._used_symbols = {}
         self._socket_queue = None
         self.gmt_bounds = []
+        self.BASE_SIZE = [10, 7.5]
+        self.BASE_FONT_SIZE = 11
+        self.BASE_SYM_SIZE = 16
 
     def setReqId(self, req_id):
         self._req_id = req_id
@@ -373,7 +376,7 @@ class MapGenerator:
         ###########################
         # DEBUG. REMOVE THIS LINE BEFORE DEPLOY
         elif zoom < 20:
-        ###########################
+            ###########################
             hillshade_files = ["@earth_relief_01s"]
         else:
             # For higher zooms, use elevation.alaska.gov data
@@ -484,6 +487,11 @@ class MapGenerator:
             custom_symbols[name]['color'] = color
             legend_labels[name] = label
 
+        # Symbol Size
+        sym_size = self.BASE_SYM_SIZE * self.scale_factor
+        if sym_size < 9:
+            sym_size = 9
+
         for station in stations:
             category = station.get('category', 'Unknown')
             if isinstance(category, dict):
@@ -509,8 +517,7 @@ class MapGenerator:
             if symbol is None:
                 continue
 
-            # Symbol Size
-            symbol += "16p"
+            symbol += f"{sym_size}p"
 
             label_x = station.get('labelLon')
             label_y = station.get('labelLat')
@@ -535,7 +542,7 @@ class MapGenerator:
                 plot_defs[symbol][color]['label'] = label
                 self._used_symbols[label] = {'symbol': symbol,
                                              'color': color, }
-                
+
         #Station/marker name labels
         labels = []
         label_lines = []
@@ -546,32 +553,45 @@ class MapGenerator:
             labels += volc_names
             label_lines += volc_label_lines
 
+        complete = 0
+        run_count = sta_count
         if labels: # if labels, then label lines as well, or else bug.
+            run_count += len(label_lines)
             try:
                 import pygmt
             except Exception:
                 os.environ['GMT_LIBRARY_PATH'] = '/usr/local/lib'
                 import pygmt
-                
+
             for line_x, line_y in label_lines:
                 try:
                     self.fig.plot(x = line_x, y = line_y, pen = '1p')
                 except:
-                    pass            
+                    pass
+
+                complete += 1
+                prog = round((complete / run_count) * 100, 1)
+                self._update_status({
+                    'status': "Plotting Stations...",
+                    'progress': prog
+                })
 
             names, vx, vy = zip(*labels)
             vx = numpy.asarray(vx, dtype = float)
             vy = numpy.asarray(vy, dtype = float)
-            font_str = f"11p,Helvetica,black"
+            font_size = self.BASE_FONT_SIZE * self.scale_factor
+            if font_size < 8:
+                font_size = 8
+
+            font_str = f"{font_size}p,Helvetica,black"
             with pygmt.config(FONT_ANNOT_PRIMARY = font_str):
                 # Plot the names using standard positioning
                 self.fig.text(
                     x = vx, y = vy,
                     text = names,
                     justify = 'TL',
-                )        
+                )
 
-        complete = 0
         for symbol, sym_dict in plot_defs.items():
             for color, col_dict in sym_dict.items():
                 x = col_dict['x']
@@ -586,12 +606,11 @@ class MapGenerator:
                               fill=color, pen = outline)
 
                 complete += len(x)
-                prog = round((complete / sta_count) * 100, 1)
+                prog = round((complete / run_count) * 100, 1)
                 self._update_status({
                     'status': "Plotting Stations...",
                     'progress': prog
                 })
-
 
     def _plot_data(self, zoom):
         plotdata_file = self.data.get('plotDataFile')
@@ -748,9 +767,20 @@ class MapGenerator:
             self._update_status("Initializing")
             logging.info("Sent first status update")
             width = self.data['width']
+            height = self.data['height']
             bounds = self.data['bounds']
             unit = self.data['unit']
             overview = self.data['overview']
+
+            # Calculate percent over/under base size
+            dwidth = width / self.BASE_SIZE[0]
+            dheight = height / self.BASE_SIZE[1]
+
+            if abs(dwidth - 1) < abs(dheight - 1):
+                self.scale_factor = dwidth
+            else:
+                self.scale_factor = dheight
+
             if overview == "False":
                 overview = False
 

@@ -15,6 +15,10 @@ var monitorSocket = null;
 var pingTimer = null;
 var units = "i"
 
+const BASE_FONT_SIZE=19;
+const BASE_MARKER_SIZE=34;
+const BASE_MAP_SIZE=[1232,924];
+
 const labelOffsets={
     BL: [[17,-43],'left'], //top right
     BR: [[-17,-43],'right'], //top left
@@ -641,7 +645,42 @@ function sizeMap() {
     if ($('#lockWidth').is(':checked')) {
         $('#overviewWidth').val(Math.round(width / overviewRatio));
     }
+
+    setTimeout(fixMarkerSize,100);
     setTimeout(setOverviewDiv, 250);
+}
+
+function fixMarkerSize(){
+    const contWidth = $('#mapContainer').width();
+    const contHeight = $('#mapContainer').height();
+
+    const dx=Math.abs(contWidth-BASE_MAP_SIZE[0]);
+    const dy=Math.abs(contHeight-BASE_MAP_SIZE[1]);
+
+    const xscale=contWidth/BASE_MAP_SIZE[0];
+    const yscale=contHeight/BASE_MAP_SIZE[1];
+
+    let scale=1;
+    // compare relative change from 100% between x and y
+    if(Math.abs(xscale-1)<Math.abs(yscale-1)){
+        //x has a smaller percentage change than y, so use X
+        scale=xscale
+    }
+    else{
+        // either y had a smaller percentage change, or they are the same.
+        scale=yscale;
+    }
+
+    const markerSize=BASE_MARKER_SIZE*scale;
+    const fontSize=BASE_FONT_SIZE*scale;
+
+    //no need for jquery here...
+    const root=document.querySelector(':root');
+    root.style.setProperty('--markerFontSize',`${fontSize}pt`);
+
+    //set the new size for the markers, and redraw.
+    ICON_SIZE=markerSize;
+    plotMarkers();
 }
 
 var insetId = 0;
@@ -1108,7 +1147,10 @@ function refreshStationMarkerOpts(){
         let svg=icon_images[$(this).find('input.staOpt_Icon').val()];
         if(typeof(svg)=='undefined'){
             //set a default icon if none specified for this type
-            svg=icon_images['i'];
+            svg=icon_images['i']();
+        }
+        else if(typeof(svg)=='function'){
+            svg=svg();
         }
 
         staIcons[markerClass]=svg;
@@ -1155,6 +1197,7 @@ const labelOpts={
 //use a debounce timer on this so it doesn't get triggered many times when checking/unchecking all
 function plotMarkersRun(){
     markerPlotTimer=null;
+    refreshStationMarkerOpts();
 
     //clear out tracking lists
     const toRemove=volcanoMarkers.concat(volcanoTooltips,stationMarkers,stationTooltips);
@@ -1220,7 +1263,7 @@ function plotMarkersRun(){
             labelOffset=volcOffset;
             labelDir=volcDir;
             markerClass=`marker${color}`
-            svg=icon_images['t']
+            svg=icon_images['t']()
         }
         else{
             labelPos=staLabelPos;

@@ -576,9 +576,13 @@ input.hidden{
     padding:1px 5px;
 }
 
+:root {
+    --markerFontSize:19pt;
+}
+
 .markerLabel{
     white-space: nowrap;
-    font-size:19pt;
+    font-size:var(--markerFontSize);
     font-family: helvetica,sans-serif;
     margin-top:0px;
     line-height:.95em;
