@@ -369,7 +369,11 @@ class MapGenerator:
     def _set_hillshade(self, zoom, map_bounds):
         if zoom <= 7:
             hillshade_files = ["@earth_relief_15s"]
-        elif zoom < 10:
+        #elif zoom < 10:
+        ###########################
+        # DEBUG. REMOVE THIS LINE BEFORE DEPLOY
+        elif zoom < 20:
+        ###########################
             hillshade_files = ["@earth_relief_01s"]
         else:
             # For higher zooms, use elevation.alaska.gov data
@@ -505,7 +509,8 @@ class MapGenerator:
             if symbol is None:
                 continue
 
-            symbol += "12p"
+            # Symbol Size
+            symbol += "16p"
 
             label_x = station.get('labelLon')
             label_y = station.get('labelLat')
@@ -530,29 +535,7 @@ class MapGenerator:
                 plot_defs[symbol][color]['label'] = label
                 self._used_symbols[label] = {'symbol': symbol,
                                              'color': color, }
-
-        complete = 0
-        for symbol, sym_dict in plot_defs.items():
-            for color, col_dict in sym_dict.items():
-                x = col_dict['x']
-                y = col_dict['y']
-                label = col_dict.get('label')
-                outline = sym_outline
-                plot_symbol = symbol
-                if symbol.startswith('tV'):  # this is a volcano marker
-                    plot_symbol = symbol.replace('V', '')
-                    outline = "thin,0"
-
-                self.fig.plot(x=x, y=y, style=plot_symbol,
-                              fill=color, pen = outline)
-
-                complete += len(x)
-                prog = round((complete / sta_count) * 100, 1)
-                self._update_status({
-                    'status': "Plotting Stations...",
-                    'progress': prog
-                })
-
+                
         #Station/marker name labels
         labels = []
         label_lines = []
@@ -569,24 +552,46 @@ class MapGenerator:
             except Exception:
                 os.environ['GMT_LIBRARY_PATH'] = '/usr/local/lib'
                 import pygmt
+                
+            for line_x, line_y in label_lines:
+                try:
+                    self.fig.plot(x = line_x, y = line_y, pen = '1p')
+                except:
+                    pass            
 
             names, vx, vy = zip(*labels)
             vx = numpy.asarray(vx, dtype = float)
             vy = numpy.asarray(vy, dtype = float)
-            font_str = f"9.5p,Helvetica,black"
+            font_str = f"11p,Helvetica,black"
             with pygmt.config(FONT_ANNOT_PRIMARY = font_str):
                 # Plot the names using standard positioning
                 self.fig.text(
                     x = vx, y = vy,
                     text = names,
                     justify = 'TL',
-                )
-                
-            for line_x, line_y in label_lines:
-                try:
-                    self.fig.plot(x = line_x, y = line_y, pen = '1p')
-                except:
-                    pass
+                )        
+
+        complete = 0
+        for symbol, sym_dict in plot_defs.items():
+            for color, col_dict in sym_dict.items():
+                x = col_dict['x']
+                y = col_dict['y']
+                outline = sym_outline
+                plot_symbol = symbol
+                if symbol.startswith('tV'):  # this is a volcano marker
+                    plot_symbol = symbol.replace('V', '')
+                    outline = "thin,0"
+
+                self.fig.plot(x=x, y=y, style=plot_symbol,
+                              fill=color, pen = outline)
+
+                complete += len(x)
+                prog = round((complete / sta_count) * 100, 1)
+                self._update_status({
+                    'status': "Plotting Stations...",
+                    'progress': prog
+                })
+
 
     def _plot_data(self, zoom):
         plotdata_file = self.data.get('plotDataFile')

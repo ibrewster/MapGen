@@ -578,9 +578,9 @@ input.hidden{
 
 .markerLabel{
     white-space: nowrap;
-    font-size:14pt;
+    font-size:19pt;
     font-family: helvetica,sans-serif;
-    margin-top:-3px;
+    margin-top:0px;
     line-height:.95em;
 }
 
@@ -662,4 +662,28 @@ input.hidden{
 #volcLabelsTable tbody tr td input{
     width:100%;
     box-sizing: border-box;
+}
+
+.markervolcanoGREEN path{
+    fill:#87C264;
+}
+
+.markervolcanoRED path{
+    fill:#EC0000;
+}
+
+.markervolcanoYELLOW path{
+    fill:#FFFF66;
+}
+
+.markervolcanoORANGE path{
+    fill:#FF9933;
+}
+
+.markervolcanoUNASSIGNED path{
+    fill:#777777;
+}
+
+.markervolcanoWHITE path{
+    fill:#FFF;
 }

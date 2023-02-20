@@ -16,11 +16,11 @@ var pingTimer = null;
 var units = "i"
 
 const labelOffsets={
-    BL: [[17,-37],'left'], //top right
-    BR: [[-17,-37],'right'], //top left
+    BL: [[17,-43],'left'], //top right
+    BR: [[-17,-43],'right'], //top left
     TR: [[-17,17],'right'],  //bottom left
     TL: [[17,17],'left'],  //bottom right
-    BC: [[0,-37],'center'], //top center
+    BC: [[0,-43],'center'], //top center
     ML: [[17,-6],'left'],   //right
     TC: [[0,17],'center'],  //bottom center
     MR: [[-17,-6],'right']    //left
@@ -531,7 +531,6 @@ function setOverviewDiv() {
     var desiredWidth = Number($('#mapWidth').val());
     var ratio = mapWidth / desiredWidth;
     var disp_size = ratio * Number($('#overviewWidth').val());
-    console.log(disp_size);
     $('#overviewMap')
         .css('width', disp_size + "px")
         .css('height', disp_size + "px");
@@ -1175,6 +1174,7 @@ function plotMarkersRun(){
     const volcsUseColor=$('#showVolcColor').is(':checked')
 
     let volcOffset,volcDir,staOffset,staDir,labelOffset,labelDir;
+    let markerClass,svg
     const volcLabelPos=labelOffsets[$('#volcLabelLocation').val()];
     const staLabelPos=labelOffsets[$('#staLabelLocation').val()];
 
@@ -1204,7 +1204,7 @@ function plotMarkersRun(){
             isVolc=false;
         }
 
-        const color=volcsUseColor? volcColors[itemCat] : '#FFF';
+        const color=volcsUseColor? itemCat : 'volcanoWHITE';
 
         //For some reason, leaflet wants items on the far side of the 
         //dateline to be more negitive.
@@ -1219,36 +1219,28 @@ function plotMarkersRun(){
             labelPos=volcLabelPos;
             labelOffset=volcOffset;
             labelDir=volcDir;
-            marker=new L.triangleMarker(latlng,
-            {
-                color:'#000',
-                weight:1,
-                fill:true,
-                fillColor:color,
-                fillOpacity:1.0,
-                width:17,
-                height:10
-            })
+            markerClass=`marker${color}`
+            svg=icon_images['t']
         }
         else{
             labelPos=staLabelPos;
             labelOffset=staOffset;
             labelDir=staDir;
             labelClass="markerLabel stationLabel"
-            const markerClass=`staMarker${itemCat}`;
-            const svg=staIcons[markerClass]
-
-            svgIcon=L.divIcon({
-                html:svg,
-                className:markerClass,
-                iconSize:[19,19],
-                iconAnchor:[9.5,9.5]
-            })
-
-            marker=new L.Marker(latlng,
-                {icon:svgIcon}
-            )
+            markerClass=`staMarker${itemCat}`;
+            svg=staIcons[markerClass]
         }
+        
+        svgIcon=L.divIcon({
+            html:svg,
+            className:markerClass,
+            iconSize:[ICON_SIZE,ICON_SIZE],
+            iconAnchor:[ICON_SIZE/2,ICON_SIZE/2]
+        })
+
+        marker=new L.Marker(latlng,
+            {icon:svgIcon}
+        )
         marker.addTo(map);
 
         if(isVolc){
