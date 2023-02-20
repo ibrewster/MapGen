@@ -588,10 +588,6 @@ input.hidden{
     line-height:.95em;
 }
 
-.markerLabel.stationLabel{
-    margin-top:-8px;
-}
-
 .markerLabel.stationLabel.moved{
     margin-top:-12px;
 }
