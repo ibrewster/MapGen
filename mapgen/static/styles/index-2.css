@@ -577,7 +577,7 @@ input.hidden{
 }
 
 :root {
-    --markerFontSize:19pt;
+    --markerFontSize:16px;
 }
 
 .markerLabel{

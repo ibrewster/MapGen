@@ -15,9 +15,10 @@ var monitorSocket = null;
 var pingTimer = null;
 var units = "i"
 
-const BASE_FONT_SIZE=19;
-const BASE_MARKER_SIZE=34;
+const BASE_FONT_SIZE=20;
+const BASE_MARKER_SIZE=20;
 const BASE_MAP_SIZE=[1232,924];
+let scale=1;
 
 const labelOffsets={
     BL: [[17,-43],'left'], //top right
@@ -232,8 +233,8 @@ function makeDraggable(popup,checkID,offset){
         const offy=dy-offset[1];
         customLabelLocs[checkVal['name']]=[offx,offy];
 
-        checkVal['offx']=offx;
-        checkVal['offy']=offy;
+        checkVal['offx']=offx/scale;
+        checkVal['offy']=offy/scale;
 
 
         volcCheck.val(JSON.stringify(checkVal));
@@ -650,7 +651,11 @@ function sizeMap() {
     setTimeout(setOverviewDiv, 250);
 }
 
-function fixMarkerSize(){
+function fixMarkerSize(replot){
+    if(typeof(replot)=='undefined'){
+        replot=true
+    }
+
     const contWidth = $('#mapContainer').width();
     const contHeight = $('#mapContainer').height();
 
@@ -660,7 +665,6 @@ function fixMarkerSize(){
     const xscale=contWidth/BASE_MAP_SIZE[0];
     const yscale=contHeight/BASE_MAP_SIZE[1];
 
-    let scale=1;
     // compare relative change from 100% between x and y
     if(Math.abs(xscale-1)<Math.abs(yscale-1)){
         //x has a smaller percentage change than y, so use X
@@ -676,11 +680,12 @@ function fixMarkerSize(){
 
     //no need for jquery here...
     const root=document.querySelector(':root');
-    root.style.setProperty('--markerFontSize',`${fontSize}pt`);
+    root.style.setProperty('--markerFontSize',`${fontSize}px`);
 
     //set the new size for the markers, and redraw.
     ICON_SIZE=markerSize;
-    plotMarkers();
+    if(replot===true)
+        plotMarkers();
 }
 
 var insetId = 0;
@@ -1198,6 +1203,7 @@ const labelOpts={
 function plotMarkersRun(){
     markerPlotTimer=null;
     refreshStationMarkerOpts();
+    fixMarkerSize(false);
 
     //clear out tracking lists
     const toRemove=volcanoMarkers.concat(volcanoTooltips,stationMarkers,stationTooltips);
@@ -1223,10 +1229,12 @@ function plotMarkersRun(){
 
     if(typeof(volcLabelPos)!='undefined'){
         [volcOffset,volcDir]=volcLabelPos;
+        volcOffset=[volcOffset[0]*scale,volcOffset[1]*scale];
     }
 
     if(typeof(staLabelPos)!='undefined'){
         [staOffset,staDir]=staLabelPos;
+        staOffset=[staOffset[0]*scale,staOffset[1]*scale];
     }
 
     const checkedItems=$('.staCheck:checked');
@@ -1303,8 +1311,8 @@ function plotMarkersRun(){
             if(typeof(custX)!=='undefined' && typeof(custY)!=='undefined'){
                 customLabelLocs[checkVal['name']]=[custX,custY];
                 itemOffset=[
-                    Number(custX)+labelOffset[0],
-                    Number(custY)+labelOffset[1]
+                    Number(custX)*scale+labelOffset[0],
+                    Number(custY)*scale+labelOffset[1]
                 ];
             }
 
@@ -1348,19 +1356,25 @@ function plotMarkersRun(){
                 const checkVal=JSON.parse(volcCheck.val());
                 let newLatLon=this.getLatLng();
 
-                let offx=checkVal['offx'] || 0;
-                let offy=checkVal['offy'] || 0;
-
-                const dx=event.sourceTarget._newPos.x-pos.x
-                const dy=event.sourceTarget._newPos.y-pos.y
-
                 checkVal['labelLat']=newLatLon['lat'];
                 checkVal['labelLon']=newLatLon['lng'];
 
+                //get the old offset
+                let offx=checkVal['offx'] || 0;
+                let offy=checkVal['offy'] || 0;
+
+                //multiply by the scale factor to get the scaled offset
+                offx*=scale;
+                offy*=scale;
+
+                //add in the latest move
+                const dx=event.sourceTarget._newPos.x-pos.x
+                const dy=event.sourceTarget._newPos.y-pos.y
+
                 offx+=dx;
                 offy+=dy;
-                checkVal['offx']=offx;
-                checkVal['offy']=offy;
+                checkVal['offx']=offx/scale;
+                checkVal['offy']=offy/scale;
                 
                 volcCheck.val(JSON.stringify(checkVal));
 
