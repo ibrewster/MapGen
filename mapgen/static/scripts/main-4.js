@@ -1413,6 +1413,9 @@ function calcLineAnchor(elements){
 
         const checkID=$(this).data('checkID');
         const itemCheck=$('#'+checkID);
+        if(itemCheck.length==0){
+            return false;
+        }
         const checkVal=JSON.parse(itemCheck.val());
         const originLatLon=L.latLng(checkVal['lat'], checkVal['lon']);
         const originPos=map.latLngToLayerPoint(originLatLon);
