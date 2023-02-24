@@ -158,6 +158,7 @@ class MapSchema(BaseSchema):
     loncol = Value(str, default = None)
     valcol = Value(str, default = None)
     mapColormap = Value(str, default = None)
+    overviewColormap = Value(str, default = None)
     showCMTitle = Value(bool, default = False)
     dataTrans = Value(int, default = 0)
     fillOcean = Value(bool, default = False)

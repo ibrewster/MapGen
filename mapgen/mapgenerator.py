@@ -868,6 +868,7 @@ class MapGenerator:
             logging.info("Adding scalebar")
             self._add_scalebar()
 
+            ########## OVERVIEW MAP#############
             if overview:
                 logging.info("Adding Overview")
                 self._update_status("Adding Overview Map...")
@@ -892,21 +893,48 @@ class MapGenerator:
                 inset_width = self.data['overviewWidth']
                 pos = f"j{overview}+w{inset_width}{unit}+o0.1c"
                 star_size = "16p"
+                
                 with self.fig.inset(position=pos, box="+gwhite+p1p"):
-                    self.fig.coast(
+                    # Draw hillshade files
+                    hillshade_args = {
+                        "nan_transparent": True,
+                        "dpi": 300,
+                        "shading": True
+                    }
+                    
+                    cm = self.data.get('overviewColormap')
+                    mapcm = self.data.get('mapColormap')
+                    if not cm:
+                        cm = mapcm
+                        
+                    if cm:
+                        try:
+                            import pygmt
+                        except Exception:
+                            os.environ['GMT_LIBRARY_PATH'] = '/usr/local/lib'
+                            import pygmt
+        
+                        pygmt.makecpt(cmap = cm, series = (-11000, 8500))
+                        
+                    self.fig.grdimage(
+                        "@earth_relief_15s",
                         region=ak_bounds,
-                        projection="M?",
+                        projection="M?",                        
+                        **hillshade_args
+                    )
+                    
+                    self.fig.coast(
                         water="#CBE7FF",
-                        land="lightgreen",
                         resolution="l",
                         shorelines=True,
-                        # area_thresh = 10000
-                    )
+                    )                    
+                    
                     x_loc = self.gmt_bounds[0] + (self.gmt_bounds[1] - self.gmt_bounds[0]) / 2
                     y_loc = self.gmt_bounds[2] + (self.gmt_bounds[3] - self.gmt_bounds[2]) / 2
                     self.fig.plot(x=[x_loc, ], y=[y_loc, ],
                                   style=f"a{star_size}", fill="blue")
-
+                    
+            ############# INSET MAPS##############
             inset_maps = zip(self.data['insetBounds'],
                              self.data['insetZoom'],
                              self.data['insetLeft'],
