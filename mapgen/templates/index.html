@@ -256,9 +256,13 @@
                                     may vary somewhat due to map shape.
                                 </p>
 
-                                    <p>
+                                <p>
                                     Click the refresh button here to reset the entered values to those
                                     actually displayed on the map.
+                                </p>
+                                <p>
+                                    Hold down the shift key and drag a box on the map to zoom to the
+                                    selected area.
                                 </p>
                             </div>
                         </div>
@@ -719,6 +723,10 @@
                                     The first row of the CSV is assumed to be a header row and is ignored.
                                 </p>
                                 <p>
+                                Once a CSV file has been selected, a "Clear Upload" button will appear that can be clicked
+                                to remove all markers added from the CSV from the list and remove the selected CSV file.
+                                </p>
+                                <p>
                                 Custom labels (for the key), icons, and, in some cases, colors can be set for each 
                                 category by clicking the "Display Options" button. This allows you to use one of the 
                                 "standard" station types for other purposes - for example, you could set the "camera"
@@ -735,7 +743,8 @@
 
                         <div id="stationCSV">
                             Upload CSV:<br>
-                            <input type=file id="addStationCSV">
+                            <input type=file id="addStationCSV"><br>
+                            <button type="button" id="clearStationCSV" style="display:none">Clear Upload</button>
                         </div>
                         <div id="stationListTop">
 

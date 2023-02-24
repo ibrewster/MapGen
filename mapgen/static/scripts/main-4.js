@@ -131,6 +131,7 @@ $(document).ready(function() {
     $('#plotDataCSV').change(parseDataHeaders);
     $('.setCM').click(openCMSelector);
     $('area.cmArea').click(selectColormap);
+    $('#clearStationCSV').click(clearCSV);
     
     $('#closeVolcLabel').click(function(){
       $('#volcLabelPosShield').hide();  
@@ -189,6 +190,13 @@ $(document).ready(function() {
     setupAccordion();
     refreshStationMarkerOpts();
 });
+
+function clearCSV(){
+    csvStations=[];
+    $('#addStationCSV').val(null);
+    displayStations();
+    $('#clearStationCSV').hide();
+}
 
 function updateVolcOffset(){
     //this should be an offset input box
@@ -1487,9 +1495,13 @@ function query_stations(minLat, maxLat, eastLon, westLon, eastLon2, westLon2) {
         });
 }
 
+let csvStations=[]
+
 function addCSVStations() {
+    csvStations=[] //start with an empty list of CSV stations
     var file = $('#addStationCSV')[0].files;
     if (file.length == 0) {
+        $('#clearStationCSV').hide();
         displayStations();
         return;
     }
@@ -1512,9 +1524,10 @@ function addCSVStations() {
                 staDict['catId'] = 999; //user defined/unknown
             }
 
-            all_stations.push(staDict);
+            csvStations.push(staDict);
         }
-
+        
+        $('#clearStationCSV').show();
         displayStations();
     }
     reader.readAsBinaryString(file);
@@ -1559,9 +1572,10 @@ function displayStations() {
     var seenCategories = []
 
     $('#stationListTop').empty();
+    let displayStations=all_stations.concat(csvStations);
 
-    for (var i = 0; i < all_stations.length; i++) {
-        var sta = all_stations[i];
+    for (var i = 0; i < displayStations.length; i++) {
+        var sta = displayStations[i];
         var staName = sta['station'];
         if (seenStations.indexOf(staName) !== -1) {
             continue //already seen this station
