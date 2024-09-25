@@ -4,9 +4,9 @@ script_dir = os.path.dirname(__file__)
 
 wsgi_app = "mapgen:app"
 chdir = script_dir
-# user = "mapgen"
-# group = "nginx"
-bind = ['unix:/var/run/mapgen/gunicorn.sock','127.0.0.1:5002']
+user = "www-data"
+group = "www-data"
+bind = ['unix:/run/mapgen/gunicorn.sock','127.0.0.1:5002']
 workers = 1
 threads = 100
 worker_connections = 102

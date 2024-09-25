@@ -3,9 +3,10 @@ Description = Map Generator
 After = network.target
 
 [Service]
-ExecStart = /data/MapGen/run_mapgen.sh
-User=mapgen
-Group=nginx
+WorkingDirectory = /shared/apps/mapgen/web
+ExecStart = /shared/apps/mapgen/mapgen-env/bin/gunicorn
+User=www-data
+Group=www-data
 RuntimeDirectory = mapgen
 RuntimeDirectoryMode = 777
 Restart=on-failure
