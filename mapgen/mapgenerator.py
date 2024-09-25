@@ -25,6 +25,7 @@ import osgeo.gdal
 import pandas
 import requests
 import vincenty
+import xarray
 
 from urllib.parse import unquote
 
@@ -432,6 +433,7 @@ class MapGenerator:
 
             logging.info(f"Adding image {idx+1} of {len(hillshade_file)}: {file}")
             cm = self.data.get('mapColormap')
+            logging.info(f"Colormap is {cm} in draw hillshades")
             if cm:
                 try:
                     import pygmt
@@ -439,8 +441,20 @@ class MapGenerator:
                     os.environ['GMT_LIBRARY_PATH'] = '/usr/local/lib'
                     import pygmt
 
+                logging.info(f"Loading file of {file} in draw hillshades")
+
+                if file.startswith('@'):
+                    resolution = file.split('_')[-1]
+                    grid = pygmt.datasets.load_earth_relief(resolution = resolution)
+                else:
+                    grid = xarray.open_dataarray(file)
+
+                file = grid.fillna(-120000)
+
                 pygmt.makecpt(cmap = cm, series = (-11000, 8500))
-            self.fig.grdimage(file, **kwargs)
+                pygmt.makecpt(cmap="transparent", series=(-120000, -120000))
+
+                self.fig.grdimage(file, **kwargs)
 
     def _add_stations(self, stations, zoom):
         logging.info("Plotting stations")
@@ -841,7 +855,6 @@ class MapGenerator:
             hillshade_file = self._set_hillshade(zoom, warp_bounds)
 
             hillshade_args = {
-                "nan_transparent": True,
                 "dpi": 300,
                 "shading": True
             }
@@ -893,47 +906,58 @@ class MapGenerator:
                 inset_width = self.data['overviewWidth']
                 pos = f"j{overview}+w{inset_width}{unit}+o0.1c"
                 star_size = "16p"
-                
+
                 with self.fig.inset(position=pos, box="+gwhite+p1p"):
                     # Draw hillshade files
                     hillshade_args = {
-                        "nan_transparent": True,
+                        # "nan_transparent": True,
                         "dpi": 300,
                         "shading": True
                     }
-                    
+
                     cm = self.data.get('overviewColormap')
                     mapcm = self.data.get('mapColormap')
                     if not cm:
                         cm = mapcm
-                        
+                    overview_base = '@earth_relief_15s'
                     if cm:
                         try:
                             import pygmt
                         except Exception:
                             os.environ['GMT_LIBRARY_PATH'] = '/usr/local/lib'
                             import pygmt
-        
+
+                        logging.info(f"Loading file of {overview_base} in plot overview")
+
+                        if file.startswith('@'):
+                            resolution = file.split('_')[-1]
+                            grid = pygmt.datasets.load_earth_relief(resolution = resolution)
+                        else:
+                            grid = xarray.open_dataarray(file)
+
+                        overview_base = grid.fillna(-120000)
+
                         pygmt.makecpt(cmap = cm, series = (-11000, 8500))
-                        
+                        pygmt.makecpt(cmap="transparent", series=(-120000, -120000))
+
                     self.fig.grdimage(
-                        "@earth_relief_15s",
+                        overview_base,
                         region=ak_bounds,
-                        projection="M?",                        
+                        projection="M?",
                         **hillshade_args
                     )
-                    
+
                     self.fig.coast(
                         water="#CBE7FF",
                         resolution="l",
                         shorelines=True,
-                    )                    
-                    
+                    )
+
                     x_loc = self.gmt_bounds[0] + (self.gmt_bounds[1] - self.gmt_bounds[0]) / 2
                     y_loc = self.gmt_bounds[2] + (self.gmt_bounds[3] - self.gmt_bounds[2]) / 2
                     self.fig.plot(x=[x_loc, ], y=[y_loc, ],
                                   style=f"a{star_size}", fill="blue")
-                    
+
             ############# INSET MAPS##############
             inset_maps = zip(self.data['insetBounds'],
                              self.data['insetZoom'],
@@ -957,7 +981,6 @@ class MapGenerator:
                     hillshade_args = {
                         "region": inset_bounds,
                         "projection": "M?",
-                        "nan_transparent": True,
                         "shading": True,
                         "dpi": 300,
                     }
