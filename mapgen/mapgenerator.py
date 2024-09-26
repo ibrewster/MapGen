@@ -175,6 +175,87 @@ class MapGenerator:
         if self._socket_queue is not None:
             self._socket_queue.send(status)
 
+    def _download_wcs(self, bounds):
+        URL_BASE = 'https://geoportal.dggs.dnr.alaska.gov/arcgis/services/elevation/IFSAR_DSM/ImageServer/WCSServer'
+        
+        x_min = bounds[0]
+        x_max = bounds[2]
+        y_min = bounds[1]
+        y_max = bounds[3]
+        height = (x_max - x_min)
+        width = (y_max - y_min)
+        ratio = height / width
+        
+        ratio = .75
+        
+        if ratio > 1:
+            pixel_height = 2000
+            pixel_width = int(round(pixel_height / ratio))
+        else:
+            pixel_width = 2000
+            pixel_height = int(round(pixel_width * ratio))
+        
+        # How many rows and columns should we split the image into? More=higher resolution, but slower
+        num_rows = 4
+        num_cols = 4
+        
+        y_nodes = numpy.linspace(y_min, y_max, num_cols + 1)
+        x_nodes = numpy.linspace(x_min, x_max, num_rows + 1)
+        
+        xv, yv = numpy.meshgrid(x_nodes, y_nodes)
+        xv2 = numpy.roll(xv, -1, 1)
+        yv2 = numpy.roll(yv, -1, 0)
+        
+        grids = numpy.stack([xv, yv, xv2, yv2], axis = 2)[:num_rows, :num_cols, :]
+        
+        # x_mid = (bounds[2] - bounds[0]) / 2 + bounds[0]
+        # y_mid = (bounds[3] - bounds[1]) / 2 + bounds[1]
+        
+        # divided_bounds = [
+            # (bounds[0], bounds[1], x_mid, y_mid),
+            # (x_mid, bounds[1], bounds[2], y_mid),
+            # (bounds[0], y_mid, x_mid, bounds[3]),
+            # (x_mid, y_mid, bounds[2], bounds[3])
+        # ]
+        
+        # pixel_height = 4000
+        # pixel_width = 1732
+        
+        ARGS = {
+            'COVERAGE': 'IFSAR_DSM_1',
+            'SERVICE': 'WCS',
+            'REQUEST': 'GetCoverage',
+            'CRS': 'EPSG:4326',
+            'RESPONSE_CRS': 'EPSG:4326',
+            'VERSION': '1.0.0',
+            'WIDTH': pixel_width,
+            'HEIGHT': pixel_height,
+            'FORMAT': 'geoTIFF'
+        }
+
+        img_dir = self.tempdir()
+        files = []
+        for idx, bound in enumerate((row for column in grids for row in column)):
+        #for idx, bound in enumerate([bounds, ]):
+            
+            ARGS['BBOX'] = ",".join((str(x) for x in bound))
+            filename = os.path.join(img_dir, f"segment_{idx}.tiff")
+            logging.info("Downloading hillshade files")
+        
+            resp = requests.get(URL_BASE, params = ARGS)
+            if resp.status_code != 200:
+                logging.warning(f"Unable to fetch hillshade files for region. Server returned {resp.status_code}")
+                print(resp.status_code)
+                print(resp.text)
+                return []
+            
+            with open(filename, 'wb') as f:
+                f.write(resp.content)
+            
+            files.append(filename)         
+            
+        return files
+        
     def _download_elevation(self, bounds):
         if bounds[0] < -180 or bounds[2] > 180 or bounds[0] > bounds[2]:
             # Crossing dateline. Need to split request.
@@ -377,13 +458,14 @@ class MapGenerator:
         else:
             # For higher zooms, use elevation.alaska.gov data
             self._update_status("Downloading hillshade files...")
+            all_files = self._download_wcs(map_bounds)
 
-            tiff_dir = self._download_elevation(map_bounds)
-            logging.info("Generating composite hillshade file")
+            # tiff_dir = self._download_elevation(map_bounds)
+            # logging.info("Generating composite hillshade file")
 
             self._update_status("Processing hillshade data...")
 
-            all_files = [os.path.join(tiff_dir, x) for x in os.listdir(tiff_dir)]
+#            all_files = [os.path.join(tiff_dir, x) for x in os.listdir(tiff_dir)]
             out_files = self._process_files(all_files, map_bounds)
 
             hillshade_files = out_files
@@ -439,7 +521,7 @@ class MapGenerator:
                     os.environ['GMT_LIBRARY_PATH'] = '/usr/local/lib'
                     import pygmt
 
-                pygmt.makecpt(cmap = cm, series = (-11000, 8500))
+                pygmt.makecpt(cmap = cm, series = (-10000, 4568.84))
             self.fig.grdimage(file, **kwargs)
 
     def _add_stations(self, stations, zoom):
@@ -842,7 +924,7 @@ class MapGenerator:
 
             hillshade_args = {
                 "nan_transparent": True,
-                "dpi": 300,
+                "dpi": 600,
                 "shading": True
             }
 

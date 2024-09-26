@@ -12,7 +12,8 @@ from flask_sock import Sock
 logging.basicConfig(level = logging.INFO)
 
 app = flask.Flask(__name__)
-app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SESSION_TYPE'] = 'redis'
+app.config['SESSION_KEY_PREFIX'] = "MapGenSession:"
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 session = Session(app)
