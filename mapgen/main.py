@@ -241,7 +241,7 @@ def get_map_image():
     response.headers.set('Content-Type', 'application/pdf')
     response.headers.set('Content-Disposition', 'attachment',
                          filename="MapImage.pdf")
-    response.set_cookie('DownloadComplete', b"1")
+    response.set_cookie('DownloadComplete', "1")
 
     return response
 

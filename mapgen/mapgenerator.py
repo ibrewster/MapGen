@@ -25,8 +25,10 @@ import osgeo.gdal
 import pandas
 import requests
 import vincenty
+import xarray
 
 from urllib.parse import unquote
+from osgeo_utils.gdal_merge import main as gdal_merge
 
 try:
     from . import _global_session
@@ -378,14 +380,23 @@ class MapGenerator:
         osgeo.gdal.AllRegister()  # Why? WHY!?!? But needed...
         files = []
         num_files = len(all_files)
+        
+        if num_files > 1:
+            logging.info(f"Merging {num_files} Files")
+            file_path = os.path.dirname(all_files[0])
+            merged_file = os.path.join(file_path, "combined_image.tiff")
+            # out_file = os.path.join(in_path, "combined_warped_image.tiff")
+            merge_args = ["myScript.py", "-o", merged_file]
+            merge_args += all_files
+            gdal_merge(merge_args)
+            all_files = [merged_file]
+        
+        num_files = 1
         for idx, in_file in enumerate(all_files):
             logging.info(f"Processing image {idx+1} of {len(all_files)}")
 
             in_path, in_ext = os.path.splitext(in_file)
             out_file = f"{in_path}-processed.tiff"
-            # Considered skipping if already processed, but the bounds might be different
-            # if os.path.isfile(out_file):
-            # continue  # Already processed. Move on.
 
             ds = osgeo.gdal.Open(in_file)
             file_bounds = utils.get_extents(ds, proj)
@@ -447,7 +458,7 @@ class MapGenerator:
                 'status': "Processing hillshade data...",
                 'progress': ((idx + 1) / num_files) * 100
             })
-
+          
         return files
 
     def _set_hillshade(self, zoom, map_bounds):
@@ -501,7 +512,7 @@ class MapGenerator:
         if num_files == 1:
             multi_status = False
             self._update_status("Drawing map image...")
-
+            
         for idx, file in enumerate(hillshade_file):
             if not file.startswith("@") and not os.path.isfile(file):
                 continue  # Probably paranoid, but...
@@ -514,6 +525,8 @@ class MapGenerator:
 
             logging.info(f"Adding image {idx+1} of {len(hillshade_file)}: {file}")
             cm = self.data.get('mapColormap')
+            logging.info(f"Colormap is {cm} in draw hillshades")
+            # cmap = None
             if cm:
                 try:
                     import pygmt
@@ -522,7 +535,8 @@ class MapGenerator:
                     import pygmt
 
                 pygmt.makecpt(cmap = cm, series = (-10000, 4568.84))
-            self.fig.grdimage(file, **kwargs)
+
+            self.fig.grdimage(file, shading=True,  **kwargs)
 
     def _add_stations(self, stations, zoom):
         logging.info("Plotting stations")
@@ -923,9 +937,8 @@ class MapGenerator:
             hillshade_file = self._set_hillshade(zoom, warp_bounds)
 
             hillshade_args = {
-                "nan_transparent": True,
                 "dpi": 600,
-                "shading": True
+                # "shading": True
             }
 
             self._draw_hillshades(hillshade_file, **hillshade_args)
@@ -975,47 +988,47 @@ class MapGenerator:
                 inset_width = self.data['overviewWidth']
                 pos = f"j{overview}+w{inset_width}{unit}+o0.1c"
                 star_size = "16p"
-                
+
                 with self.fig.inset(position=pos, box="+gwhite+p1p"):
                     # Draw hillshade files
                     hillshade_args = {
-                        "nan_transparent": True,
+                        # "nan_transparent": True,
                         "dpi": 300,
                         "shading": True
                     }
-                    
+
                     cm = self.data.get('overviewColormap')
                     mapcm = self.data.get('mapColormap')
                     if not cm:
                         cm = mapcm
-                        
+
                     if cm:
                         try:
                             import pygmt
                         except Exception:
                             os.environ['GMT_LIBRARY_PATH'] = '/usr/local/lib'
                             import pygmt
-        
+
                         pygmt.makecpt(cmap = cm, series = (-11000, 8500))
-                        
+
                     self.fig.grdimage(
-                        "@earth_relief_15s",
+                        '@earth_relief_15s',
                         region=ak_bounds,
-                        projection="M?",                        
+                        projection="M?",
                         **hillshade_args
                     )
-                    
+
                     self.fig.coast(
                         water="#CBE7FF",
                         resolution="l",
                         shorelines=True,
-                    )                    
-                    
+                    )
+
                     x_loc = self.gmt_bounds[0] + (self.gmt_bounds[1] - self.gmt_bounds[0]) / 2
                     y_loc = self.gmt_bounds[2] + (self.gmt_bounds[3] - self.gmt_bounds[2]) / 2
                     self.fig.plot(x=[x_loc, ], y=[y_loc, ],
                                   style=f"a{star_size}", fill="blue")
-                    
+
             ############# INSET MAPS##############
             inset_maps = zip(self.data['insetBounds'],
                              self.data['insetZoom'],
@@ -1039,8 +1052,7 @@ class MapGenerator:
                     hillshade_args = {
                         "region": inset_bounds,
                         "projection": "M?",
-                        "nan_transparent": True,
-                        "shading": True,
+                        # "shading": True,
                         "dpi": 300,
                     }
                     self._draw_hillshades(hillshade_file, **hillshade_args)
