@@ -31,7 +31,7 @@ def index():
             volcs = cursor.fetchall()
         volcs = ujson.dumps([x[0] for x in volcs])
     except Exception as e:
-        app.logger.warning("Unable to fetch active volcanoes from geodiva", e)
+        app.logger.warning("Unable to fetch active volcanoes from geodiva. Error: %s", e)
         volcs = ujson.dumps([])
 
     sta_symbols = MapGenerator.station_symbols

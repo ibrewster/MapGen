@@ -22,10 +22,10 @@ from tempfile import NamedTemporaryFile
 
 import numpy
 import osgeo.gdal
+import pygmt
 import pandas
 import requests
 import vincenty
-import xarray
 
 from urllib.parse import unquote
 from osgeo_utils.gdal_merge import main as gdal_merge
@@ -184,20 +184,10 @@ class MapGenerator:
         x_max = bounds[2]
         y_min = bounds[1]
         y_max = bounds[3]
-        height = (x_max - x_min)
-        width = (y_max - y_min)
-        ratio = height / width
         
-        ratio = .75
-        
-        if ratio > 1:
-            pixel_height = 2000
-            pixel_width = int(round(pixel_height / ratio))
-        else:
-            pixel_width = 2000
-            pixel_height = int(round(pixel_width * ratio))
-        
-        # How many rows and columns should we split the image into? More=higher resolution, but slower
+        # How many rows and columns should we split the image into? 
+        # More=higher resolution, but slower
+        # Each image will be the specified width and height
         num_rows = 4
         num_cols = 4
         
@@ -209,19 +199,7 @@ class MapGenerator:
         yv2 = numpy.roll(yv, -1, 0)
         
         grids = numpy.stack([xv, yv, xv2, yv2], axis = 2)[:num_rows, :num_cols, :]
-        
-        # x_mid = (bounds[2] - bounds[0]) / 2 + bounds[0]
-        # y_mid = (bounds[3] - bounds[1]) / 2 + bounds[1]
-        
-        # divided_bounds = [
-            # (bounds[0], bounds[1], x_mid, y_mid),
-            # (x_mid, bounds[1], bounds[2], y_mid),
-            # (bounds[0], y_mid, x_mid, bounds[3]),
-            # (x_mid, y_mid, bounds[2], bounds[3])
-        # ]
-        
-        # pixel_height = 4000
-        # pixel_width = 1732
+        grids = grids.reshape(-1, grids.shape[2])
         
         ARGS = {
             'COVERAGE': 'IFSAR_DSM_1',
@@ -230,15 +208,20 @@ class MapGenerator:
             'CRS': 'EPSG:4326',
             'RESPONSE_CRS': 'EPSG:4326',
             'VERSION': '1.0.0',
-            'WIDTH': pixel_width,
-            'HEIGHT': pixel_height,
+            'WIDTH': 2000,
+            'HEIGHT': 1500,
             'FORMAT': 'geoTIFF'
         }
 
         img_dir = self.tempdir()
         files = []
-        for idx, bound in enumerate((row for column in grids for row in column)):
-        #for idx, bound in enumerate([bounds, ]):
+        total_loops = grids.shape[0]
+        for idx, bound in enumerate(grids):
+            pc = ((idx + 1) / total_loops) * 100
+            self._update_status({
+                'status': f"Downloading hillshade files ({idx + 1}/{total_loops})...",
+                'progress': pc
+            })
             
             ARGS['BBOX'] = ",".join((str(x) for x in bound))
             filename = os.path.join(img_dir, f"segment_{idx}.tiff")
@@ -462,11 +445,28 @@ class MapGenerator:
         return files
 
     def _set_hillshade(self, zoom, map_bounds):
-        if zoom <= 7:
-            hillshade_files = ["@earth_relief_15s"]
-        elif zoom < 10:
-            hillshade_files = ["@earth_relief_01s"]
-        else:
+        x_min, y_min, x_max, y_max = map_bounds
+        gmt_bounds = [x_min, x_max, y_min, y_max]        
+        try:            
+            if zoom <= 7:
+                data = pygmt.datasets.load_earth_relief("15s", region=gmt_bounds)  # Check availability
+                if(data == 0).all():
+                    raise ValueError
+                
+                logging.info("Using @earth_relief_15s")
+                hillshade_files = ["@earth_relief_15s"]
+            elif zoom < 10:
+                data = pygmt.datasets.load_earth_relief("01s", region=gmt_bounds)  # Check availability
+                if(data == 0).all():
+                    raise ValueError
+                
+                logging.info("Using @earth_relief_01s")
+                hillshade_files = ["@earth_relief_01s"]
+            else:
+                raise ValueError("High zoom level")
+            
+        except ValueError:
+            logging.info("Using high-res imagery")
             # For higher zooms, use elevation.alaska.gov data
             self._update_status("Downloading hillshade files...")
             all_files = self._download_wcs(map_bounds)
