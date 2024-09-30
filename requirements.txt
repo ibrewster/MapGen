@@ -11,3 +11,4 @@ flask-sock
 streaming-form-data
 pymysql
 gdal
+redis
