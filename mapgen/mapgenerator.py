@@ -470,13 +470,7 @@ class MapGenerator:
             # For higher zooms, use elevation.alaska.gov data
             self._update_status("Downloading hillshade files...")
             all_files = self._download_wcs(map_bounds)
-
-            # tiff_dir = self._download_elevation(map_bounds)
-            # logging.info("Generating composite hillshade file")
-
             self._update_status("Processing hillshade data...")
-
-#            all_files = [os.path.join(tiff_dir, x) for x in os.listdir(tiff_dir)]
             out_files = self._process_files(all_files, map_bounds)
 
             hillshade_files = out_files
