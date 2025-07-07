@@ -2,6 +2,7 @@ import logging
 import json
 import multiprocessing
 import os
+import queue
 import threading
 import uuid
 
@@ -12,7 +13,7 @@ import ujson
 
 from werkzeug.utils import secure_filename
 
-from . import app, sockets, _global_session, utils
+from . import app, _global_session, utils
 from .mapgenerator import MapGenerator
 from .targets import (
     List,
@@ -178,20 +179,22 @@ class MapSchema(BaseSchema):
     legendBkgTransp = Value(int, default = 100)
 
 
-@app.post('/getMap')
+monitor_queues = {}
+
+@app.post('/requestMap')
 @api_input(MapSchema)
-def request_map(data):
+def get_map(data):
     logging.info("Map request received")
     req_id = uuid.uuid4().hex
+
     flask.session['REQ_ID'] = req_id
     generator = MapGenerator()
     upload_dir = generator.tempdir()
 
     _global_session[req_id] = data
     generator.setReqId(req_id)
-
-    socket_id = data['socketID']
-    read_queue, write_queue = socket_queues[socket_id]
+    status_queue = multiprocessing.Queue()
+    monitor_queues[req_id] = status_queue
 
     logging.info("Processing upload(s)")
     filename = data.get('imgFile').name if data.get('imgFile') else None
@@ -213,10 +216,35 @@ def request_map(data):
     mp = multiprocessing.get_context('spawn')
     logging.info("Initalizing generator process")
     mp.Process(target = generator.generate,
-               args = (write_queue, req_id),
+               args = (status_queue, req_id),
                daemon = True).start()
     logging.info("Generator started")
     return req_id
+
+@app.route('/status/<req_id>')
+def status_stream(req_id):
+    def event_stream():
+        logging.info("Starting event stream")
+        if req_id not in monitor_queues:
+            return
+
+        status_queue: multiprocessing.Queue = monitor_queues[req_id]
+        try:
+            while True:
+                try:
+                    msg = status_queue.get(timeout = 1.0)
+                except queue.Empty:
+                    yield f"data: PING\n\n"
+                    continue
+
+                yield f"data: {json.dumps({'type': 'status', 'content': msg})}\n\n"
+        except GeneratorExit:
+            del monitor_queues[req_id]
+
+    return flask.Response(
+        flask.stream_with_context(event_stream()),
+        mimetype='text/event-stream'
+    )
 
 
 @app.get('/getMap')
@@ -244,83 +272,3 @@ def get_map_image():
     response.set_cookie('DownloadComplete', "1")
 
     return response
-
-
-@app.get('/checkstatus')
-def check_status():
-    req_id = flask.session.get('REQ_ID')
-    try:
-        data_dict = _global_session[req_id]
-    except KeyError:
-        flask.abort(404)
-
-    stat = data_dict.get('gen_status', "Initalizing...")
-    if stat == "FAILED":
-        flask.abort(500, 'Unable to generate map. An internal server error occured.')
-
-    if data_dict.get('map_file') is None:
-        return {'status': stat, 'done': False}
-    else:
-        return {'status': 'complete', 'done': True}
-
-
-socket_queues = {}
-ws_objects = {}
-
-
-# This is weird (to me) but to be able to handle this URL both with and without
-# a trailing slash, I have to declare both options as completly seperate functions,
-# each calling the same third, undecorated function. Otherwise things get confused.
-@sockets.route('/monitor')
-def monitor_wo_slash(ws):
-    return monitor_socket(ws)
-
-
-@sockets.route('/monitor/')
-def monitor_w_slash(ws):
-    return monitor_socket(ws)
-
-
-def monitor_socket(ws):
-    logging.info("New web socket connection opened")
-    socket_id = uuid.uuid4().hex
-    read_pipe, write_pipe = multiprocessing.Pipe()
-    socket_queues[socket_id] = (read_pipe, write_pipe)
-    ws_objects[socket_id] = ws
-    msg = {'type': 'socketID', 'content': socket_id, }
-    ws.send(json.dumps(msg))
-
-    # This thread monitors the sockets, above, and sends information to the client,
-    # while the loop below keeps the web socket alive and responds to messages received
-    # FROM the client.
-    logging.info("Creating webSocket monitor thread")
-    thread = threading.Thread(target = _run_monitor_socket,
-                              args = (ws, read_pipe))
-    thread.start()
-    logging.info("Web socket monitor thread started")
-
-    while True:
-        msg = ws.receive()
-        if msg == "PING":
-            ws.send('PONG')
-
-    logging.info("Web socket closed")
-
-
-def _run_monitor_socket(ws, pipe):
-    # Needs to be run in a seperate thread so it doesn't block other requests
-    logging.info("Web socket handler thread started")
-    while ws.connected:
-        # Check and loop rather than blocking indefinitely
-        # so we can know if the socket has closed.
-        msg_waiting = pipe.poll(.25)
-        if not msg_waiting:
-            continue
-
-        message = pipe.recv()
-        message = {'type': 'status',
-                   'content': message}
-        ws.send(json.dumps(message))
-
-    logging.info("Exiting web socket handler thread")
-

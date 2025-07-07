@@ -12,6 +12,7 @@ let uncheckedMarkers=[]
 var overviewRatio = 5;
 var staTimer = null;
 var monitorSocket = null;
+let eventSource=null;
 var pingTimer = null;
 var units = "i"
 
@@ -132,9 +133,9 @@ $(document).ready(function() {
     $('.setCM').click(openCMSelector);
     $('area.cmArea').click(selectColormap);
     $('#clearStationCSV').click(clearCSV);
-    
+
     $('#closeVolcLabel').click(function(){
-      $('#volcLabelPosShield').hide();  
+      $('#volcLabelPosShield').hide();
     })
 
     $('#cmCancel').click(function(){
@@ -222,7 +223,7 @@ function makeDraggable(popup,checkID,offset){
     L.DomUtil.setPosition(popup._wrapper.parentNode, pos);
     var draggable = new L.Draggable(popup._container, popup._wrapper);
     draggable.enable();
-    
+
     draggable.on('dragend', function() {
         const volcCheck=$('#'+checkID);
         const checkVal=JSON.parse(volcCheck.val());
@@ -234,8 +235,8 @@ function makeDraggable(popup,checkID,offset){
         checkVal['labelLat']=newLatLon['lat'];
         checkVal['labelLon']=newLatLon['lng'];
 
-        // new position is change in position PLUS the default offset, 
-        // but we only want to save the difference between the default 
+        // new position is change in position PLUS the default offset,
+        // but we only want to save the difference between the default
         // offset position and the current position.
         const offx=dx-offset[0];
         const offy=dy-offset[1];
@@ -247,7 +248,7 @@ function makeDraggable(popup,checkID,offset){
 
         volcCheck.val(JSON.stringify(checkVal));
 
-        // again have to clear the top/bottom CSS leaflet adds to get 
+        // again have to clear the top/bottom CSS leaflet adds to get
         // the label to show up in the correct position.
         $(popup._container).css('top','').css('bottom','');
     });
@@ -877,7 +878,7 @@ function closeStatus(delay) {
         delay = 0;
     }
 
-    monitorSocket.close();
+    eventSource.close();
     if (delay > 0)
         setTimeout($('#downloading').hide, delay);
     else
@@ -886,109 +887,23 @@ function closeStatus(delay) {
     req_id = null;
 }
 
-function checkDownloadStatus() {
-    return;
-    if (req_id === null) {
-        $('#downloading').hide();
-        return; //no request
-    }
-
-    $.getJSON('checkstatus')
-        .done(function(resp) {
-            if (resp['done']) {
-                url = `getMap?REQ_ID=${req_id}`;
-                window.location.href = url;
-                $('#downloading').hide();
-                monitorSocket.close();
-                req_id = null;
-                return
-            }
-            var payload = resp['status'];
-            updateStatus(payload);
-
-            setTimeout(checkDownloadStatus, 2000); //Check again in 2 seconds.
-        })
-        .fail(function(jqXHR, textStatus, errorThrown) {
-            alert("Unable to check status of download request. Please try again later.");
-            $('#downloading').hide();
-            monitorSocket.close();
-        });
-};
-
 function getMap() {
     //make sure our bounds are up-to-date
     updateBounds();
 
-    //setCookie("DownloadComplete", "0", 240);
     if ($('#imgFile').val() !== '')
         $('#downloadStatus').text("Uploading images...");
     else
         $('#downloadStatus').text("Requesting...");
     $('#downloading').css('display', 'grid');
 
-    init_socket();
+    request_generation();
 }
 
-function xhrFunc() {
-    var xhr = new window.XMLHttpRequest();
-    xhr.upload.addEventListener("progress",
-        updateUploadPercent,
-        false
-    );
-    return xhr;
-}
-
-function init_socket() {
-    var socketURL = 'wss://';
-    if (location.protocol !== 'https:')
-        socketURL = 'ws://';
-
-    var host = location.hostname;
-    var port = location.port;
-    var path = location.pathname;
-    socketURL+=host
-    if(port!==''){
-        socketURL+=`:${port}`
-    }
-    socketURL+=`${path}monitor/`
-
-    monitorSocket = new WebSocket(socketURL)
-    monitorSocket.onmessage = function(msg) {
-        if (msg.data == 'PONG') {
-            return;
-        }
-
-        var data = JSON.parse(msg.data);
-        if (data.type == 'socketID') {
-            var socketID = data.content;
-            console.log(socketID);
-
-            $('#socketID').val(socketID);
-            //use a small timeout so the waiting dialog can be displayed immediately
-            setTimeout(runGetMap, 50);
-        } else if (data.type == 'status') {
-            var status = data.content;
-            updateStatus(status);
-        }
-    }
-    monitorSocket.onopen = function() {
-        pingTimer = setInterval(function() {
-            monitorSocket.send('PING') //kepalive. Send ping every 5 seconds.
-        }, 5000)
-    }
-    monitorSocket.onclose = function() {
-        console.log("Web socket closed");
-        if (pingTimer !== null) {
-            clearInterval(pingTimer);
-            pingTimer = null;
-        }
-    }
-}
-
-function runGetMap() {
+function request_generation(){
     var formData = new FormData($('#setupForm')[0]);
     ajax_opts = {
-        url: 'getMap',
+        url: 'requestMap',
         method: 'POST',
         data: formData,
         processData: false,
@@ -1002,15 +917,34 @@ function runGetMap() {
 
     $.ajax(ajax_opts)
         .done(function(resp) {
-            req_id = resp
+            req_id=resp;
             console.log(resp);
-            checkDownloadStatus();
+            eventSource = new EventSource(`/status/${req_id}`);
+            eventSource.onmessage=function(msg){
+                if (msg.data == 'PING') {
+                    return;
+                }
+
+                var data = JSON.parse(msg.data);
+                if (data.type == 'status') {
+                    var status = data.content;
+                    updateStatus(status);
+                }
+            }
         })
         .fail(function(jqXHR, textStatus, errorThrown) {
             alert(`Unable to request map. Server returned code ${jqXHR.status}, error: ${errorThrown}`);
             $('#downloading').hide();
         });
+}
 
+function xhrFunc() {
+    var xhr = new window.XMLHttpRequest();
+    xhr.upload.addEventListener("progress",
+        updateUploadPercent,
+        false
+    );
+    return xhr;
 }
 
 function updateUploadPercent(evt) {
@@ -1227,7 +1161,7 @@ function plotMarkersRun(){
     volcanoTooltips=[];
     stationMarkers=[];
     stationTooltips=[];
-    
+
     const volcsUseColor=$('#showVolcColor').is(':checked')
 
     let volcOffset,volcDir,staOffset,staDir,labelOffset,labelDir;
@@ -1265,7 +1199,7 @@ function plotMarkersRun(){
 
         const color=volcsUseColor? itemCat : 'volcanoWHITE';
 
-        //For some reason, leaflet wants items on the far side of the 
+        //For some reason, leaflet wants items on the far side of the
         //dateline to be more negitive.
         let lng=Number(itemInfo['lon']);
         if(lng>0){
@@ -1289,7 +1223,7 @@ function plotMarkersRun(){
             markerClass=`staMarker${itemCat}`;
             svg=staIcons[markerClass]
         }
-        
+
         svgIcon=L.divIcon({
             html:svg,
             className:markerClass,
@@ -1346,7 +1280,7 @@ function plotMarkersRun(){
             let pos=map.latLngToLayerPoint(label.getLatLng()); //top-left corner
             pos['x']+=itemOffset[0];
             pos['y']+=itemOffset[1];
-            
+
             // Reference point is top-left corner, so to center or right justify text
             // we need to offset the X position by a percentage of the label width.
             if(labelDir=="center"){
@@ -1383,13 +1317,13 @@ function plotMarkersRun(){
                 offy+=dy;
                 checkVal['offx']=offx/scale;
                 checkVal['offy']=offy/scale;
-                
+
                 volcCheck.val(JSON.stringify(checkVal));
 
                 setTimeout(calcLineAnchor,500,[this]);
             });
 
-            // add or update the lat/lon stored in this item to 
+            // add or update the lat/lon stored in this item to
             // the label position rather than the station position.
             checkVal['labelLat']=newPos['lat'];
             checkVal['labelLon']=newPos['lng'];
@@ -1526,7 +1460,7 @@ function addCSVStations() {
 
             csvStations.push(staDict);
         }
-        
+
         $('#clearStationCSV').show();
         displayStations();
     }

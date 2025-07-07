@@ -16,7 +16,6 @@ os.environ["HOME"] = home_dir
 
 import flask
 from flask_session import Session
-from flask_sock import Sock
 
 logging.basicConfig(level = logging.INFO)
 
@@ -29,10 +28,7 @@ app.config['SESSION_KEY_PREFIX'] = "MapGenSession:"
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['SESSION_REDIS'] = redis.StrictRedis(host='localhost', port=6379, db=0)  # URL of your Redis server
 
-
 session = Session(app)
-sockets = Sock(app)
-
 
 from .file_cache import FileCache
 _global_session = FileCache()

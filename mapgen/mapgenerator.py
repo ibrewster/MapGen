@@ -175,32 +175,32 @@ class MapGenerator:
         _global_session[self._req_id] = self.data
 
         if self._socket_queue is not None:
-            self._socket_queue.send(status)
+            self._socket_queue.put(status)
 
     def _download_wcs(self, bounds):
         URL_BASE = 'https://geoportal.dggs.dnr.alaska.gov/arcgis/services/elevation/IFSAR_DSM/ImageServer/WCSServer'
-        
+
         x_min = bounds[0]
         x_max = bounds[2]
         y_min = bounds[1]
         y_max = bounds[3]
-        
-        # How many rows and columns should we split the image into? 
+
+        # How many rows and columns should we split the image into?
         # More=higher resolution, but slower
         # Each image will be the specified width and height
         num_rows = 4
         num_cols = 4
-        
+
         y_nodes = numpy.linspace(y_min, y_max, num_cols + 1)
         x_nodes = numpy.linspace(x_min, x_max, num_rows + 1)
-        
+
         xv, yv = numpy.meshgrid(x_nodes, y_nodes)
         xv2 = numpy.roll(xv, -1, 1)
         yv2 = numpy.roll(yv, -1, 0)
-        
+
         grids = numpy.stack([xv, yv, xv2, yv2], axis = 2)[:num_rows, :num_cols, :]
         grids = grids.reshape(-1, grids.shape[2])
-        
+
         ARGS = {
             'COVERAGE': 'IFSAR_DSM_1',
             'SERVICE': 'WCS',
@@ -222,25 +222,25 @@ class MapGenerator:
                 'status': f"Downloading hillshade files ({idx + 1}/{total_loops})...",
                 'progress': pc
             })
-            
+
             ARGS['BBOX'] = ",".join((str(x) for x in bound))
             filename = os.path.join(img_dir, f"segment_{idx}.tiff")
             logging.info("Downloading hillshade files")
-        
+
             resp = requests.get(URL_BASE, params = ARGS)
             if resp.status_code != 200:
                 logging.warning(f"Unable to fetch hillshade files for region. Server returned {resp.status_code}")
                 print(resp.status_code)
                 print(resp.text)
                 return []
-            
+
             with open(filename, 'wb') as f:
                 f.write(resp.content)
-            
-            files.append(filename)         
-            
+
+            files.append(filename)
+
         return files
-        
+
     def _download_elevation(self, bounds):
         if bounds[0] < -180 or bounds[2] > 180 or bounds[0] > bounds[2]:
             # Crossing dateline. Need to split request.
@@ -363,7 +363,7 @@ class MapGenerator:
         osgeo.gdal.AllRegister()  # Why? WHY!?!? But needed...
         files = []
         num_files = len(all_files)
-        
+
         if num_files > 1:
             logging.info(f"Merging {num_files} Files")
             file_path = os.path.dirname(all_files[0])
@@ -373,7 +373,7 @@ class MapGenerator:
             merge_args += all_files
             gdal_merge(merge_args)
             all_files = [merged_file]
-        
+
         num_files = 1
         for idx, in_file in enumerate(all_files):
             logging.info(f"Processing image {idx+1} of {len(all_files)}")
@@ -441,42 +441,36 @@ class MapGenerator:
                 'status': "Processing hillshade data...",
                 'progress': ((idx + 1) / num_files) * 100
             })
-          
+
         return files
 
     def _set_hillshade(self, zoom, map_bounds):
         x_min, y_min, x_max, y_max = map_bounds
-        gmt_bounds = [x_min, x_max, y_min, y_max]        
-        try:            
+        gmt_bounds = [x_min, x_max, y_min, y_max]
+        try:
             if zoom <= 7:
                 data = pygmt.datasets.load_earth_relief("15s", region=gmt_bounds)  # Check availability
                 if(data == 0).all():
                     raise ValueError
-                
+
                 logging.info("Using @earth_relief_15s")
                 hillshade_files = ["@earth_relief_15s"]
             elif zoom < 10:
                 data = pygmt.datasets.load_earth_relief("01s", region=gmt_bounds)  # Check availability
                 if(data == 0).all():
                     raise ValueError
-                
+
                 logging.info("Using @earth_relief_01s")
                 hillshade_files = ["@earth_relief_01s"]
             else:
                 raise ValueError("High zoom level")
-            
+
         except ValueError:
             logging.info("Using high-res imagery")
             # For higher zooms, use elevation.alaska.gov data
             self._update_status("Downloading hillshade files...")
             all_files = self._download_wcs(map_bounds)
-
-            # tiff_dir = self._download_elevation(map_bounds)
-            # logging.info("Generating composite hillshade file")
-
             self._update_status("Processing hillshade data...")
-
-#            all_files = [os.path.join(tiff_dir, x) for x in os.listdir(tiff_dir)]
             out_files = self._process_files(all_files, map_bounds)
 
             hillshade_files = out_files
@@ -512,7 +506,7 @@ class MapGenerator:
         if num_files == 1:
             multi_status = False
             self._update_status("Drawing map image...")
-            
+
         for idx, file in enumerate(hillshade_file):
             if not file.startswith("@") and not os.path.isfile(file):
                 continue  # Probably paranoid, but...
@@ -857,7 +851,6 @@ class MapGenerator:
         try:
             self.data = _global_session.get(self._req_id)
             self._update_status("Initializing")
-            logging.info("Sent first status update")
             width = self.data['width']
             height = self.data['height']
             bounds = self.data['bounds']
@@ -931,6 +924,7 @@ class MapGenerator:
             frame_type = self.data['mapFrame']
             pygmt.config(MAP_FRAME_TYPE = frame_type)
 
+            self._update_status("Generating Basemap")
             self.fig.basemap(**basemap_args)
 
             zoom = self.data['mapZoom']
@@ -1147,7 +1141,7 @@ class MapGenerator:
                     raise
             logging.debug(str(file_path))
         except Exception as e:
-            self._socket_queue.send('ERROR')
+            self._socket_queue.put('ERROR')
             traceback.print_exc()
             self._gen_fail_callback(req_id, e)
 
