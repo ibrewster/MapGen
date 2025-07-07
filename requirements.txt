@@ -7,7 +7,7 @@ vincenty
 gunicorn
 ujson
 flask-session
-flask-sock
 streaming-form-data
 pymysql
 gdal
+redis
