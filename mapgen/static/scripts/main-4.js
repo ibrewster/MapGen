@@ -919,7 +919,7 @@ function request_generation(){
         .done(function(resp) {
             req_id=resp;
             console.log(resp);
-            eventSource = new EventSource(`/status/${req_id}`);
+            eventSource = new EventSource(`status/${req_id}`);
             eventSource.onmessage=function(msg){
                 if (msg.data == 'PING') {
                     return;
