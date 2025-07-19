@@ -9,5 +9,5 @@ ujson
 flask-session
 streaming-form-data
 pymysql
-gdal
+gdal==3.11.1
 redis

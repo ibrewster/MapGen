@@ -175,7 +175,7 @@ class MapGenerator:
         _global_session[self._req_id] = self.data
 
         if self._socket_queue is not None:
-            self._socket_queue.put(status)
+            self._socket_queue.send(status)
 
     def _download_wcs(self, bounds):
         URL_BASE = 'https://geoportal.dggs.dnr.alaska.gov/arcgis/services/elevation/IFSAR_DSM/ImageServer/WCSServer'
@@ -1141,7 +1141,7 @@ class MapGenerator:
                     raise
             logging.debug(str(file_path))
         except Exception as e:
-            self._socket_queue.put('ERROR')
+            self._socket_queue.send('ERROR')
             traceback.print_exc()
             self._gen_fail_callback(req_id, e)
 

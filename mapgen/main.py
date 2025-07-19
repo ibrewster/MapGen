@@ -193,8 +193,8 @@ def get_map(data):
 
     _global_session[req_id] = data
     generator.setReqId(req_id)
-    status_queue = multiprocessing.Queue()
-    monitor_queues[req_id] = status_queue
+    parent_conn, child_conn = multiprocessing.Pipe(duplex=False)
+    monitor_queues[req_id] = parent_conn
 
     logging.info("Processing upload(s)")
     filename = data.get('imgFile').name if data.get('imgFile') else None
@@ -216,7 +216,7 @@ def get_map(data):
     mp = multiprocessing.get_context('spawn')
     logging.info("Initalizing generator process")
     mp.Process(target = generator.generate,
-               args = (status_queue, req_id),
+               args = (child_conn, req_id),
                daemon = True).start()
     logging.info("Generator started")
     return req_id
@@ -228,17 +228,22 @@ def status_stream(req_id):
         if req_id not in monitor_queues:
             return
 
-        status_queue: multiprocessing.Queue = monitor_queues[req_id]
+        status_queue: multiprocessing.Pipe = monitor_queues[req_id]
         try:
             while True:
-                try:
-                    msg = status_queue.get(timeout = 1.0)
-                except queue.Empty:
+                if status_queue.poll(timeout = 1.0):
+                    try:
+                        msg = status_queue.recv()
+                        yield f"data: {json.dumps({'type': 'status', 'content': msg})}\n\n"
+                    except EOFError: # closed pipe
+                        break
+                else:
                     yield f"data: PING\n\n"
                     continue
 
-                yield f"data: {json.dumps({'type': 'status', 'content': msg})}\n\n"
         except GeneratorExit:
+            pass # Client disconnect
+        finally:
             del monitor_queues[req_id]
 
     return flask.Response(
