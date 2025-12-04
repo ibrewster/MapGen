@@ -354,6 +354,7 @@ div.helpText{
     text-align:left;
     max-width:80ch;
     font-weight:normal;
+    border:1px solid #aaa;
 }
 
 div.help{
@@ -567,13 +568,60 @@ input.hidden{
     max-height:18px;
     vertical-align: middle;
 }
+#staOpts{
+    margin-top:10px;
+}
+
 #staOpts thead th{
     position:relative;
-    padding-top:2px;
+    padding-top:5px;
+    padding-bottom:5px;
+}
+
+#staOpts thead .help{
+    top:3px;
 }
 
 #staOpts tbody td{
-    padding:1px 5px;
+    padding:4px 9px;
+}
+
+#staOpts thead tr{
+    background-color:lightgrey;
+}
+
+#staNamePosDiv{
+    margin-top:5px;
+}
+
+div.smallprint{
+    width: 0;
+    min-width:100%;
+    font-size: 90%;
+    color: #666;
+    font-style: italic;
+}
+
+#closeStaOpts{
+  background: #4CAF50; /* or your primary color */
+  color: white;
+  border: none;
+  padding: 8px 24px;
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  min-width: 80px;
+  font-weight: 500;
+  margin-top:5px;
+}
+
+#closeStaOpts:hover {
+  background: #45a049;
+}
+
+#closeStaOpts:active {
+  background: #3d8b40;
+  transform: translateY(1px);
 }
 
 :root {
