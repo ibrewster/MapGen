@@ -353,7 +353,7 @@ div.helpText::before{
     height:0px;
     border-left:5px solid transparent;
     border-right:5px solid transparent;
-    border-bottom:7px solid whitesmoke;
+    border-bottom:7px solid #aaa;
     bottom:100%;
     left:0px;
     z-index:1101;
